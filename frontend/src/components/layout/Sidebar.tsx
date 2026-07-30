@@ -1,0 +1,73 @@
+import { NavLink } from "react-router-dom";
+import {
+  LayoutDashboard, Map, Sword, Backpack, Users, ShoppingCart,
+  ScrollText, Settings, Shield, MessageCircle, BookOpen,
+} from "lucide-react";
+
+interface SidebarProps {
+  isOpen: boolean;
+}
+
+const navItems = [
+  { to: "/", icon: LayoutDashboard, label: "Dashboard" },
+  { to: "/map/battleon", icon: Map, label: "Map" },
+  { to: "/class/shadowstalker", icon: Sword, label: "Classes" },
+  { to: "/inventory", icon: Backpack, label: "Inventory" },
+  { to: "/quests", icon: ScrollText, label: "Quests" },
+  { to: "/guild", icon: Users, label: "Guild" },
+  { to: "/market", icon: ShoppingCart, label: "Market" },
+];
+
+export function Sidebar({ isOpen }: SidebarProps) {
+  if (!isOpen) return null;
+
+  return (
+    <nav className="w-56 bg-dark-900/80 backdrop-blur-md border-r border-dark-700 flex flex-col py-4 overflow-y-auto shrink-0">
+      <div className="px-3 mb-4">
+        <div className="flex items-center gap-2 px-3 py-2 bg-dark-800 rounded-lg border border-dark-600">
+          <Shield size={16} className="text-purple-400" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-gray-400">Connected</p>
+            <p className="text-xs font-mono text-green-400">Server #1</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-1 px-2">
+        {navItems.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 ${
+                isActive
+                  ? "bg-gradient-to-r from-purple-600/20 to-blue-600/10 text-purple-300 border border-purple-500/20"
+                  : "text-gray-400 hover:text-gray-200 hover:bg-dark-800/50"
+              }`
+            }
+          >
+            <item.icon size={18} />
+            <span>{item.label}</span>
+          </NavLink>
+        ))}
+      </div>
+
+      <div className="mt-auto px-2 pt-4 border-t border-dark-700">
+        <div className="space-y-1">
+          <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-gray-200 hover:bg-dark-800/50 transition-all">
+            <Settings size={18} />
+            <span>Settings</span>
+          </button>
+          <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-gray-200 hover:bg-dark-800/50 transition-all">
+            <BookOpen size={18} />
+            <span>Codex</span>
+          </button>
+          <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-gray-200 hover:bg-dark-800/50 transition-all">
+            <MessageCircle size={18} />
+            <span>Support</span>
+          </button>
+        </div>
+      </div>
+    </nav>
+  );
+}

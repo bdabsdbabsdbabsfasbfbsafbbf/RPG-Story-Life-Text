@@ -1,0 +1,84 @@
+import express from "express";
+import http from "http";
+import cors from "cors";
+import helmet from "helmet";
+import compression from "compression";
+import morgan from "morgan";
+import cookieParser from "cookie-parser";
+import rateLimit from "express-rate-limit";
+import { Server as SocketIOServer } from "socket.io";
+import { PrismaClient } from "@prisma/client";
+import Redis from "ioredis";
+import { config } from "./core/config";
+import { errorHandler } from "./core/middleware/errorHandler";
+import { createAuthModule } from "./modules/auth/auth.module";
+import { createGateway } from "./gateway/gateway";
+import { CombatService } from "./modules/combat/combat.service";
+import { CooldownManager } from "./modules/combat/cooldown.manager";
+
+export const prisma = new PrismaClient();
+export const redis = new Redis(config.redis.url, {
+  keyPrefix: config.redis.prefix,
+  retryStrategy: (times) => Math.min(times * 50, 2000),
+});
+
+const app = express();
+const server = http.createServer(app);
+
+const io = new SocketIOServer(server, {
+  cors: {
+    origin: [config.frontendUrl, config.adminUrl],
+    credentials: true,
+  },
+  pingInterval: 30000,
+  pingTimeout: 10000,
+});
+
+app.use(helmet());
+app.use(compression());
+app.use(cors({ origin: [config.frontendUrl, config.adminUrl], credentials: true }));
+app.use(morgan("short"));
+app.use(cookieParser());
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true }));
+
+const limiter = rateLimit({
+  windowMs: config.rateLimit.windowMs,
+  max: config.rateLimit.maxRequests,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use("/api", limiter);
+
+app.get("/api/health", (_req, res) => {
+  res.json({ status: "ok", timestamp: Date.now(), uptime: process.uptime() });
+});
+
+const combatService = new CombatService(prisma, redis);
+const cooldownManager = new CooldownManager(redis);
+
+app.set("combatService", combatService);
+app.set("cooldownManager", cooldownManager);
+app.set("io", io);
+app.set("prisma", prisma);
+app.set("redis", redis);
+
+import { registerModules } from "./app";
+registerModules(app);
+createGateway(io, combatService, cooldownManager);
+
+app.use(errorHandler);
+
+server.listen(config.port, () => {
+  console.log(`[RPG Story Life] Server running on port ${config.port}`);
+  console.log(`[RPG Story Life] Environment: ${config.nodeEnv}`);
+});
+
+process.on("SIGTERM", async () => {
+  console.log("[RPG Story Life] SIGTERM received. Shutting down gracefully...");
+  await prisma.$disconnect();
+  redis.disconnect();
+  server.close(() => process.exit(0));
+});
+
+export { app, server, io };

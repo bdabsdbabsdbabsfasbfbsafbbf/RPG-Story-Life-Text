@@ -1,0 +1,25 @@
+{
+  "name": "rpg-story-life",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MMORPG de texto em tempo real - Inspirado em AQWorlds, DragonFable, Adventure Quest",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:admin\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:admin": "cd admin && npm run dev",
+    "build": "npm run build:backend && npm run build:frontend && npm run build:admin",
+    "build:backend": "cd backend && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "build:admin": "cd admin && npm run build",
+    "start": "cd backend && npm run start",
+    "test": "cd backend && npm run test",
+    "migrate": "cd backend && npm run migrate",
+    "seed": "cd backend && npm run seed",
+    "docker:dev": "docker-compose -f docker/docker-compose.dev.yml up",
+    "docker:prod": "docker-compose -f docker/docker-compose.prod.yml up"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

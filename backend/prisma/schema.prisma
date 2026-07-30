@@ -1,0 +1,949 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  discordId     String?  @unique
+  username      String   @unique
+  displayName   String
+  email         String?  @unique
+  avatar        String?
+  passwordHash  String?
+  experience    BigInt   @default(0)
+  level         Int      @default(1)
+  gold          BigInt   @default(0)
+  diamonds      Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  lastLoginAt   DateTime @default(now())
+  isOnline      Boolean  @default(false)
+  isBanned      Boolean  @default(false)
+  role          String   @default("player")
+  characters    Character[]
+  guildMembers  GuildMember[]
+  inventory     Inventory[]
+  questProgress QuestProgress[]
+  equipment     Equipment[]
+  mailSent      Mail[]      @relation("MailSender")
+  mailReceived  Mail[]      @relation("MailReceiver")
+  marketListings MarketListing[]
+  friendships   Friendship[]
+  userTitles    UserTitle[]
+  userAchievements UserAchievement[]
+  partyMembers  PartyMember[]
+
+  @@index([discordId])
+  @@index([username])
+  @@index([level])
+}
+
+model Character {
+  id            String   @id @default(uuid())
+  userId        String
+  name          String
+  classId       String
+  level         Int      @default(1)
+  experience    BigInt   @default(0)
+  rank          Int      @default(1)
+  currentHp     Int      @default(100)
+  currentMana   Int      @default(50)
+  currentStamina Int     @default(100)
+  lastCombatAt  DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          User     @relation(fields: [userId], references: [id])
+  class         GameClass @relation(fields: [classId], references: [id])
+  equipment     Equipment?
+  combatStats   CombatStats?
+  activeBuffs   ActiveBuff[]
+  activeCooldowns ActiveCooldown[]
+  stacks        Stack[]
+
+  @@index([userId])
+  @@index([classId])
+}
+
+model GameClass {
+  id              String   @id @default(uuid())
+  name            String   @unique
+  slug            String   @unique
+  description     String
+  lore            String?
+  element         String
+  rarity          String
+  difficulty      String
+  role            String
+  isActive        Boolean  @default(true)
+  baseHp          Int      @default(100)
+  baseMana        Int      @default(50)
+  baseStamina     Int      @default(100)
+  baseAttack      Int      @default(10)
+  baseDefense     Int      @default(10)
+  baseMagic       Int      @default(10)
+  baseMagicDefense Int     @default(10)
+  baseSpeed       Int      @default(10)
+  requiredLevel   Int      @default(1)
+  requiredQuests  String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  characters      Character[]
+  skills          Skill[]
+  classPassives   ClassPassive[]
+  classUpgrades   ClassUpgrade[]
+  masteryBonuses  MasteryBonus[]
+}
+
+model ClassUpgrade {
+  id            String   @id @default(uuid())
+  classId       String
+  rankRequired  Int
+  description   String
+  statBonuses   String
+  unlocksSkills Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  gameClass     GameClass @relation(fields: [classId], references: [id])
+  @@index([classId, rankRequired])
+}
+
+model MasteryBonus {
+  id            String   @id @default(uuid())
+  classId       String
+  rank          Int
+  bonusType     String
+  bonusValue    Float
+  description   String
+  createdAt     DateTime @default(now())
+  gameClass     GameClass @relation(fields: [classId], references: [id])
+  @@index([classId])
+}
+
+model Skill {
+  id              String   @id @default(uuid())
+  classId         String
+  name            String
+  description     String
+  icon            String?
+  type            String
+  cooldown        Int      @default(0)
+  manaCost        Int      @default(0)
+  staminaCost     Int      @default(0)
+  castTime        Int      @default(0)
+  range           Int      @default(5)
+  targetType      String   @default("enemy")
+  rankRequired    Int      @default(1)
+  sortOrder       Int      @default(0)
+  isActive        Boolean  @default(true)
+  baseDamage      Int      @default(0)
+  damageType      String   @default("physical")
+  damageScaling   String?
+  healingBase     Int      @default(0)
+  healingScaling  String?
+  effects         String?
+  buffsApplied    String?
+  debuffsApplied  String?
+  stacksApplied   String?
+  stacksRequired  String?
+  animationData   String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  gameClass       GameClass @relation(fields: [classId], references: [id])
+  combos          Combo[]   @relation("ComboSkill")
+  comboOrigin     Combo[]   @relation("ComboRequired")
+  @@index([classId])
+  @@index([classId, rankRequired])
+}
+
+model ClassPassive {
+  id            String   @id @default(uuid())
+  classId       String
+  name          String
+  description   String
+  icon          String?
+  rankRequired  Int      @default(1)
+  statModifiers String?
+  effectType    String
+  effectData    String?
+  createdAt     DateTime @default(now())
+  gameClass     GameClass @relation(fields: [classId], references: [id])
+  @@index([classId])
+}
+
+model Combo {
+  id             String   @id @default(uuid())
+  name           String
+  description    String
+  skillId        String
+  requiredSkills String
+  requiredStacks String?
+  cooldown       Int      @default(0)
+  damageBonus    Float    @default(1.0)
+  createdAt      DateTime @default(now())
+  skill          Skill    @relation("ComboSkill", fields: [skillId], references: [id])
+  requiredBy     Skill    @relation("ComboRequired")
+  @@index([skillId])
+}
+
+model Buff {
+  id            String   @id @default(uuid())
+  name          String
+  description   String
+  type          String
+  icon          String?
+  maxStacks     Int      @default(1)
+  duration      Int      @default(0)
+  tickInterval  Int      @default(0)
+  tickEffect    String?
+  statModifiers String?
+  specialEffect String?
+  stackBehavior String   @default("independent")
+  maxStackEffect String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  activeBuffs   ActiveBuff[]
+}
+
+model ActiveBuff {
+  id            String   @id @default(uuid())
+  characterId   String
+  buffId        String
+  stacks        Int      @default(1)
+  remainingDuration Int  @default(0)
+  sourceId      String?
+  appliedAt     DateTime @default(now())
+  expiresAt     DateTime?
+  character     Character @relation(fields: [characterId], references: [id])
+  buff          Buff      @relation(fields: [buffId], references: [id])
+  @@index([characterId])
+  @@index([characterId, buffId])
+}
+
+model Stack {
+  id            String   @id @default(uuid())
+  characterId   String
+  stackDefId    String
+  stackType     String
+  currentAmount Int      @default(0)
+  maxAmount     Int      @default(10)
+  duration      Int      @default(0)
+  createdAt     DateTime @default(now())
+  expiresAt     DateTime?
+  character     Character @relation(fields: [characterId], references: [id])
+  @@unique([characterId, stackDefId])
+  @@index([characterId])
+}
+
+model StackDefinition {
+  id            String   @id @default(uuid())
+  name          String
+  description   String
+  icon          String?
+  type          String
+  maxAmount     Int      @default(10)
+  duration      Int      @default(0)
+  perStackEffect String?
+  maxEffect     String?
+  consumeEffect String?
+  createdAt     DateTime @default(now())
+}
+
+model ActiveCooldown {
+  id            String   @id @default(uuid())
+  characterId   String
+  skillId       String
+  remainingMs   Int
+  startedAt     DateTime @default(now())
+  expiresAt     DateTime
+  character     Character @relation(fields: [characterId], references: [id])
+  skill         Skill     @relation(fields: [skillId], references: [id])
+  @@index([characterId])
+  @@index([characterId, skillId])
+}
+
+model CombatStats {
+  id              String   @id @default(uuid())
+  characterId     String   @unique
+  maxHp           Int      @default(100)
+  maxMana         Int      @default(50)
+  maxStamina      Int      @default(100)
+  attack          Int      @default(10)
+  defense         Int      @default(10)
+  magic           Int      @default(10)
+  magicDefense    Int      @default(10)
+  criticalChance  Float    @default(5.0)
+  criticalDamage  Float    @default(150.0)
+  armorPenetration Int     @default(0)
+  magicPenetration Int     @default(0)
+  lifeSteal       Float    @default(0)
+  manaSteal       Float    @default(0)
+  attackSpeed     Int      @default(1000)
+  cooldownReduction Float  @default(0)
+  dodge           Float    @default(2.0)
+  accuracy        Float    @default(95.0)
+  block           Float    @default(0)
+  healingPower    Float    @default(100.0)
+  healingReceived Float    @default(100.0)
+  luck            Float    @default(1.0)
+  dropRate        Float    @default(100.0)
+  goldBonus       Float    @default(100.0)
+  xpBonus         Float    @default(100.0)
+  bossDamage      Float    @default(100.0)
+  eliteDamage     Float    @default(100.0)
+  pvpDamage       Float    @default(100.0)
+  pveDamage       Float    @default(100.0)
+  elementalDamage Float    @default(0)
+  resistance      Float    @default(0)
+  speed           Int      @default(10)
+  updatedAt       DateTime @updatedAt
+  character       Character @relation(fields: [characterId], references: [id])
+}
+
+model Equipment {
+  id            String   @id @default(uuid())
+  characterId   String   @unique
+  helmetId      String?
+  chestplateId  String?
+  pantsId       String?
+  bootsId       String?
+  glovesId      String?
+  weaponId      String?
+  shieldId      String?
+  amuletId      String?
+  ring1Id       String?
+  ring2Id       String?
+  capeId        String?
+  relicId       String?
+  petId         String?
+  updatedAt     DateTime @updatedAt
+  character     Character @relation(fields: [characterId], references: [id])
+  helmet        Item?     @relation("EquippedHelmet", fields: [helmetId], references: [id])
+  chestplate    Item?     @relation("EquippedChestplate", fields: [chestplateId], references: [id])
+  pants         Item?     @relation("EquippedPants", fields: [pantsId], references: [id])
+  boots         Item?     @relation("EquippedBoots", fields: [bootsId], references: [id])
+  gloves        Item?     @relation("EquippedGloves", fields: [glovesId], references: [id])
+  weapon        Item?     @relation("EquippedWeapon", fields: [weaponId], references: [id])
+  shield        Item?     @relation("EquippedShield", fields: [shieldId], references: [id])
+  amulet        Item?     @relation("EquippedAmulet", fields: [amuletId], references: [id])
+  ring1         Item?     @relation("EquippedRing1", fields: [ring1Id], references: [id])
+  ring2         Item?     @relation("EquippedRing2", fields: [ring2Id], references: [id])
+  cape          Item?     @relation("EquippedCape", fields: [capeId], references: [id])
+  relic         Item?     @relation("EquippedRelic", fields: [relicId], references: [id])
+  pet           Item?     @relation("EquippedPet", fields: [petId], references: [id])
+}
+
+model Item {
+  id            String   @id @default(uuid())
+  name          String
+  description   String
+  icon          String?
+  type          String
+  subtype       String?
+  rarity        String
+  level         Int      @default(1)
+  tier          Int      @default(1)
+  isTradable    Boolean  @default(true)
+  isSellable    Boolean  @default(true)
+  isStackable   Boolean  @default(false)
+  maxStack      Int      @default(1)
+  buyPrice      BigInt   @default(0)
+  sellPrice     BigInt   @default(0)
+  stats         String?
+  requirements  String?
+  effects       String?
+  enchantSlots  Int      @default(0)
+  gemSlots      Int      @default(0)
+  runeSlots     Int      @default(0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  enchantments  Enchantment[]
+  gems          GemSlot[]
+  runes         RuneSlot[]
+  inventory     Inventory[]
+  shopItems     ShopItem[]
+  dropItems     DropItem[]
+  recipes       CraftRecipe[]
+  recipeResults CraftRecipe[] @relation("CraftResult")
+  mailItems     MailItem[]
+  marketListings MarketListing[]
+
+  @@index([type])
+  @@index([rarity])
+  @@index([level])
+  @@index([name])
+}
+
+model Enchantment {
+  id            String   @id @default(uuid())
+  itemId        String
+  enchantType   String
+  value         Float
+  createdAt     DateTime @default(now())
+  item          Item     @relation(fields: [itemId], references: [id])
+  @@index([itemId])
+}
+
+model GemSlot {
+  id            String   @id @default(uuid())
+  itemId        String
+  gemId         String?
+  slotIndex     Int
+  createdAt     DateTime @default(now())
+  item          Item     @relation(fields: [itemId], references: [id])
+  @@index([itemId])
+}
+
+model RuneSlot {
+  id            String   @id @default(uuid())
+  itemId        String
+  runeId        String?
+  slotIndex     Int
+  createdAt     DateTime @default(now())
+  item          Item     @relation(fields: [itemId], references: [id])
+  @@index([itemId])
+}
+
+model Inventory {
+  id            String   @id @default(uuid())
+  userId        String
+  itemId        String
+  quantity      Int      @default(1)
+  isEquipped    Boolean  @default(false)
+  slotIndex     Int?
+  acquiredAt    DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id])
+  item          Item     @relation(fields: [itemId], references: [id])
+  @@unique([userId, itemId, slotIndex])
+  @@index([userId])
+  @@index([userId, itemId])
+}
+
+model Map {
+  id            String   @id @default(uuid())
+  name          String
+  description   String
+  slug          String   @unique
+  imageUrl      String?
+  region        String
+  requiredLevel Int      @default(1)
+  requiredQuest String?
+  isPvPZone     Boolean  @default(false)
+  isActive      Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  npcs          MapNpc[]
+  monsters      MapMonster[]
+  connections   MapConnection[]
+  connectedFrom MapConnection[] @relation("MapConnectionTo")
+  questGivers   Quest[]
+}
+
+model MapConnection {
+  id            String   @id @default(uuid())
+  fromMapId     String
+  toMapId       String
+  requiredLevel Int      @default(1)
+  requiredQuest String?
+  direction     String   @default("bidirectional")
+  createdAt     DateTime @default(now())
+  fromMap       Map      @relation(fields: [fromMapId], references: [id])
+  toMap         Map      @relation("MapConnectionTo", fields: [toMapId], references: [id])
+  @@index([fromMapId])
+  @@index([toMapId])
+}
+
+model MapNpc {
+  id            String   @id @default(uuid())
+  mapId         String
+  npcId         String
+  positionX     Float    @default(0)
+  positionY     Float    @default(0)
+  createdAt     DateTime @default(now())
+  map           Map      @relation(fields: [mapId], references: [id])
+  npc           Npc      @relation(fields: [npcId], references: [id])
+  @@index([mapId])
+  @@index([mapId, npcId])
+}
+
+model MapMonster {
+  id            String   @id @default(uuid())
+  mapId         String
+  monsterId     String
+  spawnRate     Float    @default(1.0)
+  minLevel      Int      @default(1)
+  maxLevel      Int      @default(1)
+  maxInstances  Int      @default(10)
+  respawnTime   Int      @default(15000)
+  positionX     Float?
+  positionY     Float?
+  createdAt     DateTime @default(now())
+  map           Map      @relation(fields: [mapId], references: [id])
+  monster       Monster  @relation(fields: [monsterId], references: [id])
+  @@index([mapId])
+}
+
+model Monster {
+  id             String   @id @default(uuid())
+  name           String
+  description    String
+  imageUrl       String?
+  level          Int      @default(1)
+  isBoss         Boolean  @default(false)
+  isElite        Boolean  @default(false)
+  faction        String?
+  element        String?
+  hp             Int      @default(50)
+  mana           Int      @default(20)
+  stamina        Int      @default(50)
+  attack         Int      @default(10)
+  defense        Int      @default(5)
+  magic          Int      @default(5)
+  magicDefense   Int      @default(5)
+  speed          Int      @default(10)
+  criticalChance Float    @default(2.0)
+  criticalDamage Float    @default(150.0)
+  dodge          Float    @default(1.0)
+  accuracy       Float    @default(90.0)
+  xpReward       BigInt   @default(10)
+  goldReward     BigInt   @default(5)
+  dropTable      String?
+  attackSpeed    Int      @default(2000)
+  skills         String?
+  behavior       String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  mapMonsters    MapMonster[]
+  drops          DropItem[]
+}
+
+model DropItem {
+  id            String   @id @default(uuid())
+  monsterId     String
+  itemId        String
+  dropChance    Float    @default(1.0)
+  minQuantity   Int      @default(1)
+  maxQuantity   Int      @default(1)
+  minLevel      Int      @default(1)
+  maxLevel      Int      @default(99)
+  isGuaranteed  Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  monster       Monster  @relation(fields: [monsterId], references: [id])
+  item          Item     @relation(fields: [itemId], references: [id])
+  @@index([monsterId])
+  @@index([itemId])
+}
+
+model Npc {
+  id            String   @id @default(uuid())
+  name          String
+  description   String
+  imageUrl      String?
+  type          String
+  dialogue      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  mapNpcs       MapNpc[]
+  quests        Quest[]  @relation("QuestGiver")
+  shopItems     ShopItem[]
+}
+
+model ShopItem {
+  id            String   @id @default(uuid())
+  npcId         String
+  itemId        String
+  price         BigInt
+  currency      String   @default("gold")
+  stock         Int      @default(-1)
+  rotationDays  Int      @default(0)
+  createdAt     DateTime @default(now())
+  npc           Npc      @relation(fields: [npcId], references: [id])
+  item          Item     @relation(fields: [itemId], references: [id])
+  @@index([npcId])
+}
+
+model Quest {
+  id              String   @id @default(uuid())
+  title           String
+  description     String
+  type            String
+  difficulty      String
+  requiredLevel   Int      @default(1)
+  giverNpcId      String?
+  mapId           String?
+  isRepeatable    Boolean  @default(false)
+  cooldownType    String?
+  isActive        Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  requiredQuestIds String?
+  objectives      String   @default("[]")
+  xpReward        BigInt   @default(0)
+  goldReward      BigInt   @default(0)
+  itemRewards     String?
+  choiceRewards   String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  giverNpc        Npc?     @relation("QuestGiver", fields: [giverNpcId], references: [id])
+  map             Map?     @relation(fields: [mapId], references: [id])
+  progress        QuestProgress[]
+  @@index([type])
+  @@index([giverNpcId])
+}
+
+model QuestProgress {
+  id            String   @id @default(uuid())
+  userId        String
+  questId       String
+  status        String   @default("active")
+  progress      String   @default("{}")
+  startedAt     DateTime @default(now())
+  completedAt   DateTime?
+  claimedAt     DateTime?
+  user          User     @relation(fields: [userId], references: [id])
+  quest         Quest    @relation(fields: [questId], references: [id])
+  @@unique([userId, questId])
+  @@index([userId])
+  @@index([userId, questId, status])
+}
+
+model Guild {
+  id            String   @id @default(uuid())
+  name          String   @unique
+  tag           String   @unique
+  description   String
+  icon          String?
+  level         Int      @default(1)
+  experience    BigInt   @default(0)
+  gold          BigInt   @default(0)
+  memberCount   Int      @default(0)
+  maxMembers    Int      @default(50)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  members       GuildMember[]
+  bank          GuildBank[]
+  perks         GuildPerk[]
+  quests        GuildQuest[]
+  rank          GuildRanking?
+  @@index([name])
+  @@index([tag])
+  @@index([level])
+}
+
+model GuildMember {
+  id            String   @id @default(uuid())
+  guildId       String
+  userId        String
+  role          String   @default("member")
+  joinedAt      DateTime @default(now())
+  contribution  BigInt   @default(0)
+  guild         Guild    @relation(fields: [guildId], references: [id])
+  user          User     @relation(fields: [userId], references: [id])
+  @@unique([guildId, userId])
+  @@index([guildId])
+  @@index([userId])
+}
+
+model GuildBank {
+  id            String   @id @default(uuid())
+  guildId       String
+  gold          BigInt   @default(0)
+  items         String?
+  updatedAt     DateTime @updatedAt
+  guild         Guild    @relation(fields: [guildId], references: [id])
+  @@index([guildId])
+}
+
+model GuildPerk {
+  id            String   @id @default(uuid())
+  guildId       String
+  perkType      String
+  perkValue     Float
+  levelRequired Int      @default(1)
+  activeUntil   DateTime?
+  createdAt     DateTime @default(now())
+  guild         Guild    @relation(fields: [guildId], references: [id])
+  @@index([guildId])
+}
+
+model GuildQuest {
+  id            String   @id @default(uuid())
+  guildId       String
+  title         String
+  description   String
+  objectives    String
+  xpReward      BigInt
+  goldReward    BigInt
+  expiresAt     DateTime?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  guild         Guild    @relation(fields: [guildId], references: [id])
+  @@index([guildId])
+}
+
+model GuildRanking {
+  id            String   @id @default(uuid())
+  guildId       String   @unique
+  rank          Int      @default(0)
+  score         BigInt   @default(0)
+  updatedAt     DateTime @updatedAt
+  guild         Guild    @relation(fields: [guildId], references: [id])
+  @@index([rank])
+}
+
+model MarketListing {
+  id            String   @id @default(uuid())
+  sellerId      String
+  itemId        String
+  quantity      Int      @default(1)
+  price         BigInt
+  currency      String   @default("gold")
+  status        String   @default("active")
+  createdAt     DateTime @default(now())
+  expiresAt     DateTime?
+  seller        User     @relation(fields: [sellerId], references: [id])
+  item          Item     @relation(fields: [itemId], references: [id])
+  @@index([sellerId])
+  @@index([itemId])
+  @@index([status])
+  @@index([price])
+}
+
+model Mail {
+  id            String   @id @default(uuid())
+  senderId      String
+  receiverId    String
+  subject       String
+  body          String?
+  isRead        Boolean  @default(false)
+  hasItems      Boolean  @default(false)
+  hasGold       Boolean  @default(false)
+  goldAmount    BigInt   @default(0)
+  sentAt        DateTime @default(now())
+  expiresAt     DateTime?
+  sender        User     @relation("MailSender", fields: [senderId], references: [id])
+  receiver      User     @relation("MailReceiver", fields: [receiverId], references: [id])
+  items         MailItem[]
+  @@index([receiverId])
+  @@index([receiverId, isRead])
+}
+
+model MailItem {
+  id            String   @id @default(uuid())
+  mailId        String
+  itemId        String
+  quantity      Int      @default(1)
+  mail          Mail     @relation(fields: [mailId], references: [id])
+  item          Item     @relation(fields: [itemId], references: [id])
+  @@index([mailId])
+}
+
+model CraftRecipe {
+  id             String   @id @default(uuid())
+  name           String
+  description    String
+  resultItemId   String
+  resultQuantity Int      @default(1)
+  craftTime      Int      @default(0)
+  requiredLevel  Int      @default(1)
+  station        String?
+  materials      String
+  createdAt      DateTime @default(now())
+  resultItem     Item     @relation("CraftResult", fields: [resultItemId], references: [id])
+  @@index([resultItemId])
+}
+
+model Title {
+  id            String   @id @default(uuid())
+  name          String
+  description   String
+  requirements  String?
+  statBonuses   String?
+  isHidden      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  userTitles    UserTitle[]
+}
+
+model UserTitle {
+  id            String   @id @default(uuid())
+  userId        String
+  titleId       String
+  isActive      Boolean  @default(false)
+  unlockedAt    DateTime @default(now())
+  user          User?    @relation(fields: [userId], references: [id])
+  title         Title    @relation(fields: [titleId], references: [id])
+  @@unique([userId, titleId])
+  @@index([userId])
+}
+
+model Achievement {
+  id            String   @id @default(uuid())
+  name          String
+  description   String
+  icon          String?
+  category      String
+  requirements  String?
+  xpReward      BigInt   @default(0)
+  itemRewards   String?
+  isHidden      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  userAchievements UserAchievement[]
+}
+
+model UserAchievement {
+  id            String   @id @default(uuid())
+  userId        String
+  achievementId String
+  progress      Float    @default(0)
+  isCompleted   Boolean  @default(false)
+  completedAt   DateTime?
+  unlockedAt    DateTime @default(now())
+  user          User?        @relation(fields: [userId], references: [id])
+  achievement   Achievement  @relation(fields: [achievementId], references: [id])
+  @@unique([userId, achievementId])
+  @@index([userId])
+}
+
+model Friendship {
+  id            String   @id @default(uuid())
+  userId        String
+  friendId      String
+  status        String   @default("pending")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id])
+  @@unique([userId, friendId])
+  @@index([userId])
+  @@index([friendId])
+}
+
+model Party {
+  id            String   @id @default(uuid())
+  leaderId      String
+  name          String?
+  maxMembers    Int      @default(5)
+  isPrivate     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  disbandedAt   DateTime?
+  members       PartyMember[]
+}
+
+model PartyMember {
+  id            String   @id @default(uuid())
+  partyId       String
+  userId        String
+  joinedAt      DateTime @default(now())
+  party         Party    @relation(fields: [partyId], references: [id])
+  user          User     @relation(fields: [userId], references: [id])
+  @@unique([partyId, userId])
+  @@index([partyId])
+}
+
+model GameEvent {
+  id            String   @id @default(uuid())
+  name          String
+  description   String
+  type          String
+  startsAt      DateTime
+  endsAt        DateTime
+  rewards       String?
+  isActive      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  @@index([startsAt, endsAt])
+  @@index([isActive])
+}
+
+model Season {
+  id            String   @id @default(uuid())
+  name          String
+  description   String
+  startsAt      DateTime
+  endsAt        DateTime
+  isActive      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  passes        SeasonPass[]
+  tiers         SeasonTier[]
+}
+
+model SeasonPass {
+  id            String   @id @default(uuid())
+  seasonId      String
+  userId        String
+  isPremium     Boolean  @default(false)
+  level         Int      @default(1)
+  experience    BigInt   @default(0)
+  claimedTiers  String   @default("[]")
+  purchasedAt   DateTime @default(now())
+  season        Season   @relation(fields: [seasonId], references: [id])
+  @@unique([seasonId, userId])
+  @@index([seasonId])
+  @@index([userId])
+}
+
+model SeasonTier {
+  id            String   @id @default(uuid())
+  seasonId      String
+  level         Int
+  freeRewards   String
+  premiumRewards String
+  createdAt     DateTime @default(now())
+  season        Season   @relation(fields: [seasonId], references: [id])
+  @@index([seasonId, level])
+}
+
+model CombatLog {
+  id            String   @id @default(uuid())
+  characterId   String
+  targetId      String
+  action        String
+  value         Int
+  isCritical    Boolean  @default(false)
+  isDodged      Boolean  @default(false)
+  isBlocked     Boolean  @default(false)
+  skillId       String?
+  createdAt     DateTime @default(now())
+  @@index([characterId])
+  @@index([createdAt])
+}
+
+model ChatLog {
+  id            String   @id @default(uuid())
+  userId        String
+  channel       String
+  message       String
+  targetId      String?
+  createdAt     DateTime @default(now())
+  @@index([channel])
+  @@index([createdAt])
+}
+
+model GameLog {
+  id            String   @id @default(uuid())
+  userId        String
+  action        String
+  details       String?
+  createdAt     DateTime @default(now())
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model AnalyticsEvent {
+  id            String   @id @default(uuid())
+  eventType     String
+  userId        String?
+  sessionId     String?
+  data          String
+  createdAt     DateTime @default(now())
+  @@index([eventType])
+  @@index([createdAt])
+}

@@ -1,0 +1,26 @@
+import { Express } from "express";
+import { createAuthModule } from "./modules/auth/auth.module";
+import { createClassesModule } from "./modules/classes/classes.module";
+import { createItemsModule } from "./modules/items/items.module";
+import { createInventoryModule } from "./modules/inventory/inventory.module";
+import { createMapsModule } from "./modules/maps/maps.module";
+import { createQuestsModule } from "./modules/quests/quests.module";
+import { createGuildModule } from "./modules/guild/guild.module";
+import { createMarketModule } from "./modules/market/market.module";
+import { createNpcModule } from "./modules/npc/npc.module";
+import { createEventsModule } from "./modules/events/events.module";
+import { createAdminModule } from "./modules/admin/admin.module";
+
+export function registerModules(app: Express): void {
+  createAuthModule(app);
+  createClassesModule(app);
+  createItemsModule(app);
+  createInventoryModule(app);
+  createMapsModule(app);
+  createQuestsModule(app);
+  createGuildModule(app);
+  createMarketModule(app);
+  createNpcModule(app);
+  createEventsModule(app);
+  createAdminModule(app);
+}
