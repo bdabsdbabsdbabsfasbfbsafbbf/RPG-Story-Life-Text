@@ -94,7 +94,6 @@ export function ClassPage() {
             {[
               { label: "HP", value: gameClass.baseHp, icon: Shield, color: "text-red-400" },
               { label: "Mana", value: gameClass.baseMana, icon: Droplets, color: "text-blue-400" },
-              { label: "Stamina", value: gameClass.baseStamina, icon: Zap, color: "text-green-400" },
               { label: "Attack", value: gameClass.baseAttack, icon: Swords, color: "text-orange-400" },
               { label: "Defense", value: gameClass.baseDefense, icon: ShieldCheck, color: "text-yellow-400" },
               { label: "Magic", value: gameClass.baseMagic, icon: Star, color: "text-purple-400" },
@@ -154,7 +153,6 @@ export function ClassPage() {
                               <Clock size={11} /> {(skill.cooldown / 1000).toFixed(1)}s
                             </span>
                             <span className="text-xs text-blue-400">{skill.manaCost} MP</span>
-                            <span className="text-xs text-green-400">{skill.staminaCost} SP</span>
                             {skill.rankRequired > 1 && (
                               <span className="text-xs text-yellow-400">Rank {skill.rankRequired}</span>
                             )}
@@ -272,10 +270,6 @@ export function ClassPage() {
               <div className="bg-dark-800/50 rounded-lg p-3">
                 <p className="text-xs text-gray-500 mb-1">Mana Cost</p>
                 <p className="font-mono font-bold text-blue-400">{selectedSkill.manaCost}</p>
-              </div>
-              <div className="bg-dark-800/50 rounded-lg p-3">
-                <p className="text-xs text-gray-500 mb-1">Stamina Cost</p>
-                <p className="font-mono font-bold text-green-400">{selectedSkill.staminaCost}</p>
               </div>
               <div className="bg-dark-800/50 rounded-lg p-3">
                 <p className="text-xs text-gray-500 mb-1">Type</p>

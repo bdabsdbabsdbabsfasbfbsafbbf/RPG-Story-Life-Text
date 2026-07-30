@@ -8,8 +8,6 @@ export interface Player {
   maxHp: number;
   mana: number;
   maxMana: number;
-  stamina: number;
-  maxStamina: number;
   gold: number;
   diamonds: number;
   classId: string | null;
@@ -95,7 +93,6 @@ export type SkillTarget = 'self' | 'single_enemy' | 'all_enemies' | 'single_ally
 export interface SkillCost {
   hp?: number;
   mana?: number;
-  stamina?: number;
 }
 
 export interface SkillEffect {

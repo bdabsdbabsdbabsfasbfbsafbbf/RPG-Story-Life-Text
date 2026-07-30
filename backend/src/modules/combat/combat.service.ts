@@ -11,7 +11,6 @@ interface CombatInstance {
   state: "active" | "won" | "lost" | "fled";
   characterHp: number;
   characterMana: number;
-  characterStamina: number;
   monsterHp: number;
   startTime: number;
   lastTick: number;
@@ -74,7 +73,6 @@ export class CombatService {
       state: "active",
       characterHp: character.currentHp,
       characterMana: character.currentMana,
-      characterStamina: character.currentStamina,
       monsterHp: monster.hp,
       startTime: Date.now(),
       lastTick: Date.now(),
@@ -129,7 +127,6 @@ export class CombatService {
     }
 
     combat.characterMana -= skill.manaCost;
-    combat.characterStamina -= skill.staminaCost;
 
     let damage = skill.baseDamage;
     if (skill.damageScaling) {
@@ -188,7 +185,6 @@ export class CombatService {
         experience: { increment: xpGain },
         currentHp: 100,
         currentMana: 50,
-        currentStamina: 100,
       },
     });
 

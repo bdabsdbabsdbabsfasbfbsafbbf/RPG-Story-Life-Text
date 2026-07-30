@@ -53,7 +53,6 @@ model Character {
   rank          Int      @default(1)
   currentHp     Int      @default(100)
   currentMana   Int      @default(50)
-  currentStamina Int     @default(100)
   lastCombatAt  DateTime?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -83,7 +82,6 @@ model GameClass {
   isActive        Boolean  @default(true)
   baseHp          Int      @default(100)
   baseMana        Int      @default(50)
-  baseStamina     Int      @default(100)
   baseAttack      Int      @default(10)
   baseDefense     Int      @default(10)
   baseMagic       Int      @default(10)
@@ -134,7 +132,6 @@ model Skill {
   type            String
   cooldown        Int      @default(0)
   manaCost        Int      @default(0)
-  staminaCost     Int      @default(0)
   castTime        Int      @default(0)
   range           Int      @default(5)
   targetType      String   @default("enemy")
@@ -273,7 +270,6 @@ model CombatStats {
   characterId     String   @unique
   maxHp           Int      @default(100)
   maxMana         Int      @default(50)
-  maxStamina      Int      @default(100)
   attack          Int      @default(10)
   defense         Int      @default(10)
   magic           Int      @default(10)
@@ -371,8 +367,6 @@ model Item {
   inventory     Inventory[]
   shopItems     ShopItem[]
   dropItems     DropItem[]
-  recipes       CraftRecipe[]
-  recipeResults CraftRecipe[] @relation("CraftResult")
   mailItems     MailItem[]
   marketListings MarketListing[]
 
@@ -504,7 +498,6 @@ model Monster {
   element        String?
   hp             Int      @default(50)
   mana           Int      @default(20)
-  stamina        Int      @default(50)
   attack         Int      @default(10)
   defense        Int      @default(5)
   magic          Int      @default(5)
@@ -745,21 +738,6 @@ model MailItem {
   mail          Mail     @relation(fields: [mailId], references: [id])
   item          Item     @relation(fields: [itemId], references: [id])
   @@index([mailId])
-}
-
-model CraftRecipe {
-  id             String   @id @default(uuid())
-  name           String
-  description    String
-  resultItemId   String
-  resultQuantity Int      @default(1)
-  craftTime      Int      @default(0)
-  requiredLevel  Int      @default(1)
-  station        String?
-  materials      String
-  createdAt      DateTime @default(now())
-  resultItem     Item     @relation("CraftResult", fields: [resultItemId], references: [id])
-  @@index([resultItemId])
 }
 
 model Title {

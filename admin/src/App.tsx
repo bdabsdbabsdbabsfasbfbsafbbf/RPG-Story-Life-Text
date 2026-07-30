@@ -155,8 +155,8 @@ export default function App() {
                 <option value="dps">DPS</option><option value="assassin">Assassin</option><option value="hybrid">Hybrid</option>
               </select>
             </div>
-            <div className="grid grid-cols-4 gap-2">
-              {["baseHp", "baseMana", "baseStamina", "baseAttack"].map(f => (
+            <div className="grid grid-cols-3 gap-2">
+              {["baseHp", "baseMana", "baseAttack"].map(f => (
                 <input key={f} name={f} type="number" placeholder={f.replace("base", "")} className="w-full px-3 py-2 bg-dark-700 border border-dark-500 rounded-lg text-sm" />
               ))}
             </div>

@@ -1,7 +1,6 @@
 export interface StatBlock {
   maxHp: number;
   maxMana: number;
-  maxStamina: number;
   attack: number;
   defense: number;
   magic: number;
@@ -34,7 +33,7 @@ export interface StatBlock {
 
 export function createEmptyStats(): StatBlock {
   return {
-    maxHp: 0, maxMana: 0, maxStamina: 0,
+    maxHp: 0, maxMana: 0,
     attack: 0, defense: 0, magic: 0, magicDefense: 0,
     criticalChance: 0, criticalDamage: 0,
     armorPenetration: 0, magicPenetration: 0,

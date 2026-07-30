@@ -98,15 +98,6 @@ export function CombatPage() {
                 <div className="stat-bar-fill bg-gradient-to-r from-blue-500 to-blue-600" style={{ width: "50%" }} />
               </div>
             </div>
-            <div>
-              <div className="flex justify-between text-xs mb-1">
-                <span className="text-green-400">Stamina</span>
-                <span className="font-mono">100</span>
-              </div>
-              <div className="stat-bar">
-                <div className="stat-bar-fill bg-gradient-to-r from-green-500 to-green-600" style={{ width: "100%" }} />
-              </div>
-            </div>
           </div>
 
           {combat && combat.state === "active" && (
