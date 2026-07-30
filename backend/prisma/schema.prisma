@@ -50,7 +50,6 @@ model Character {
   classId       String
   level         Int      @default(1)
   experience    BigInt   @default(0)
-  rank          Int      @default(1)
   currentHp     Int      @default(100)
   currentMana   Int      @default(50)
   lastCombatAt  DateTime?
@@ -64,8 +63,28 @@ model Character {
   activeBuffs   ActiveBuff[]
   activeCooldowns ActiveCooldown[]
   stacks        Stack[]
+  classProgress CharacterClass[]
 
   @@index([userId])
+  @@index([classId])
+}
+
+// Tracks XP/Rank per class per character (player can level multiple classes)
+model CharacterClass {
+  id            String   @id @default(uuid())
+  characterId   String
+  classId       String
+  rank          Int      @default(1)
+  experience    BigInt   @default(0)
+  isActive      Boolean  @default(false) // currently equipped class
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  character     Character @relation(fields: [characterId], references: [id])
+  gameClass     GameClass @relation(fields: [classId], references: [id])
+
+  @@unique([characterId, classId])
+  @@index([characterId])
   @@index([classId])
 }
 
@@ -75,11 +94,20 @@ model GameClass {
   slug            String   @unique
   description     String
   lore            String?
-  element         String
-  rarity          String
-  difficulty      String
-  role            String
-  isActive        Boolean  @default(true)
+  icon            String?
+  element         String   // fire, water, earth, wind, light, dark, neutral
+  rarity          String   // common, uncommon, rare, epic, legendary, mythic
+  difficulty      String   // easy, medium, hard, expert
+  role            String   // tank, support, mage, dps, assassin, hybrid
+  statModel       String   @default("hybrid") // tank, hybrid, luckHybrid, powerCaster, physicalDPS, magicDPS, support, assassin, bruiser, battleMage
+
+  // Unlock
+  unlockMethod    String   @default("auto") // auto, quest, item, level, currency
+  unlockData      String?  // JSON: questId, itemId, requiredLevel, currencyCost
+  requiredLevel   Int      @default(1)
+  requiredQuests  String?
+
+  // Core Class Base
   baseHp          Int      @default(100)
   baseMana        Int      @default(50)
   baseAttack      Int      @default(10)
@@ -87,12 +115,23 @@ model GameClass {
   baseMagic       Int      @default(10)
   baseMagicDefense Int     @default(10)
   baseSpeed       Int      @default(10)
-  requiredLevel   Int      @default(1)
-  requiredQuests  String?
+  manaRecovery    Float    @default(5.0) // per tick
+
+  // Stat Scaling Config (JSON)
+  attackScaling   Float    @default(1.0)  // Attack -> Attack Power multiplier
+  magicScaling    Float    @default(1.0)  // Magic -> Spell Power multiplier
+  critScaling     Float    @default(0.05) // per point -> crit chance
+  critDamageBase  Float    @default(150.0)
+  dodgeScaling    Float    @default(0.02)
+  cooldownScaling Float    @default(0.0)  // per point -> CDR
+  manaEfficiency  Float    @default(1.0)  // mana cost multiplier
+
+  isActive        Boolean  @default(true)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   characters      Character[]
+  classProgress   CharacterClass[]
   skills          Skill[]
   classPassives   ClassPassive[]
   classUpgrades   ClassUpgrade[]
@@ -129,26 +168,46 @@ model Skill {
   name            String
   description     String
   icon            String?
-  type            String
-  cooldown        Int      @default(0)
+  type            String   // active, passive, ultimate
+  subType         String?  // melee, ranged, spell, heal, buff, debuff, dot, aoe, channel
+  cooldown        Int      @default(0)    // ms
   manaCost        Int      @default(0)
-  castTime        Int      @default(0)
+  castTime        Int      @default(0)    // ms
   range           Int      @default(5)
-  targetType      String   @default("enemy")
+  targetType      String   @default("enemy") // self, enemy, ally, area, all
   rankRequired    Int      @default(1)
   sortOrder       Int      @default(0)
   isActive        Boolean  @default(true)
+  unlockCondition String?  // JSON: condition to unlock (before rankRequired)
+
+  // Damage
   baseDamage      Int      @default(0)
-  damageType      String   @default("physical")
-  damageScaling   String?
+  damageType      String   @default("physical") // physical, magic, true
+  damageScaling   String?  // JSON: { "attack": 0.5, "magic": 0.3 } (scale with which stats)
+  damageStat      String?  // "attackPower", "spellPower", "both", "hp", "defense" etc.
+
+  // Healing
   healingBase     Int      @default(0)
-  healingScaling  String?
-  effects         String?
-  buffsApplied    String?
-  debuffsApplied  String?
-  stacksApplied   String?
-  stacksRequired  String?
-  animationData   String?
+  healingScaling  String?  // JSON
+
+  // Effects & Status
+  effects         String?  // JSON array of effect objects
+  buffsApplied    String?  // JSON array of buff IDs
+  debuffsApplied  String?  // JSON array of debuff IDs
+  stacksApplied   String?  // JSON: { "stackId": "bleeding", "amount": 1 }
+  stacksRequired  String?  // JSON: { "stackId": "bleeding", "amount": 5, "consume": true }
+  hitsMultiple    Boolean  @default(false)
+  maxTargets      Int      @default(1)
+
+  // Display
+  animationName   String?  // animation key
+  soundEffect     String?  // sound key
+  animationData   String?  // JSON: custom animation config
+
+  // Combo / Interaction
+  comboId         String?  // references a Combo if part of one
+  interactsWith   String?  // JSON: skill IDs this interacts with
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -268,38 +327,77 @@ model ActiveCooldown {
 model CombatStats {
   id              String   @id @default(uuid())
   characterId     String   @unique
-  maxHp           Int      @default(100)
-  maxMana         Int      @default(50)
-  attack          Int      @default(10)
-  defense         Int      @default(10)
-  magic           Int      @default(10)
-  magicDefense    Int      @default(10)
-  criticalChance  Float    @default(5.0)
-  criticalDamage  Float    @default(150.0)
-  armorPenetration Int     @default(0)
-  magicPenetration Int     @default(0)
-  lifeSteal       Float    @default(0)
-  manaSteal       Float    @default(0)
-  attackSpeed     Int      @default(1000)
-  cooldownReduction Float  @default(0)
-  dodge           Float    @default(2.0)
-  accuracy        Float    @default(95.0)
-  block           Float    @default(0)
-  healingPower    Float    @default(100.0)
-  healingReceived Float    @default(100.0)
-  luck            Float    @default(1.0)
-  dropRate        Float    @default(100.0)
-  goldBonus       Float    @default(100.0)
-  xpBonus         Float    @default(100.0)
-  bossDamage      Float    @default(100.0)
-  eliteDamage     Float    @default(100.0)
-  pvpDamage       Float    @default(100.0)
-  pveDamage       Float    @default(100.0)
-  elementalDamage Float    @default(0)
-  resistance      Float    @default(0)
-  speed           Int      @default(10)
   updatedAt       DateTime @updatedAt
   character       Character @relation(fields: [characterId], references: [id])
+
+  // ===== CORE STATS =====
+  // Weapon / Equipment Base
+  weaponDamageMin  Int      @default(0)
+  weaponDamageMax  Int      @default(0)
+  classEnchant     String?  // JSON of class enchant
+  weaponEnchant    String?
+  helmetEnchant    String?
+  capeEnchant      String?
+
+  // Class Base
+  baseHp           Int      @default(100)
+  baseMana         Int      @default(50)
+  baseAttack       Int      @default(10)
+  baseDefense      Int      @default(10)
+  baseMagic        Int      @default(10)
+  baseMagicDefense Int      @default(10)
+  baseSpeed        Int      @default(10)
+
+  // ===== MODIFIER STATS =====
+  damageBoost      Float    @default(0)   // % all damage
+  damageResistance Float    @default(0)   // % all damage reduction
+  physicalBoost    Float    @default(0)
+  magicalBoost     Float    @default(0)
+  physicalResist   Float    @default(0)
+  magicalResist    Float    @default(0)
+  healingBoost     Float    @default(0)
+  healingReceived  Float    @default(0)
+  dotBoost         Float    @default(0)
+  dotResistance    Float    @default(0)
+  armorPenetration Float    @default(0)   // % armor ignored
+  magicPenetration Float    @default(0)   // % magic defense ignored
+  trueDamage       Float    @default(0)   // flat true damage
+  lifeSteal        Float    @default(0)   // % dmg -> hp
+  manaSteal        Float    @default(0)   // % dmg -> mana
+  cooldownReduction Float  @default(0)   // %
+  haste            Float    @default(0)   // attack speed %
+  manaCostReduction Float  @default(0)   // %
+
+  // ===== COMBAT STATS =====
+  attackPower      Int      @default(10)  // Total physical power
+  spellPower       Int      @default(10)  // Total magic power
+  criticalChance   Float    @default(5.0)
+  criticalMultiplier Float  @default(150.0)
+  hitChance        Float    @default(95.0)
+  dodgeChance      Float    @default(2.0)
+  attackSpeed      Int      @default(1000) // ms between attacks
+  cooldownReductionTotal Float @default(0) // %
+  manaRegen        Float    @default(5.0)  // per tick
+  healthRegen      Float    @default(0)
+  maxHp            Int      @default(100)
+  maxMana          Int      @default(50)
+  threat           Float    @default(100.0)
+  aggro            Float    @default(100.0)
+
+  // Damage type modifiers
+  pvpDamage        Float    @default(100.0) // %
+  pveDamage        Float    @default(100.0) // %
+  bossDamage       Float    @default(100.0) // %
+  eliteDamage      Float    @default(100.0) // %
+  elementalDamage  Float    @default(0)
+  resistance       Float    @default(0)
+
+  // Utility
+  luck             Float    @default(1.0)
+  dropRate         Float    @default(100.0)
+  goldBonus        Float    @default(100.0)
+  xpBonus          Float    @default(100.0)
+  speed            Int      @default(10)
 }
 
 model Equipment {

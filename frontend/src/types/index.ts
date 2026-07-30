@@ -12,11 +12,9 @@ export interface Player {
   diamonds: number;
   classId: string | null;
   className: string;
-  rank: string;
-  rankIndex: number;
   title: string;
   experience: number;
-  stats: PlayerStats;
+  stats: CombatStatsPanel;
   equipment: EquipmentMap;
   activeQuests: string[];
   guildId: string | null;
@@ -24,82 +22,191 @@ export interface Player {
   location: string;
 }
 
-export interface PlayerStats {
-  strength: number;
-  dexterity: number;
-  intelligence: number;
-  vitality: number;
-  wisdom: number;
-  luck: number;
-  attack: number;
-  defense: number;
-  magicAttack: number;
-  magicDefense: number;
-  speed: number;
-  critRate: number;
-  critDamage: number;
-  dodgeRate: number;
-  hpRegen: number;
-  manaRegen: number;
+// ====== 3 Stat Panels ======
+export interface CoreStats {
+  weaponDamageMin: number;
+  weaponDamageMax: number;
+  classEnchant: string | null;
+  weaponEnchant: string | null;
+  helmetEnchant: string | null;
+  capeEnchant: string | null;
+  baseHp: number;
+  baseMana: number;
+  baseAttack: number;
+  baseDefense: number;
+  baseMagic: number;
+  baseMagicDefense: number;
+  baseSpeed: number;
 }
 
-export interface PlayerClass {
+export interface ModifierStats {
+  damageBoost: number;
+  damageResistance: number;
+  physicalBoost: number;
+  magicalBoost: number;
+  physicalResist: number;
+  magicalResist: number;
+  healingBoost: number;
+  healingReceived: number;
+  dotBoost: number;
+  dotResistance: number;
+  armorPenetration: number;
+  magicPenetration: number;
+  trueDamage: number;
+  lifeSteal: number;
+  manaSteal: number;
+  cooldownReduction: number;
+  haste: number;
+  manaCostReduction: number;
+}
+
+export interface CombatStatsPanel {
+  attackPower: number;
+  spellPower: number;
+  criticalChance: number;
+  criticalMultiplier: number;
+  hitChance: number;
+  dodgeChance: number;
+  attackSpeed: number;
+  cooldownReductionTotal: number;
+  manaRegen: number;
+  healthRegen: number;
+  maxHp: number;
+  maxMana: number;
+  threat: number;
+  aggro: number;
+  pvpDamage: number;
+  pveDamage: number;
+  bossDamage: number;
+  eliteDamage: number;
+  elementalDamage: number;
+  resistance: number;
+  luck: number;
+  dropRate: number;
+  goldBonus: number;
+  xpBonus: number;
+  speed: number;
+}
+
+// ====== Game Class ======
+export interface GameClass {
   id: string;
   name: string;
+  slug: string;
   description: string;
-  lore: string;
-  icon: string;
-  ranks: ClassRank[];
+  lore: string | null;
+  icon: string | null;
+  element: string;
+  rarity: string;
+  difficulty: string;
+  role: string;
+  statModel: string;
+  unlockMethod: string;
+  unlockData: string | null;
+  requiredLevel: number;
+  requiredQuests: string | null;
+  baseHp: number;
+  baseMana: number;
+  baseAttack: number;
+  baseDefense: number;
+  baseMagic: number;
+  baseMagicDefense: number;
+  baseSpeed: number;
+  manaRecovery: number;
+  attackScaling: number;
+  magicScaling: number;
+  critScaling: number;
+  critDamageBase: number;
+  dodgeScaling: number;
+  cooldownScaling: number;
+  manaEfficiency: number;
+  isActive: boolean;
   skills: Skill[];
-  baseStats: Partial<PlayerStats>;
-  requirements?: ClassRequirements;
+  classPassives: ClassPassive[];
+  classUpgrades: ClassUpgrade[];
+  masteryBonuses: MasteryBonus[];
 }
 
-export interface ClassRank {
-  index: number;
-  name: string;
-  levelRequired: number;
+export interface CharacterClass {
+  id: string;
+  characterId: string;
+  classId: string;
+  rank: number;
+  experience: number;
+  isActive: boolean;
+  gameClass: GameClass;
+}
+
+export interface ClassUpgrade {
+  id: string;
+  classId: string;
+  rankRequired: number;
   description: string;
-  statBonus: Partial<PlayerStats>;
+  statBonuses: string;
+  unlocksSkills: boolean;
 }
 
-export interface ClassRequirements {
-  level: number;
-  questId?: string;
-  itemId?: string;
+export interface MasteryBonus {
+  id: string;
+  classId: string;
+  rank: number;
+  bonusType: string;
+  bonusValue: number;
+  description: string;
+}
+
+export interface ClassPassive {
+  id: string;
+  classId: string;
+  name: string;
+  description: string;
+  icon: string | null;
+  rankRequired: number;
+  statModifiers: string | null;
+  effectType: string;
+  effectValue: number;
+  targetStat: string | null;
+  duration: number;
+  cooldown: number;
+  isPassive: boolean;
+  sortOrder: number;
 }
 
 export interface Skill {
   id: string;
+  classId: string;
   name: string;
   description: string;
-  icon: string;
-  type: SkillType;
-  target: SkillTarget;
-  rank: number;
-  levelRequired: number;
-  cost: SkillCost;
+  icon: string | null;
+  type: 'active' | 'passive' | 'ultimate';
+  subType: string | null;
   cooldown: number;
+  manaCost: number;
   castTime: number;
-  effects: SkillEffect[];
-  damageMultiplier?: number;
-  healingMultiplier?: number;
-  isUltimate?: boolean;
-}
-
-export type SkillType = 'physical' | 'magical' | 'healing' | 'buff' | 'debuff' | 'utility';
-export type SkillTarget = 'self' | 'single_enemy' | 'all_enemies' | 'single_ally' | 'all_allies';
-
-export interface SkillCost {
-  hp?: number;
-  mana?: number;
-}
-
-export interface SkillEffect {
-  type: string;
-  value: number;
-  duration?: number;
-  stat?: string;
+  range: number;
+  targetType: string;
+  rankRequired: number;
+  sortOrder: number;
+  isActive: boolean;
+  unlockCondition: string | null;
+  baseDamage: number;
+  damageType: string;
+  damageScaling: string | null;
+  damageStat: string | null;
+  healingBase: number;
+  healingScaling: string | null;
+  effects: string | null;
+  buffsApplied: string | null;
+  debuffsApplied: string | null;
+  stacksApplied: string | null;
+  stacksRequired: string | null;
+  hitsMultiple: boolean;
+  maxTargets: number;
+  animationName: string | null;
+  soundEffect: string | null;
+  animationData: string | null;
+  comboId: string | null;
+  interactsWith: string | null;
 }
 
 export interface Enemy {

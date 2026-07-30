@@ -134,9 +134,10 @@ export default function App() {
               <input name="name" placeholder="Name" className="w-full px-3 py-2 bg-dark-700 border border-dark-500 rounded-lg text-sm" required />
               <input name="slug" placeholder="Slug" className="w-full px-3 py-2 bg-dark-700 border border-dark-500 rounded-lg text-sm" required />
             </div>
-            <textarea name="description" placeholder="Description" rows={3} className="w-full px-3 py-2 bg-dark-700 border border-dark-500 rounded-lg text-sm" required />
+            <textarea name="description" placeholder="Description" rows={2} className="w-full px-3 py-2 bg-dark-700 border border-dark-500 rounded-lg text-sm" required />
             <textarea name="lore" placeholder="Lore" rows={2} className="w-full px-3 py-2 bg-dark-700 border border-dark-500 rounded-lg text-sm" />
-            <div className="grid grid-cols-2 gap-3">
+            <input name="icon" placeholder="Icon key" className="w-full px-3 py-2 bg-dark-700 border border-dark-500 rounded-lg text-sm" />
+            <div className="grid grid-cols-3 gap-2">
               <select name="element" className="w-full px-3 py-2 bg-dark-700 border border-dark-500 rounded-lg text-sm">
                 <option value="fire">Fire</option><option value="water">Water</option><option value="earth">Earth</option>
                 <option value="wind">Wind</option><option value="light">Light</option><option value="dark">Dark</option><option value="neutral">Neutral</option>
@@ -145,22 +146,79 @@ export default function App() {
                 <option value="common">Common</option><option value="uncommon">Uncommon</option><option value="rare">Rare</option>
                 <option value="epic">Epic</option><option value="legendary">Legendary</option><option value="mythic">Mythic</option>
               </select>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
               <select name="difficulty" className="w-full px-3 py-2 bg-dark-700 border border-dark-500 rounded-lg text-sm">
                 <option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option><option value="expert">Expert</option>
               </select>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
               <select name="role" className="w-full px-3 py-2 bg-dark-700 border border-dark-500 rounded-lg text-sm">
                 <option value="tank">Tank</option><option value="support">Support</option><option value="mage">Mage</option>
                 <option value="dps">DPS</option><option value="assassin">Assassin</option><option value="hybrid">Hybrid</option>
               </select>
+              <select name="statModel" className="w-full px-3 py-2 bg-dark-700 border border-dark-500 rounded-lg text-sm">
+                <option value="tank">Tank</option><option value="hybrid">Hybrid</option><option value="luckHybrid">Luck Hybrid</option>
+                <option value="powerCaster">Power Caster</option><option value="physicalDPS">Physical DPS</option>
+                <option value="magicDPS">Magic DPS</option><option value="support">Support</option>
+                <option value="assassin">Assassin</option><option value="bruiser">Bruiser</option><option value="battleMage">Battle Mage</option>
+              </select>
             </div>
-            <div className="grid grid-cols-3 gap-2">
-              {["baseHp", "baseMana", "baseAttack"].map(f => (
-                <input key={f} name={f} type="number" placeholder={f.replace("base", "")} className="w-full px-3 py-2 bg-dark-700 border border-dark-500 rounded-lg text-sm" />
+            <div className="grid grid-cols-2 gap-2">
+              <select name="unlockMethod" className="w-full px-3 py-2 bg-dark-700 border border-dark-500 rounded-lg text-sm">
+                <option value="auto">Auto</option><option value="quest">Quest</option><option value="item">Item</option>
+                <option value="level">Level</option><option value="currency">Currency</option>
+              </select>
+              <input name="requiredLevel" type="number" placeholder="Required Level" defaultValue="1" className="w-full px-3 py-2 bg-dark-700 border border-dark-500 rounded-lg text-sm" />
+            </div>
+            <p className="text-xs text-gray-500 font-semibold mt-2">Core Base Stats</p>
+            <div className="grid grid-cols-4 gap-2">
+              {["baseHp", "baseMana", "baseAttack", "baseDefense", "baseMagic", "baseMagicDefense", "baseSpeed", "manaRecovery"].map(f => (
+                <input key={f} name={f} type="number" placeholder={f.replace("base", "")} defaultValue={f === "manaRecovery" ? "5" : "10"} step={f === "manaRecovery" ? "0.1" : "1"} className="w-full px-2 py-1.5 bg-dark-700 border border-dark-500 rounded-lg text-xs" />
+              ))}
+            </div>
+            <p className="text-xs text-gray-500 font-semibold mt-2">Scaling Config</p>
+            <div className="grid grid-cols-4 gap-2">
+              {["attackScaling", "magicScaling", "critScaling", "critDamageBase", "dodgeScaling", "cooldownScaling", "manaEfficiency"].map(f => (
+                <input key={f} name={f} type="number" placeholder={f} defaultValue="1" step="0.01" className="w-full px-2 py-1.5 bg-dark-700 border border-dark-500 rounded-lg text-xs" />
               ))}
             </div>
             <button type="submit" className="w-full py-2 bg-purple-600 hover:bg-purple-500 rounded-lg font-medium">Create Class</button>
+          </form>
+        </EditorModal>
+      );
+    }
+
+    if (!editItem && activeTab === "skills") {
+      return (
+        <EditorModal title="Create Skill" onClose={() => setEditItem(null)}>
+          <form onSubmit={(e) => { e.preventDefault(); const fd = new FormData(e.currentTarget); handleSave("skills", Object.fromEntries(fd)); }} className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <input name="name" placeholder="Skill Name" className="w-full px-3 py-2 bg-dark-700 border border-dark-500 rounded-lg text-sm" required />
+              <input name="classId" placeholder="Class ID" className="w-full px-3 py-2 bg-dark-700 border border-dark-500 rounded-lg text-sm" required />
+            </div>
+            <textarea name="description" placeholder="Description" rows={2} className="w-full px-3 py-2 bg-dark-700 border border-dark-500 rounded-lg text-sm" required />
+            <div className="grid grid-cols-3 gap-2">
+              <select name="type" className="w-full px-3 py-2 bg-dark-700 border border-dark-500 rounded-lg text-sm">
+                <option value="active">Active</option><option value="passive">Passive</option><option value="ultimate">Ultimate</option>
+              </select>
+              <input name="subType" placeholder="Sub Type (melee/spell/buff)" className="w-full px-3 py-2 bg-dark-700 border border-dark-500 rounded-lg text-sm" />
+              <select name="targetType" className="w-full px-3 py-2 bg-dark-700 border border-dark-500 rounded-lg text-sm">
+                <option value="self">Self</option><option value="enemy">Enemy</option><option value="ally">Ally</option><option value="area">Area</option>
+              </select>
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              <input name="cooldown" type="number" placeholder="Cooldown (ms)" defaultValue="0" className="w-full px-2 py-1.5 bg-dark-700 border border-dark-500 rounded-lg text-xs" />
+              <input name="manaCost" type="number" placeholder="Mana Cost" defaultValue="0" className="w-full px-2 py-1.5 bg-dark-700 border border-dark-500 rounded-lg text-xs" />
+              <input name="castTime" type="number" placeholder="Cast Time (ms)" defaultValue="0" className="w-full px-2 py-1.5 bg-dark-700 border border-dark-500 rounded-lg text-xs" />
+              <input name="range" type="number" placeholder="Range" defaultValue="5" className="w-full px-2 py-1.5 bg-dark-700 border border-dark-500 rounded-lg text-xs" />
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <input name="baseDamage" type="number" placeholder="Base Damage" defaultValue="0" className="w-full px-2 py-1.5 bg-dark-700 border border-dark-500 rounded-lg text-xs" />
+              <select name="damageType" className="w-full px-2 py-1.5 bg-dark-700 border border-dark-500 rounded-lg text-xs">
+                <option value="physical">Physical</option><option value="magic">Magic</option><option value="true">True</option>
+              </select>
+              <input name="rankRequired" type="number" placeholder="Rank Required" defaultValue="1" className="w-full px-2 py-1.5 bg-dark-700 border border-dark-500 rounded-lg text-xs" />
+            </div>
+            <button type="submit" className="w-full py-2 bg-purple-600 hover:bg-purple-500 rounded-lg font-medium">Create Skill</button>
           </form>
         </EditorModal>
       );
@@ -226,7 +284,7 @@ export default function App() {
                 <button onClick={() => setEditItem({})} className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 rounded-lg text-sm">+ New</button>
               </div>
               <DataTable
-                columns={[{ key: "name", label: "Name" }, { key: "role", label: "Role" }, { key: "rarity", label: "Rarity" }, { key: "element", label: "Element" }, { key: "baseHp", label: "Base HP" }]}
+                columns={[{ key: "name", label: "Name" }, { key: "role", label: "Role" }, { key: "statModel", label: "Stat Model" }, { key: "rarity", label: "Rarity" }, { key: "element", label: "Element" }, { key: "baseHp", label: "HP" }]}
                 data={data.classes || []}
                 onEdit={(item) => setEditItem(item)}
                 onDelete={(id) => handleDelete("classes", id)}
@@ -277,6 +335,22 @@ export default function App() {
                 onEdit={(item) => setEditItem(item)}
                 onDelete={(id) => handleDelete("maps", id)}
               />
+            </div>
+          )}
+
+          {!loading && activeTab === "skills" && (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h2 className="text-lg font-bold">Skills</h2>
+                <button onClick={() => setEditItem({})} className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 rounded-lg text-sm">+ New</button>
+              </div>
+              <DataTable
+                columns={[{ key: "name", label: "Name" }, { key: "type", label: "Type" }, { key: "subType", label: "SubType" }, { key: "rankRequired", label: "Rank" }, { key: "baseDamage", label: "DMG" }, { key: "manaCost", label: "MP" }]}
+                data={data.skills || []}
+                onEdit={(item) => setEditItem(item)}
+                onDelete={(id) => handleDelete("skills", id)}
+              />
+              {editItem && renderEditor()}
             </div>
           )}
 

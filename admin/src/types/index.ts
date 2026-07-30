@@ -68,39 +68,69 @@ export interface Item {
 export interface GameClass {
   id?: string;
   name: string;
+  slug: string;
   description: string;
-  lore: string;
+  lore?: string;
+  icon?: string;
   element: string;
-  difficulty: number;
-  role: 'tank' | 'dps' | 'mage' | 'support' | 'assassin' | 'hybrid';
-  baseStats: Record<string, number>;
-  statGrowth: Record<string, number>;
-  skillsPerRank: Record<number, string[]>;
-  requirements: Record<string, string>;
+  rarity: string;
+  difficulty: string;
+  role: string;
+  statModel: string;
+  unlockMethod: string;
+  unlockData?: string;
+  requiredLevel: number;
+  requiredQuests?: string;
+  baseHp: number;
+  baseMana: number;
+  baseAttack: number;
+  baseDefense: number;
+  baseMagic: number;
+  baseMagicDefense: number;
+  baseSpeed: number;
+  manaRecovery: number;
+  attackScaling: number;
+  magicScaling: number;
+  critScaling: number;
+  critDamageBase: number;
+  dodgeScaling: number;
+  cooldownScaling: number;
+  manaEfficiency: number;
+  isActive: boolean;
 }
 
 export interface Skill {
   id?: string;
   name: string;
   description: string;
+  icon?: string;
   type: 'active' | 'passive' | 'ultimate';
-  cooldownSeconds: number;
+  subType?: string;
+  cooldown: number;
   manaCost: number;
-  staminaCost: number;
   castTime: number;
   range: number;
-  targetType: 'self' | 'enemy' | 'ally' | 'aoe';
-  damageFormula: string;
-  buffApplication: string[];
-  debuffApplication: string[];
-  stackInteraction: {
-    generateStacks: number;
-    consumeStacks: number;
-    effectsAtMaxStacks: string[];
-  };
-  rankUnlock: number;
-  icon: string;
-  animationType: string;
+  targetType: string;
+  rankRequired: number;
+  sortOrder: number;
+  isActive: boolean;
+  unlockCondition?: string;
+  baseDamage: number;
+  damageType: string;
+  damageScaling?: string;
+  damageStat?: string;
+  healingBase: number;
+  healingScaling?: string;
+  effects?: string;
+  buffsApplied?: string;
+  debuffsApplied?: string;
+  stacksApplied?: string;
+  stacksRequired?: string;
+  hitsMultiple: boolean;
+  maxTargets: number;
+  animationName?: string;
+  soundEffect?: string;
+  animationData?: string;
 }
 
 export interface Monster {
