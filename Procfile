@@ -1,1 +1,1 @@
-web: cd backend && npx prisma migrate deploy && npm run start
+web: cd backend && node dist/server.js
