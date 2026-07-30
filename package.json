@@ -13,7 +13,7 @@
     "dev:backend": "cd backend && npm run dev",
     "dev:frontend": "cd frontend && npm run dev",
     "build": "cd backend && npm ci && npx prisma generate && npm run build",
-    "start": "cd backend && if (Test-Path node_modules) { node dist/server.js } else { npm ci && npx prisma generate && npm run build && node dist/server.js }",
+    "start": "cd backend && node dist/server.js",
     "postinstall": "cd backend && npm install && cd ../frontend && npm install && cd ../admin && npm install",
     "migrate": "cd backend && npx prisma migrate deploy",
     "seed": "cd backend && npx tsx database/seeds/index.ts",
