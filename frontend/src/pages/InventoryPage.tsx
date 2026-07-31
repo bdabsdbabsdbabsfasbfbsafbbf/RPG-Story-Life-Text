@@ -144,7 +144,7 @@ export function InventoryPage() {
               <div className="bg-dark-800/50 rounded-lg p-3 mb-4">
                 <p className="text-xs text-gray-500 mb-2">Stats</p>
                 <div className="grid grid-cols-2 gap-1 text-sm">
-                  {Object.entries(JSON.parse(selectedItem.item.stats)).map(([key, val]) => (
+                  {Object.entries(JSON.parse(selectedItem.item.stats) as Record<string, number>).map(([key, val]) => (
                     <div key={key} className="flex items-center justify-between">
                       <span className="text-gray-400 capitalize">{key.replace(/([A-Z])/g, " $1")}</span>
                       <span className="font-mono text-green-400">+{val}</span>

@@ -27,10 +27,10 @@ export function CombatPage() {
 
     socket.on("combat:skillUsed", (data: CombatUpdate) => {
       setCombat(data);
-      const log = [];
+      const log: string[] = [];
       if (data.isCritical) log.push("Critical hit!");
       if (data.isDodged) log.push("Attack dodged!");
-      if (data.damage > 0) log.push(`Dealt ${data.damage} damage`);
+      if ((data.damage ?? 0) > 0) log.push(`Dealt ${data.damage} damage`);
       setCombatLog(prev => [...prev.slice(-19), ...log]);
     });
 

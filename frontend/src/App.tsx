@@ -1,16 +1,16 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
-import GameLayout from './components/layout/GameLayout';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import DashboardPage from './pages/DashboardPage';
-import MapPage from './pages/MapPage';
-import InventoryPage from './pages/InventoryPage';
-import ClassPage from './pages/ClassPage';
-import QuestPage from './pages/QuestPage';
-import GuildPage from './pages/GuildPage';
-import MarketPage from './pages/MarketPage';
-import CombatPage from './pages/CombatPage';
+import { GameLayout } from './components/layout/GameLayout';
+import { LoginPage } from './pages/LoginPage';
+import { RegisterPage } from './pages/RegisterPage';
+import { DashboardPage } from './pages/DashboardPage';
+import { MapPage } from './pages/MapPage';
+import { InventoryPage } from './pages/InventoryPage';
+import { ClassPage } from './pages/ClassPage';
+import { QuestPage } from './pages/QuestPage';
+import { GuildPage } from './pages/GuildPage';
+import { MarketPage } from './pages/MarketPage';
+import { CombatPage } from './pages/CombatPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const accessToken = useAuthStore((s) => s.accessToken);

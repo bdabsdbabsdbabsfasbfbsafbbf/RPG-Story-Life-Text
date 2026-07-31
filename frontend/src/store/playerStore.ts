@@ -1,11 +1,11 @@
 import { create } from 'zustand';
-import type { Player, PlayerStats } from '@/types';
+import type { Player, CombatStatsPanel } from '@/types';
 
 interface PlayerStore {
   player: Player | null;
   setPlayer: (player: Player) => void;
-  updateStats: (stats: Partial<PlayerStats>) => void;
-  updateResource: (resource: 'hp' | 'mana' | 'stamina', value: number) => void;
+  updateStats: (stats: Partial<CombatStatsPanel>) => void;
+  updateResource: (resource: 'hp' | 'mana', value: number) => void;
   addXp: (amount: number) => void;
   addGold: (amount: number) => void;
   addDiamonds: (amount: number) => void;

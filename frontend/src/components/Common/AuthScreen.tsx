@@ -5,12 +5,7 @@ export default function AuthScreen() {
   const login = useAuthStore((s) => s.login);
 
   const handleQuickLogin = () => {
-    login('mock-token', {
-      id: '1',
-      username: 'ShadowMaster',
-      avatar: '',
-      role: 'player',
-    });
+    void login('guest', 'guest123');
   };
 
   return (

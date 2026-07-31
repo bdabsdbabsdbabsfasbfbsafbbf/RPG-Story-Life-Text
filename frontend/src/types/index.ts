@@ -285,23 +285,25 @@ export interface CombatLogEntry {
 
 export interface InventoryItem {
   id: string;
+  characterId?: string;
   itemId: string;
+  quantity: number;
+  isEquipped: boolean;
+  item: Item;
+}
+
+export interface Item {
+  id: string;
   name: string;
   type: ItemType;
   rarity: Rarity;
-  icon: string;
-  quantity: number;
-  stackable: boolean;
   level: number;
   description: string;
-  stats?: string;
+  stats?: string | null;
   sellPrice: number;
   buyPrice: number;
-  isEquipped: boolean;
-  requirements?: ItemRequirements;
-  durability?: number;
-  maxDurability?: number;
-  enchantLevel?: number;
+  stackable: boolean;
+  icon?: string | null;
 }
 
 export type ItemType =
@@ -479,7 +481,7 @@ export interface MarketListing {
   sellerId?: string;
   sellerName?: string;
   seller?: { id?: string; username?: string; displayName?: string };
-  item: InventoryItem;
+  item: Item;
   quantity?: number;
   price?: number;
   pricePerUnit?: number;
@@ -526,6 +528,15 @@ export interface Character {
   className?: string;
   experience?: number;
   xpToNext?: number;
+  experienceToNext?: number;
+  currentHp?: number;
+  maxHp?: number;
+  currentMana?: number;
+  maxMana?: number;
+  currentStamina?: number;
+  maxStamina?: number;
+  gold?: number;
+  diamonds?: number;
 }
 
 export interface Map {

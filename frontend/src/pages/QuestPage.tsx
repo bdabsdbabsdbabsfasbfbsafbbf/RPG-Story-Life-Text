@@ -11,7 +11,7 @@ export function QuestPage() {
   const [filter, setFilter] = useState<string>("all");
 
   useEffect(() => {
-    Promise.all([questsApi.list(), questsApi.progress().catch(() => [])])
+    Promise.all([questsApi.list(), questsApi.progress().catch(() => ({ data: [] }))])
       .then(([q, p]) => {
         setQuests(q.data);
         setProgress(p.data || []);

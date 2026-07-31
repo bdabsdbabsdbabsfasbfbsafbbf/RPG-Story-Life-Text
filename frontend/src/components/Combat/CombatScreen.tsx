@@ -22,7 +22,7 @@ const mockSkills: Skill[] = [
 ];
 
 export default function CombatScreen() {
-  const { combat, character } = useGameStore();
+  useGameStore();
   const [cooldowns, setCooldowns] = useState<Record<string, number>>({});
   const [combatLog, setCombatLog] = useState<Array<{ text: string; type: string; id: number }>>([]);
 

@@ -2,19 +2,19 @@ import { useGameStore } from '../../store/gameStore';
 import styles from './StatusBar.module.css';
 
 export default function StatusBar() {
-  const { character, currentMap, currentLocation } = useGameStore();
+  const { selectedCharacter, currentMap } = useGameStore();
 
-  if (!character) return null;
+  if (!selectedCharacter) return null;
 
-  const hpPercent = (character.currentHp / character.maxHp) * 100;
-  const manaPercent = (character.currentMana / character.maxMana) * 100;
-  const staminaPercent = (character.currentStamina / character.maxStamina) * 100;
-  const xpPercent = (character.experience / character.experienceToNext) * 100;
+  const hpPercent = ((selectedCharacter.currentHp || 0) / (selectedCharacter.maxHp || 1)) * 100;
+  const manaPercent = ((selectedCharacter.currentMana || 0) / (selectedCharacter.maxMana || 1)) * 100;
+  const staminaPercent = ((selectedCharacter.currentStamina || 0) / (selectedCharacter.maxStamina || 1)) * 100;
+  const xpPercent = ((selectedCharacter.experience || 0) / (selectedCharacter.experienceToNext || 1)) * 100;
 
   return (
     <div className={styles.statusBar}>
       <div className={styles.playerInfo}>
-        <div className={styles.level}>Lv.{character.level}</div>
+        <div className={styles.level}>Lv.{selectedCharacter.level}</div>
         <div className={styles.bars}>
           <div className={styles.barRow}>
             <div className={styles.barLabel}>HP</div>
@@ -25,7 +25,7 @@ export default function StatusBar() {
               />
             </div>
             <span className={styles.barText}>
-              {character.currentHp}/{character.maxHp}
+              {selectedCharacter.currentHp}/{selectedCharacter.maxHp}
             </span>
           </div>
           <div className={styles.barRow}>
@@ -37,7 +37,7 @@ export default function StatusBar() {
               />
             </div>
             <span className={styles.barText}>
-              {character.currentMana}/{character.maxMana}
+              {selectedCharacter.currentMana}/{selectedCharacter.maxMana}
             </span>
           </div>
           <div className={styles.barRow}>
@@ -49,7 +49,7 @@ export default function StatusBar() {
               />
             </div>
             <span className={styles.barText}>
-              {character.currentStamina}/{character.maxStamina}
+              {selectedCharacter.currentStamina}/{selectedCharacter.maxStamina}
             </span>
           </div>
           <div className={styles.barRow}>
@@ -61,23 +61,23 @@ export default function StatusBar() {
               />
             </div>
             <span className={styles.barText}>
-              {character.experience}/{character.experienceToNext}
+              {selectedCharacter.experience}/{selectedCharacter.experienceToNext}
             </span>
           </div>
         </div>
       </div>
       <div className={styles.locationInfo}>
-        <div className={styles.mapName}>{currentMap}</div>
-        <div className={styles.locationName}>{currentLocation}</div>
+        <div className={styles.mapName}>{currentMap?.name}</div>
+        <div className={styles.locationName}>{currentMap?.region}</div>
       </div>
       <div className={styles.currency}>
         <div className={styles.gold}>
           <span className={styles.currencyIcon}>G</span>
-          {character.gold.toLocaleString()}
+          {(selectedCharacter.gold || 0).toLocaleString()}
         </div>
         <div className={styles.diamonds}>
           <span className={styles.currencyIcon}>D</span>
-          {character.diamonds.toLocaleString()}
+          {(selectedCharacter.diamonds || 0).toLocaleString()}
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { authApi } from '../services/api';
+import type { Character } from '../types';
 
 export interface AuthUser {
   id: string;
@@ -15,6 +16,7 @@ export interface AuthUser {
   experience?: number;
   isOnline?: boolean;
   createdAt?: string;
+  characters?: Character[];
 }
 
 interface AuthStore {

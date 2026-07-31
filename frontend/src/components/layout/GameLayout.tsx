@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Outlet } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
 import { connectSocket, disconnectSocket } from "../../services/socket";
 import { Sidebar } from "./Sidebar";
@@ -7,7 +8,7 @@ import { ChatPanel } from "./ChatPanel";
 import { CombatHUD } from "../Combat/CombatHUD";
 import { useGameStore } from "../../store/gameStore";
 
-export function GameLayout({ children }: { children: React.ReactNode }) {
+export function GameLayout() {
   const { user, logout, accessToken } = useAuthStore();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [chatOpen, setChatOpen] = useState(true);
@@ -33,7 +34,7 @@ export function GameLayout({ children }: { children: React.ReactNode }) {
         <Sidebar isOpen={sidebarOpen} />
 
         <main className="flex-1 overflow-y-auto p-4 md:p-6">
-          {children}
+          <Outlet />
         </main>
 
         {chatOpen && <ChatPanel />}

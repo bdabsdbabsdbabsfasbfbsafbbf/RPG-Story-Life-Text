@@ -50,7 +50,7 @@ export function MarketPage() {
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm truncate">{listing.item.name}</p>
                 <p className="text-xs text-gray-500 capitalize">{listing.item.rarity} • {listing.item.type}</p>
-                <p className="text-xs text-gray-500">Seller: {listing.seller.displayName}</p>
+                <p className="text-xs text-gray-500">Seller: {listing.seller?.displayName ?? "Unknown"}</p>
               </div>
             </div>
             <div className="flex items-center justify-between">

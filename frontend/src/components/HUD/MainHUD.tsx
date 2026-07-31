@@ -11,7 +11,7 @@ const mockMaps = [
 ];
 
 export default function MainHUD() {
-  const { character } = useGameStore();
+  useGameStore();
 
   return (
     <div className={styles.container}>

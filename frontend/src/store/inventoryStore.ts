@@ -41,7 +41,7 @@ export const useInventoryStore = create<InventoryStore>((set) => ({
   addItem: (item) =>
     set((state) => {
       if (state.items.length >= state.maxSlots) return state;
-      const existing = item.stackable ? state.items.find((i) => i.itemId === item.itemId) : undefined;
+      const existing = item.item.stackable ? state.items.find((i) => i.itemId === item.itemId) : undefined;
       if (existing) {
         return {
           items: state.items.map((i) =>
