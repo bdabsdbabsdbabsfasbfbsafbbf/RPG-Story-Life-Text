@@ -1,0 +1,111 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #0a0a0f;
+  color: #e2e8f0;
+  overflow-x: hidden;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #13131a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2a2a3a;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6366f1;
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-4 py-2 bg-accent-gradient text-white font-semibold rounded-lg
+      transition-all duration-200 hover:shadow-lg hover:shadow-indigo-500/25
+      active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-ghost {
+    @apply px-4 py-2 text-rpg-text-dim border border-rpg-border rounded-lg
+      transition-all duration-200 hover:bg-rpg-surface2 hover:text-rpg-text;
+  }
+
+  .card {
+    @apply bg-rpg-surface border border-rpg-border rounded-xl p-4
+      transition-all duration-200 hover:border-rpg-accent/30;
+  }
+
+  .card-glow {
+    @apply card hover:shadow-lg hover:shadow-indigo-500/10;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-2 bg-rpg-surface2 border border-rpg-border rounded-lg
+      text-rpg-text placeholder-rpg-text-dim
+      focus:outline-none focus:border-rpg-accent focus:ring-1 focus:ring-rpg-accent
+      transition-all duration-200;
+  }
+
+  .progress-bar {
+    @apply h-2 rounded-full bg-rpg-surface2 overflow-hidden;
+  }
+
+  .progress-fill {
+    @apply h-full rounded-full transition-all duration-500 ease-out;
+  }
+
+  .stat-label {
+    @apply text-xs text-rpg-text-dim uppercase tracking-wider font-medium;
+  }
+
+  .stat-value {
+    @apply text-sm font-semibold text-rpg-text;
+  }
+
+  .hud-panel {
+    @apply bg-rpg-surface/90 backdrop-blur-sm border border-rpg-border rounded-2xl p-4;
+  }
+
+  .skill-button {
+    @apply relative w-full p-3 rounded-xl border border-rpg-border bg-rpg-surface2
+      transition-all duration-200 hover:border-rpg-accent hover:bg-rpg-surface2/80
+      active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
+  .tooltip {
+    @apply absolute z-50 px-3 py-2 text-sm bg-rpg-surface2 border border-rpg-border
+      rounded-lg shadow-xl pointer-events-none;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-accent-gradient;
+  }
+
+  .text-gold {
+    @apply bg-clip-text text-transparent bg-gold-gradient;
+  }
+
+  .glow-border {
+    box-shadow: 0 0 10px rgba(99, 102, 241, 0.3);
+  }
+}
