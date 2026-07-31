@@ -75,7 +75,7 @@ function NavItemComponent({ item, depth = 0 }: { item: NavItem; depth?: number }
           <span className="flex-1 text-left text-sm font-medium">{item.label}</span>
           {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         </button>
-        {open && (
+        {open && item.children && (
           <div className="ml-4 mt-1 space-y-0.5">
             {item.children.map((child) => (
               <NavItemComponent key={child.to} item={child} depth={depth + 1} />
