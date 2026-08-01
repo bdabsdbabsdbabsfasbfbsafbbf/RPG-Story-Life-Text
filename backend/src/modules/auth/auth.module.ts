@@ -144,7 +144,7 @@ export function createAuthModule(app: Express): void {
           characters: {
             select: {
               id: true, name: true, level: true, classId: true,
-              class: { select: { name: true, slug: true } },
+              class: { select: { name: true, slug: true, baseHp: true, baseMana: true } },
               race: { select: { name: true } },
               trait: { select: { name: true } },
             },
@@ -178,7 +178,7 @@ export function createAuthModule(app: Express): void {
           characters: {
             select: {
               id: true, name: true, level: true, classId: true,
-              class: { select: { name: true, slug: true } },
+              class: { select: { name: true, slug: true, baseHp: true, baseMana: true } },
               race: { select: { name: true } },
               trait: { select: { name: true } },
             },

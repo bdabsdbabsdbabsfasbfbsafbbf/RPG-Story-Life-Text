@@ -21,8 +21,8 @@ export function CombatPage() {
 
   const socket = getSocket();
 
-  const maxHp = combat?.maxHp ?? 100;
-  const maxMana = combat?.maxMana ?? 50;
+  const maxHp = combat?.maxHp ?? selectedCharacter?.class?.baseHp ?? 100;
+  const maxMana = combat?.maxMana ?? selectedCharacter?.class?.baseMana ?? 50;
   const monsterMaxHp = combat?.monsterMaxHp ?? 100;
 
   const characterHpPercent = combat ? Math.min(100, (combat.characterHp / maxHp) * 100) : 100;
@@ -41,6 +41,30 @@ export function CombatPage() {
     if (monsterId) {
       monstersApi.get(monsterId).then(({ data }) => setMonsterInfo({ name: data.name, level: data.level })).catch(() => {});
     }
+  }, [monsterId]);
+
+  useEffect(() => {
+    if (!monsterId) return;
+    let started = false;
+    const start = (s: any) => {
+      if (started || !s?.connected) return;
+      started = true;
+      s.emit("combat:start", { monsterId });
+    };
+    const interval = setInterval(() => {
+      const s = getSocket();
+      if (!s) return;
+      if (s.connected) {
+        clearInterval(interval);
+        start(s);
+        return;
+      }
+      s.once("connect", () => {
+        clearInterval(interval);
+        start(s);
+      });
+    }, 300);
+    return () => clearInterval(interval);
   }, [monsterId]);
 
   useEffect(() => {
@@ -96,10 +120,11 @@ export function CombatPage() {
   }, [socket]);
 
   const startCombat = () => {
-    if (!socket || !monsterId) return;
+    const s = getSocket();
+    if (!s || !monsterId) return;
     setLoading(true);
     setCombatLog([]);
-    socket.emit("combat:start", { monsterId });
+    s.emit("combat:start", { monsterId });
   };
 
   const useSkill = (skillId: string) => {
@@ -131,7 +156,12 @@ export function CombatPage() {
             </div>
             <div>
               <h2 className="font-display font-bold">{combat?.characterName || selectedCharacter?.name || user?.displayName || "Player"}</h2>
-              <p className="text-xs text-gray-400">Level {combat?.characterLevel || selectedCharacter?.level || user?.level || 1}</p>
+              <p className="text-xs text-gray-400">
+                Level {combat?.characterLevel || selectedCharacter?.level || user?.level || 1}
+                {selectedCharacter?.class?.name && <> • {selectedCharacter.class.name}</>}
+                {selectedCharacter?.race?.name && <> • {selectedCharacter.race.name}</>}
+                {selectedCharacter?.trait?.name && <> • Trait: {selectedCharacter.trait.name}</>}
+              </p>
             </div>
           </div>
 

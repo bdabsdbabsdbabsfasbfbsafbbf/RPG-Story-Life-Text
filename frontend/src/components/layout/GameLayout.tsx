@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
-import { connectSocket, disconnectSocket } from "../../services/socket";
+import { connectSocket, disconnectSocket, getSocket } from "../../services/socket";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { ChatPanel } from "./ChatPanel";
@@ -13,12 +13,29 @@ export function GameLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [chatOpen, setChatOpen] = useState(true);
   const combat = useGameStore((s) => s.combat);
+  const setCharacter = useGameStore((s) => s.setCharacter);
 
   useEffect(() => {
     if (!accessToken) return;
     connectSocket(accessToken);
     return () => disconnectSocket();
   }, [accessToken]);
+
+  useEffect(() => {
+    const first = user?.characters?.[0];
+    if (!first?.id) return;
+    setCharacter(first);
+    const socket = getSocket();
+    const select = () => socket?.emit("character:select", first.id);
+    if (socket?.connected) {
+      select();
+    } else {
+      socket?.once("connect", select);
+    }
+    return () => {
+      socket?.off("connect", select);
+    };
+  }, [user?.characters, setCharacter]);
 
   return (
     <div className="h-screen flex flex-col bg-dark-950 overflow-hidden">
