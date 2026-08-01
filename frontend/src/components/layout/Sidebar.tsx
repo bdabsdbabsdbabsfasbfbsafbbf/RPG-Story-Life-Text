@@ -10,8 +10,8 @@ interface SidebarProps {
 
 const navItems = [
   { to: "/", icon: LayoutDashboard, label: "Dashboard" },
-  { to: "/map/battleon", icon: Map, label: "Map" },
-  { to: "/class/shadowstalker", icon: Sword, label: "Classes" },
+  { to: "/map", icon: Map, label: "Map" },
+  { to: "/classes", icon: Sword, label: "Classes" },
   { to: "/inventory", icon: Backpack, label: "Inventory" },
   { to: "/quests", icon: ScrollText, label: "Quests" },
   { to: "/guild", icon: Users, label: "Guild" },

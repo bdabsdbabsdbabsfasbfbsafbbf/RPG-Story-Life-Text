@@ -1,8 +1,15 @@
 import { Server as SocketIOServer, Socket } from "socket.io";
 import jwt from "jsonwebtoken";
 import { config } from "../core/config";
+import { PrismaClient } from "@prisma/client";
 import { CombatService } from "../modules/combat/combat.service";
 import { CooldownManager } from "../modules/combat/cooldown.manager";
+
+const prisma = new PrismaClient();
+
+function sanitize(value: any): any {
+  return JSON.parse(JSON.stringify(value, (_k, v) => (typeof v === "bigint" ? Number(v) : v)));
+}
 
 interface AuthenticatedSocket extends Socket {
   userId?: string;
@@ -20,7 +27,7 @@ export function createGateway(
   cooldownManager: CooldownManager
 ): void {
   combatService.setOnTick((payload) => {
-    io.to(`character:${payload.characterId}`).emit("combat:tick", payload);
+    io.to(`character:${payload.characterId}`).emit("combat:tick", sanitize(payload));
   });
 
   io.use((socket: AuthenticatedSocket, next) => {
@@ -121,10 +128,20 @@ export function createGateway(
     });
 
     socket.on("combat:start", async (data: { monsterId: string }) => {
-      if (!socket.currentCharacterId) return;
       try {
+        if (!socket.currentCharacterId) {
+          const character = await prisma.character.findFirst({
+            where: { userId: socket.userId! },
+            orderBy: { createdAt: "asc" },
+          });
+          if (!character) {
+            return socket.emit("combat:error", { message: "Você precisa criar um personagem para lutar." });
+          }
+          socket.currentCharacterId = character.id;
+          socket.join(`character:${character.id}`);
+        }
         const result = await combatService.startCombat(socket.currentCharacterId, data.monsterId);
-        socket.emit("combat:started", result);
+        socket.emit("combat:started", sanitize(result));
       } catch (err: any) {
         socket.emit("combat:error", { message: err.message });
       }
@@ -134,8 +151,8 @@ export function createGateway(
       if (!socket.currentCharacterId) return;
       try {
         const result = await combatService.useSkill(socket.currentCharacterId, data.combatId, data.skillId);
-        socket.emit("combat:skillUsed", result);
-        socket.to(`combat:${data.combatId}`).emit("combat:update", result);
+        socket.emit("combat:skillUsed", sanitize(result));
+        socket.to(`combat:${data.combatId}`).emit("combat:update", sanitize(result));
       } catch (err: any) {
         socket.emit("combat:error", { message: err.message });
       }

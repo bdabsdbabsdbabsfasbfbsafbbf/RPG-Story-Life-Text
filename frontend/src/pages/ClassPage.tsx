@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { classesApi } from "../services/api";
 import { GameClass, Skill } from "../types";
 import { motion, AnimatePresence } from "framer-motion";
@@ -65,13 +65,21 @@ function formatMs(ms: number): string {
 export function ClassPage() {
   const { slug } = useParams<{ slug: string }>();
   const [gameClass, setGameClass] = useState<GameClass | null>(null);
+  const [classList, setClassList] = useState<GameClass[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
   const [selectedRank, setSelectedRank] = useState<number | "auto">("auto");
   const [statPanel, setStatPanel] = useState<"core" | "modifiers" | "combat">("core");
 
   useEffect(() => {
-    if (!slug) return;
+    if (!slug) {
+      setLoading(true);
+      classesApi.list()
+        .then(({ data }) => setClassList(data))
+        .catch(() => {})
+        .finally(() => setLoading(false));
+      return;
+    }
     setLoading(true);
     classesApi.get(slug)
       .then(({ data }) => setGameClass(data))
@@ -80,6 +88,51 @@ export function ClassPage() {
   }, [slug]);
 
   if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" /></div>;
+
+  if (!slug) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <div>
+          <h1 className="text-2xl font-display font-bold flex items-center gap-2">
+            <Swords size={22} className="text-purple-400" /> Classes
+          </h1>
+          <p className="text-sm text-gray-400 mt-1">Escolha uma classe para ver os atributos, skills e passivas.</p>
+        </div>
+        {classList.length === 0 && <p className="text-gray-500 text-sm">Nenhuma classe disponível.</p>}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {classList.map((cls) => (
+            <Link
+              key={cls.id}
+              to={`/class/${cls.slug}`}
+              className="card-hover block p-5"
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-display font-bold text-lg">{cls.name}</span>
+                <span className={`text-xs font-bold uppercase px-2 py-1 rounded bg-gradient-to-r ${rarityColors[cls.rarity] || "text-gray-400"} bg-opacity-10`}>
+                  {cls.rarity}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 mb-2">
+                <span className={`text-xs px-2 py-0.5 rounded bg-gradient-to-r ${elementColors[cls.element] || "from-gray-500 to-gray-600"} bg-opacity-10`}>{cls.element}</span>
+                <span className="text-xs px-2 py-0.5 bg-dark-700 rounded-md capitalize">{cls.role}</span>
+                <span className="text-xs px-2 py-0.5 bg-dark-700 rounded-md capitalize">{statModelLabels[cls.statModel] || cls.statModel}</span>
+              </div>
+              <p className="text-xs text-gray-400 line-clamp-2 mb-3">{cls.description}</p>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-300">
+                <span className="flex items-center gap-1"><Shield size={12} className="text-red-400" /> HP {cls.baseHp}</span>
+                <span className="flex items-center gap-1"><Mana size={12} className="text-blue-400" /> Mana {cls.baseMana}</span>
+                <span className="flex items-center gap-1"><Sword size={12} className="text-orange-400" /> ATK {cls.baseAttack}</span>
+                <span className="flex items-center gap-1"><ShieldCheck size={12} className="text-green-400" /> DEF {cls.baseDefense}</span>
+                <span className="flex items-center gap-1"><Sparkles size={12} className="text-purple-400" /> MAG {cls.baseMagic}</span>
+                <span className="flex items-center gap-1"><Shield size={12} className="text-cyan-400" /> MDEF {cls.baseMagicDefense}</span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   if (!gameClass) return <div className="text-center py-12 text-gray-400">Class not found</div>;
 
   const skills = gameClass.skills || [];

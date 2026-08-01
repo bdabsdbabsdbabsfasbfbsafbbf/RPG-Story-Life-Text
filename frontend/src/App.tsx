@@ -41,6 +41,7 @@ export default function App() {
       <Route path="/" element={<ProtectedRoute><GameLayout /></ProtectedRoute>}>
         <Route index element={<CharacterGate><Navigate to="/dashboard" replace /></CharacterGate>} />
         <Route path="dashboard" element={<CharacterGate><DashboardPage /></CharacterGate>} />
+        <Route path="map" element={<CharacterGate><MapPage /></CharacterGate>} />
         <Route path="map/:slug" element={<CharacterGate><MapPage /></CharacterGate>} />
         <Route path="inventory" element={<CharacterGate><InventoryPage /></CharacterGate>} />
         <Route path="classes" element={<CharacterGate><ClassPage /></CharacterGate>} />

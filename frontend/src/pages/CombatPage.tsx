@@ -4,6 +4,7 @@ import { getSocket } from "../services/socket";
 import { useGameStore } from "../store/gameStore";
 import { useAuthStore } from "../store/authStore";
 import { CombatUpdate } from "../types";
+import { monstersApi } from "../services/api";
 import { ArrowLeft, Sword, Shield, Zap, Skull, Heart, Sparkles, Coins } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -15,6 +16,7 @@ export function CombatPage() {
   const [combat, setCombat] = useState<CombatUpdate | null>(null);
   const [combatLog, setCombatLog] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [monsterInfo, setMonsterInfo] = useState<{ name: string; level: number } | null>(null);
   const [cooldowns, setCooldowns] = useState<Record<string, number>>({});
 
   const socket = getSocket();
@@ -34,6 +36,12 @@ export function CombatPage() {
     if (skill.type === "passive") return "Passiva";
     return skill.subType === "heal" ? "Cura" : "Ativo";
   };
+
+  useEffect(() => {
+    if (monsterId) {
+      monstersApi.get(monsterId).then(({ data }) => setMonsterInfo({ name: data.name, level: data.level })).catch(() => {});
+    }
+  }, [monsterId]);
 
   useEffect(() => {
     if (!socket) return;
@@ -75,6 +83,7 @@ export function CombatPage() {
 
     socket.on("combat:error", (data: any) => {
       setCombatLog(prev => [...prev, `Erro: ${data.message}`]);
+      toast.error(data.message || "Erro no combate");
       setLoading(false);
     });
 
@@ -104,11 +113,12 @@ export function CombatPage() {
     return Date.now() - last < cooldown;
   };
 
-  const monsterName = combat?.monsterName || (monsterId ? monsterId.replace(/-/g, " ") : "Monstro");
+  const monsterName = combat?.monsterName || monsterInfo?.name || "Monstro";
+  const monsterLevel = combat?.monsterLevel || monsterInfo?.level || 1;
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <Link to="/map/arcadia" className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-200">
+      <Link to="/map" className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-200">
         <ArrowLeft size={16} /> Voltar ao mapa
       </Link>
 
@@ -196,7 +206,7 @@ export function CombatPage() {
               <div className="flex items-center justify-center gap-4 text-sm text-gray-300">
                 <span className="flex items-center gap-1"><Coins size={14} className="text-yellow-400" /> Recompensas concedidas</span>
               </div>
-              <button onClick={() => navigate("/map/arcadia")} className="btn-primary">Voltar ao mapa</button>
+              <button onClick={() => navigate("/map")} className="btn-primary">Voltar ao mapa</button>
             </div>
           )}
 
@@ -216,7 +226,7 @@ export function CombatPage() {
             </div>
             <div>
               <h2 className="font-display font-bold capitalize">{monsterName}</h2>
-              <p className="text-xs text-gray-400">Level {combat?.monsterLevel || 1} · Monstro</p>
+              <p className="text-xs text-gray-400">Level {monsterLevel} · Monstro</p>
             </div>
           </div>
 

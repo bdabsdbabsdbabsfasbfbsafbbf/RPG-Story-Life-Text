@@ -29,7 +29,7 @@ export const crudConfigs: CrudConfig[] = [
     ],
     fields: [
       { name: "name", label: "Name", type: "text", required: true },
-      { name: "slug", label: "Slug", type: "text", placeholder: "e.g. shadowstalker", hint: "Lowercase, no spaces" },
+      { name: "slug", label: "Slug", type: "text", placeholder: "e.g. cavaleiro", hint: "Lowercase, no spaces" },
       { name: "description", label: "Description", type: "textarea", required: true },
       { name: "lore", label: "Lore", type: "textarea" },
       { name: "icon", label: "Icon", type: "text", placeholder: "e.g. 'Swords'" },

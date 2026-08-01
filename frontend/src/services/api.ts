@@ -75,6 +75,10 @@ export const mapsApi = {
   monsters: (slug: string) => api.get(`/maps/${slug}/monsters`),
 };
 
+export const monstersApi = {
+  get: (id: string) => api.get(`/monsters/${id}`),
+};
+
 export const questsApi = {
   list: (params?: any) => api.get("/quests", { params }),
   get: (id: string) => api.get(`/quests/${id}`),

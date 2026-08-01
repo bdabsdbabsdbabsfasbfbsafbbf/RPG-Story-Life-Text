@@ -2,12 +2,8 @@ import { useGameStore } from '../../store/gameStore';
 import styles from './MainHUD.module.css';
 
 const mockMaps = [
-  { id: 'battleon', name: 'Battleon', level: 1, players: 42 },
-  { id: 'dark-forest', name: 'Floresta Sombria', level: 10, players: 28 },
-  { id: 'ice-realm', name: 'Reino de Gelo', level: 25, players: 15 },
-  { id: 'volcano', name: 'Vulcão', level: 40, players: 8 },
-  { id: 'shadow-citadel', name: 'Cidadela Sombria', level: 60, players: 3 },
-  { id: 'heaven-peak', name: 'Pico Celestial', level: 80, players: 1 },
+  { id: 'arcadia', name: 'Arcadia', level: 1, players: 42 },
+  { id: 'floresta-sombria', name: 'Floresta Sombria', level: 10, players: 28 },
 ];
 
 export default function MainHUD() {

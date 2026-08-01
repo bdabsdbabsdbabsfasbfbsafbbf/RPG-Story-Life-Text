@@ -102,7 +102,7 @@ export class CombatService {
     this.activeCombats.set(combat.id, combat);
     this.startCombatTick(combat);
 
-    return combat;
+    return { ...combat, combatId: combat.id } as CombatInstance & { combatId: string };
   }
 
   private startCombatTick(combat: CombatInstance): void {
