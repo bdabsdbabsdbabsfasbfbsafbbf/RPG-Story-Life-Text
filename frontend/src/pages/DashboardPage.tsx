@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { mapsApi } from "../services/api";
 import { Map as MapType } from "../types";
-import { Sword, Map, Users, ScrollText, TrendingUp, Zap, Shield, Star } from "lucide-react";
+import { Sword, Map, Users, ScrollText, TrendingUp, Zap, Shield, Star, UserPlus } from "lucide-react";
 
 export function DashboardPage() {
   const { user } = useAuthStore();
@@ -12,6 +12,8 @@ export function DashboardPage() {
   useEffect(() => {
     mapsApi.list().then(({ data }) => setMaps(data)).catch(() => {});
   }, []);
+
+  const hasCharacter = !!user?.characters && user.characters.length > 0;
 
   const statCards = [
     { label: "Level", value: user?.level || 1, icon: Star, color: "from-purple-500 to-purple-600" },
@@ -29,10 +31,40 @@ export function DashboardPage() {
           </h1>
           <p className="text-gray-400 text-sm mt-1">Your adventure continues...</p>
         </div>
-        <Link to="/class/shadowstalker" className="btn-primary flex items-center gap-2">
+        <Link to={hasCharacter ? "/class/shadowstalker" : "/character/create"} className="btn-primary flex items-center gap-2">
           <Sword size={16} /> Classes
         </Link>
       </div>
+
+      {!hasCharacter && (
+        <Link to="/character/create" className="card-hover block border-purple-500/40 bg-gradient-to-r from-purple-600/10 to-blue-600/10 p-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center shrink-0">
+              <UserPlus size={24} className="text-white" />
+            </div>
+            <div className="flex-1">
+              <h2 className="font-display font-bold text-lg">Crie seu personagem</h2>
+              <p className="text-sm text-gray-400">
+                Escolha uma das 4 classes iniciais, role sua raça e trait e comece a jornada!
+              </p>
+            </div>
+            <span className="btn-primary text-sm">Criar agora</span>
+          </div>
+        </Link>
+      )}
+
+      {hasCharacter && (
+        <div className="panel p-4 border-cyan-500/30 bg-cyan-500/5">
+          <div className="flex items-center gap-3">
+            <Shield size={20} className="text-cyan-400" />
+            <div className="flex-1">
+              <p className="text-sm text-gray-400">Selected character</p>
+              <p className="font-display font-bold">{user!.characters![0].name}</p>
+            </div>
+            <span className="text-sm text-gray-400">Level {user!.characters![0].level}</span>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {statCards.map((card) => (

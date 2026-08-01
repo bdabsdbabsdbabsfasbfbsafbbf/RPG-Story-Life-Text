@@ -62,7 +62,13 @@ export function createAuthModule(app: Express): void {
       });
 
       res.status(201).json({
-        user: { id: user.id, username: user.username, displayName: user.displayName, role: user.role },
+        user: {
+          id: user.id,
+          username: user.username,
+          displayName: user.displayName,
+          role: user.role,
+          characters: [],
+        },
         token,
       });
     } catch (err) {
@@ -102,8 +108,19 @@ export function createAuthModule(app: Express): void {
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
 
+      const characters = await prisma.character.findMany({
+        where: { userId: user.id },
+        select: { id: true, name: true, level: true, classId: true },
+      });
+
       res.json({
-        user: { id: user.id, username: user.username, displayName: user.displayName, role: user.role },
+        user: {
+          id: user.id,
+          username: user.username,
+          displayName: user.displayName,
+          role: user.role,
+          characters,
+        },
         token,
       });
     } catch (err) {
@@ -128,6 +145,32 @@ export function createAuthModule(app: Express): void {
         },
       });
       if (!user) throw new AppError(404, "User not found");
+      res.json(user);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.put("/api/auth/me", authenticate, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { displayName, avatar } = req.body;
+      const data: { displayName?: string; avatar?: string } = {};
+      if (typeof displayName === "string" && displayName.trim()) {
+        if (displayName.trim().length > 30) throw new AppError(400, "Display name too long");
+        data.displayName = displayName.trim();
+      }
+      if (typeof avatar === "string" && avatar.length > 0) data.avatar = avatar;
+
+      const user = await prisma.user.update({
+        where: { id: req.user!.userId },
+        data,
+        select: {
+          id: true, username: true, displayName: true, email: true, avatar: true,
+          experience: true, level: true, gold: true, diamonds: true,
+          role: true, createdAt: true, isOnline: true,
+          characters: { select: { id: true, name: true, level: true, classId: true } },
+        },
+      });
       res.json(user);
     } catch (err) {
       next(err);

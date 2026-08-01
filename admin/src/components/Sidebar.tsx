@@ -6,103 +6,37 @@ import {
   Zap,
   Skull,
   Map,
-  Bot,
   ScrollText,
   Box,
-  Calendar,
   Activity,
   Wrench,
-  Shield,
   Swords,
-  Medal,
-  Trophy,
-  FlaskConical,
-  VenetianMask,
+  Sparkles,
+  Fingerprint,
   LogOut,
-  ChevronDown,
-  ChevronRight,
 } from 'lucide-react';
-import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
 interface NavItem {
   to: string;
   icon: React.ReactNode;
   label: string;
-  children?: NavItem[];
 }
 
 const navItems: NavItem[] = [
   { to: '/', icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
-  {
-    to: '#',
-    icon: <Sword size={18} />,
-    label: 'Game Content',
-    children: [
-      { to: '/items', icon: <Box size={16} />, label: 'Items' },
-      { to: '/classes', icon: <Users size={16} />, label: 'Classes' },
-      { to: '/skills', icon: <Zap size={16} />, label: 'Skills' },
-      { to: '/monsters', icon: <Skull size={16} />, label: 'Monsters/Bosses' },
-      { to: '/maps', icon: <Map size={16} />, label: 'Maps' },
-      { to: '/npcs', icon: <Bot size={16} />, label: 'NPCs' },
-      { to: '/quests', icon: <ScrollText size={16} />, label: 'Quests' },
-      { to: '/loot-tables', icon: <Box size={16} />, label: 'Loot Tables' },
-      { to: '/events', icon: <Calendar size={16} />, label: 'Events' },
-      { to: '/buffs', icon: <Activity size={16} />, label: 'Buffs/Debuffs' },
-      { to: '/crafting', icon: <Wrench size={16} />, label: 'Crafting' },
-      { to: '/titles', icon: <Medal size={16} />, label: 'Titles' },
-      { to: '/achievements', icon: <Trophy size={16} />, label: 'Achievements' },
-    ],
-  },
-  { to: '/players', icon: <Shield size={18} />, label: 'Players' },
-  { to: '/guilds', icon: <Swords size={18} />, label: 'Guilds' },
-  { to: '/settings', icon: <Wrench size={18} />, label: 'System Settings' },
-  { to: '/audit', icon: <VenetianMask size={18} />, label: 'Audit Log' },
+  { to: '/classes', icon: <Sword size={18} />, label: 'Classes' },
+  { to: '/skills', icon: <Zap size={18} />, label: 'Skills' },
+  { to: '/items', icon: <Box size={18} />, label: 'Items' },
+  { to: '/monsters', icon: <Skull size={18} />, label: 'Monsters' },
+  { to: '/maps', icon: <Map size={18} />, label: 'Maps' },
+  { to: '/quests', icon: <ScrollText size={18} />, label: 'Quests' },
+  { to: '/buffs', icon: <Activity size={18} />, label: 'Buffs / Debuffs' },
+  { to: '/races', icon: <Fingerprint size={18} />, label: 'Races' },
+  { to: '/traits', icon: <Sparkles size={18} />, label: 'Traits' },
+  { to: '/users', icon: <Users size={18} />, label: 'Users' },
+  { to: '/guild-settings', icon: <Swords size={18} />, label: 'Guild Settings' },
 ];
-
-function NavItemComponent({ item, depth = 0 }: { item: NavItem; depth?: number }) {
-  const [open, setOpen] = useState(true);
-  const hasChildren = item.children && item.children.length > 0;
-
-  if (hasChildren) {
-    return (
-      <div>
-        <button
-          onClick={() => setOpen(!open)}
-          className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-400 hover:text-white hover:bg-dark-700 rounded-lg transition-colors"
-        >
-          {item.icon}
-          <span className="flex-1 text-left text-sm font-medium">{item.label}</span>
-          {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-        </button>
-        {open && item.children && (
-          <div className="ml-4 mt-1 space-y-0.5">
-            {item.children.map((child) => (
-              <NavItemComponent key={child.to} item={child} depth={depth + 1} />
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <NavLink
-      to={item.to}
-      end={item.to === '/'}
-      className={({ isActive }) =>
-        `flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors text-sm ${
-          isActive
-            ? 'bg-accent-600/20 text-accent-400 font-medium'
-            : 'text-gray-400 hover:text-white hover:bg-dark-700'
-        }`
-      }
-    >
-      {item.icon}
-      <span>{item.label}</span>
-    </NavLink>
-  );
-}
 
 export default function Sidebar() {
   const { user, logout } = useAuth();
@@ -119,7 +53,21 @@ export default function Sidebar() {
 
       <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
         {navItems.map((item) => (
-          <NavItemComponent key={item.to} item={item} />
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.to === '/'}
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors text-sm ${
+                isActive
+                  ? 'bg-accent-600/20 text-accent-400 font-medium'
+                  : 'text-gray-400 hover:text-white hover:bg-dark-700'
+              }`
+            }
+          >
+            {item.icon}
+            <span>{item.label}</span>
+          </NavLink>
         ))}
       </nav>
 

@@ -29,6 +29,17 @@ export const authApi = {
     api.post("/auth/logout"),
   me: () =>
     api.get("/auth/me"),
+  updateMe: (data: { displayName?: string; avatar?: string }) =>
+    api.put("/auth/me", data),
+};
+
+export const charactersApi = {
+  index: () => api.get("/characters/index"),
+  roll: (type: "race" | "trait") => api.post("/characters/roll", { type }),
+  create: (data: { name: string; classId: string; raceId?: string; traitId?: string }) =>
+    api.post("/characters", data),
+  my: () => api.get("/characters/my"),
+  tickets: () => api.get("/characters/tickets"),
 };
 
 export const classesApi = {
@@ -72,6 +83,7 @@ export const guildApi = {
   list: () => api.get("/guilds"),
   rankings: () => api.get("/guilds/rankings"),
   get: (id: string) => api.get(`/guilds/${id}`),
+  requirements: () => api.get("/guilds/requirements"),
   create: (data: { name: string; tag: string; description: string }) =>
     api.post("/guilds", data),
   join: (id: string) => api.post(`/guilds/${id}/join`),

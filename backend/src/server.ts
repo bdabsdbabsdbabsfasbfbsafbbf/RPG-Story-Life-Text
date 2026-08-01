@@ -28,6 +28,16 @@ process.on("unhandledRejection", (reason) => {
 const app = express();
 const server = http.createServer(app);
 
+app.use((_req, res, next) => {
+  res.json = (body: unknown) => {
+    res.setHeader("Content-Type", "application/json");
+    return res.send(
+      JSON.stringify(body, (_key, value) => (typeof value === "bigint" ? Number(value) : value))
+    );
+  };
+  next();
+});
+
 const io = new SocketIOServer(server, {
   cors: {
     origin: [config.frontendUrl, config.adminUrl],

@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import { GameLayout } from './components/layout/GameLayout';
 import { LoginPage } from './pages/LoginPage';
@@ -11,10 +11,24 @@ import { QuestPage } from './pages/QuestPage';
 import { GuildPage } from './pages/GuildPage';
 import { MarketPage } from './pages/MarketPage';
 import { CombatPage } from './pages/CombatPage';
+import { CreateCharacterPage } from './pages/CreateCharacterPage';
+import { SettingsPage } from './pages/SettingsPage';
+import { CodexPage } from './pages/CodexPage';
+import { SupportPage } from './pages/SupportPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const accessToken = useAuthStore((s) => s.accessToken);
   if (!accessToken) return <Navigate to="/login" replace />;
+  return <>{children}</>;
+}
+
+function CharacterGate({ children }: { children: React.ReactNode }) {
+  const user = useAuthStore((s) => s.user);
+  const location = useLocation();
+  const hasCharacter = !!user?.characters && user.characters.length > 0;
+  if (!hasCharacter && location.pathname !== "/character/create") {
+    return <Navigate to="/character/create" replace />;
+  }
   return <>{children}</>;
 }
 
@@ -23,18 +37,22 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/character/create" element={<ProtectedRoute><CreateCharacterPage /></ProtectedRoute>} />
       <Route path="/" element={<ProtectedRoute><GameLayout /></ProtectedRoute>}>
-        <Route index element={<Navigate to="/dashboard" replace />} />
-        <Route path="dashboard" element={<DashboardPage />} />
-        <Route path="map/:slug" element={<MapPage />} />
-        <Route path="inventory" element={<InventoryPage />} />
-        <Route path="classes" element={<ClassPage />} />
-        <Route path="class/:slug" element={<ClassPage />} />
-        <Route path="quests" element={<QuestPage />} />
-        <Route path="guild" element={<GuildPage />} />
-        <Route path="market" element={<MarketPage />} />
-        <Route path="combat" element={<CombatPage />} />
-        <Route path="combat/:monsterId" element={<CombatPage />} />
+        <Route index element={<CharacterGate><Navigate to="/dashboard" replace /></CharacterGate>} />
+        <Route path="dashboard" element={<CharacterGate><DashboardPage /></CharacterGate>} />
+        <Route path="map/:slug" element={<CharacterGate><MapPage /></CharacterGate>} />
+        <Route path="inventory" element={<CharacterGate><InventoryPage /></CharacterGate>} />
+        <Route path="classes" element={<CharacterGate><ClassPage /></CharacterGate>} />
+        <Route path="class/:slug" element={<CharacterGate><ClassPage /></CharacterGate>} />
+        <Route path="quests" element={<CharacterGate><QuestPage /></CharacterGate>} />
+        <Route path="guild" element={<CharacterGate><GuildPage /></CharacterGate>} />
+        <Route path="market" element={<CharacterGate><MarketPage /></CharacterGate>} />
+        <Route path="combat" element={<CharacterGate><CombatPage /></CharacterGate>} />
+        <Route path="combat/:monsterId" element={<CharacterGate><CombatPage /></CharacterGate>} />
+        <Route path="settings" element={<CharacterGate><SettingsPage /></CharacterGate>} />
+        <Route path="codex" element={<CharacterGate><CodexPage /></CharacterGate>} />
+        <Route path="support" element={<CharacterGate><SupportPage /></CharacterGate>} />
       </Route>
     </Routes>
   );

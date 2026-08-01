@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 export function GuildPage() {
   const [guild, setGuild] = useState<Guild | null>(null);
   const [myGuild, setMyGuild] = useState<any>(null);
+  const [requirements, setRequirements] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ name: "", tag: "", description: "" });
@@ -15,9 +16,11 @@ export function GuildPage() {
     Promise.all([
       guildApi.list(),
       guildApi.mine().catch(() => {}),
-    ]).then(([guilds, my]) => {
+      guildApi.requirements().catch(() => {}),
+    ]).then(([guilds, my, req]) => {
       setGuild(guilds.data);
       setMyGuild(my?.data || null);
+      setRequirements(req?.data || null);
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
@@ -27,7 +30,10 @@ export function GuildPage() {
       const { data } = await guildApi.create(form);
       toast.success("Guild created!");
       setShowCreate(false);
+      setForm({ name: "", tag: "", description: "" });
       setMyGuild({ guild: data });
+      const { data: guilds } = await guildApi.list();
+      setGuild(guilds);
     } catch (err: any) {
       toast.error(err.response?.data?.error || "Failed to create guild");
     }
@@ -77,11 +83,19 @@ export function GuildPage() {
 
       {showCreate && (
         <form onSubmit={handleCreate} className="panel p-4 space-y-3">
+          {requirements && (
+            <div className="bg-dark-800 border border-amber-500/30 rounded-lg p-3 text-sm">
+              <p className="text-amber-300 font-medium mb-1">Requisitos para criar guilda:</p>
+              <p className="text-gray-300">
+                Level {requirements.requiredLevel} • {Number(requirements.requiredGold).toLocaleString()} Gold • {Number(requirements.requiredDiamonds).toLocaleString()} Diamonds
+              </p>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="input-rpg" placeholder="Guild name" required />
             <input value={form.tag} onChange={e => setForm({...form, tag: e.target.value})} className="input-rpg" placeholder="TAG" maxLength={5} required />
           </div>
-          <textarea value={form.description} onChange={e => setForm({...form, description: e.target.value})} className="input-rpg" placeholder="Description" rows={2} />
+          <textarea value={form.description} onChange={e => setForm({...form, description: e.target.value})} className="input-rpg" placeholder="Description" rows={2} required />
           <button type="submit" className="btn-primary w-full">Create Guild</button>
         </form>
       )}

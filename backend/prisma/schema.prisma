@@ -25,6 +25,8 @@ model User {
   isOnline      Boolean  @default(false)
   isBanned      Boolean  @default(false)
   role          String   @default("player")
+  raceRerolls   Int      @default(3)
+  traitRerolls  Int      @default(3)
   characters    Character[]
   guildMembers  GuildMember[]
   inventory     Inventory[]
@@ -47,6 +49,8 @@ model Character {
   userId        String
   name          String
   classId       String
+  raceId        String?
+  traitId       String?
   level         Int      @default(1)
   experience    BigInt   @default(0)
   currentHp     Int      @default(100)
@@ -57,6 +61,8 @@ model Character {
 
   user          User     @relation(fields: [userId], references: [id])
   class         GameClass @relation(fields: [classId], references: [id])
+  race          Race?    @relation(fields: [raceId], references: [id])
+  trait         Trait?   @relation(fields: [traitId], references: [id])
   equipment     Equipment?
   combatStats   CombatStats?
   activeBuffs   ActiveBuff[]
@@ -66,6 +72,38 @@ model Character {
 
   @@index([userId])
   @@index([classId])
+  @@index([raceId])
+  @@index([traitId])
+}
+
+model Race {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  slug        String   @unique
+  description String
+  traits      Json     @default("{}") // stat modifiers: { baseHp, baseMana, baseAttack, baseDefense, baseMagic, baseMagicDefense, baseSpeed, manaRecovery }
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  characters  Character[]
+}
+
+model Trait {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  slug        String   @unique
+  description String
+  modifiers   Json     @default("{}") // { xpBonus, goldBonus, critBonus, dodgeBonus, cooldownReduction }
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  characters  Character[]
+}
+
+model SystemConfig {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
 }
 
 // Tracks XP/Rank per class per character (player can level multiple classes)
@@ -126,6 +164,7 @@ model GameClass {
   manaEfficiency  Float    @default(1.0)  // mana cost multiplier
 
   isActive        Boolean  @default(true)
+  isStarter       Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 

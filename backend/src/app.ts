@@ -10,9 +10,11 @@ import { createMarketModule } from "./modules/market/market.module";
 import { createNpcModule } from "./modules/npc/npc.module";
 import { createEventsModule } from "./modules/events/events.module";
 import { createAdminModule } from "./modules/admin/admin.module";
+import { createCharacterModule } from "./modules/characters/character.module";
 
 export function registerModules(app: Express): void {
   createAuthModule(app);
+  createCharacterModule(app);
   createClassesModule(app);
   createItemsModule(app);
   createInventoryModule(app);

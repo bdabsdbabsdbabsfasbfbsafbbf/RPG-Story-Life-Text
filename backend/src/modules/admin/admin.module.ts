@@ -1,6 +1,10 @@
 import { Express, Request, Response, NextFunction } from "express";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import { prisma } from "../../core/database";
-import { authenticate, requireRole } from "../../core/middleware/auth";
+import { config } from "../../core/config";
+import { authenticate, requireRole, AuthPayload } from "../../core/middleware/auth";
+import { AppError } from "../../core/middleware/errorHandler";
 
 function requireAdmin(req: Request, res: Response, next: NextFunction) {
   authenticate(req, res, () => {
@@ -8,28 +12,127 @@ function requireAdmin(req: Request, res: Response, next: NextFunction) {
   });
 }
 
+const DEFAULT_GUILD_SETTINGS = {
+  requiredLevel: 2,
+  requiredGold: 200,
+  requiredDiamonds: 0,
+};
+
 export function createAdminModule(app: Express): void {
+  // Admin auth
+  app.post("/api/admin/auth/login", async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { username, password } = req.body;
+      if (!username || !password) throw new AppError(400, "Username and password required");
+
+      const user = await prisma.user.findUnique({ where: { username } });
+      if (!user || !user.passwordHash) throw new AppError(401, "Invalid credentials");
+      if (user.role !== "admin" && user.role !== "owner") {
+        throw new AppError(403, "Account does not have admin access");
+      }
+
+      const valid = await bcrypt.compare(password, user.passwordHash);
+      if (!valid) throw new AppError(401, "Invalid credentials");
+
+      const token = jwt.sign(
+        { userId: user.id, username: user.username, role: user.role } as AuthPayload,
+        config.jwt.secret,
+        { expiresIn: config.jwt.expiresIn } as jwt.SignOptions
+      );
+
+      res.json({
+        data: {
+          token,
+          user: {
+            id: user.id,
+            username: user.username,
+            displayName: user.displayName,
+            role: user.role,
+          },
+        },
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.get("/api/admin/auth/me", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: req.user!.userId },
+        select: { id: true, username: true, displayName: true, role: true },
+      });
+      res.json({ data: user });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Guild creation requirements (adjustable in the admin panel)
+  app.get("/api/admin/settings/guild", requireAdmin, async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const config = await prisma.systemConfig.findUnique({ where: { key: "guild" } });
+      res.json({ ...DEFAULT_GUILD_SETTINGS, ...(config?.value as object | undefined) });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.put("/api/admin/settings/guild", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { requiredLevel, requiredGold, requiredDiamonds } = req.body;
+      const value = {
+        requiredLevel:
+          typeof requiredLevel === "number" && requiredLevel >= 0 ? Math.floor(requiredLevel) : DEFAULT_GUILD_SETTINGS.requiredLevel,
+        requiredGold:
+          typeof requiredGold === "number" && requiredGold >= 0 ? Math.floor(requiredGold) : DEFAULT_GUILD_SETTINGS.requiredGold,
+        requiredDiamonds:
+          typeof requiredDiamonds === "number" && requiredDiamonds >= 0 ? Math.floor(requiredDiamonds) : DEFAULT_GUILD_SETTINGS.requiredDiamonds,
+      };
+      const config = await prisma.systemConfig.upsert({
+        where: { key: "guild" },
+        update: { value },
+        create: { key: "guild", value },
+      });
+      res.json(config.value);
+    } catch (err) {
+      next(err);
+    }
+  });
+
   // Stats
   app.get("/api/admin/stats", requireAdmin, async (_req: Request, res: Response, next: NextFunction) => {
     try {
-      const [totalUsers, totalClasses, totalItems, totalMonsters, totalMaps, totalQuests, totalSkills, activePlayers] = await Promise.all([
+      const [totalUsers, totalCharacters, totalGuilds, totalClasses, totalItems, totalMonsters, totalMaps, totalQuests, totalSkills, totalBuffs, totalRaces, totalTraits, activePlayers] = await Promise.all([
         prisma.user.count(),
+        prisma.character.count(),
+        prisma.guild.count(),
         prisma.gameClass.count(),
         prisma.item.count(),
         prisma.monster.count(),
         prisma.map.count(),
         prisma.quest.count(),
         prisma.skill.count(),
+        prisma.buff.count(),
+        prisma.race.count(),
+        prisma.trait.count(),
         prisma.user.count({ where: { isOnline: true } }),
       ]);
-      res.json({ totalUsers, totalClasses, totalItems, totalMonsters, totalMaps, totalQuests, totalSkills, activePlayers });
+      res.json({ totalUsers, totalCharacters, totalGuilds, totalClasses, totalItems, totalMonsters, totalMaps, totalQuests, totalSkills, totalBuffs, totalRaces, totalTraits, activePlayers });
     } catch (err) { next(err); }
   });
 
   // Users
   app.get("/api/admin/users", requireAdmin, async (_req: Request, res: Response, next: NextFunction) => {
     try {
-      const users = await prisma.user.findMany({ select: { id: true, username: true, displayName: true, role: true, level: true, isOnline: true, isBanned: true } });
+      const users = await prisma.user.findMany({
+        select: {
+          id: true, username: true, displayName: true, email: true, role: true,
+          level: true, gold: true, diamonds: true, isOnline: true, isBanned: true,
+          createdAt: true, _count: { select: { characters: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      });
       res.json(users);
     } catch (err) { next(err); }
   });
@@ -158,5 +261,39 @@ export function createAdminModule(app: Express): void {
 
   app.delete("/api/admin/buffs/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try { await prisma.buff.delete({ where: { id: req.params.id } }); res.json({ message: "Deleted" }); } catch (err) { next(err); }
+  });
+
+  // Races CRUD
+  app.get("/api/admin/races", requireAdmin, async (_req: Request, res: Response, next: NextFunction) => {
+    try { res.json(await prisma.race.findMany({ orderBy: { name: "asc" } })); } catch (err) { next(err); }
+  });
+
+  app.post("/api/admin/races", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try { res.status(201).json(await prisma.race.create({ data: req.body })); } catch (err) { next(err); }
+  });
+
+  app.put("/api/admin/races/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try { res.json(await prisma.race.update({ where: { id: req.params.id }, data: req.body })); } catch (err) { next(err); }
+  });
+
+  app.delete("/api/admin/races/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try { await prisma.race.delete({ where: { id: req.params.id } }); res.json({ message: "Deleted" }); } catch (err) { next(err); }
+  });
+
+  // Traits CRUD
+  app.get("/api/admin/traits", requireAdmin, async (_req: Request, res: Response, next: NextFunction) => {
+    try { res.json(await prisma.trait.findMany({ orderBy: { name: "asc" } })); } catch (err) { next(err); }
+  });
+
+  app.post("/api/admin/traits", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try { res.status(201).json(await prisma.trait.create({ data: req.body })); } catch (err) { next(err); }
+  });
+
+  app.put("/api/admin/traits/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try { res.json(await prisma.trait.update({ where: { id: req.params.id }, data: req.body })); } catch (err) { next(err); }
+  });
+
+  app.delete("/api/admin/traits/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try { await prisma.trait.delete({ where: { id: req.params.id } }); res.json({ message: "Deleted" }); } catch (err) { next(err); }
   });
 }

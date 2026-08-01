@@ -526,6 +526,8 @@ export interface Character {
   level: number;
   classId?: string | null;
   className?: string;
+  raceId?: string | null;
+  traitId?: string | null;
   experience?: number;
   xpToNext?: number;
   experienceToNext?: number;
@@ -537,6 +539,32 @@ export interface Character {
   maxStamina?: number;
   gold?: number;
   diamonds?: number;
+  race?: Race | null;
+  trait?: Trait | null;
+}
+
+export interface Race {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  traits: Record<string, number>;
+  isActive?: boolean;
+}
+
+export interface Trait {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  modifiers: Record<string, number>;
+  isActive?: boolean;
+}
+
+export interface CharacterIndex {
+  races: Race[];
+  traits: Trait[];
+  classes: GameClass[];
 }
 
 export interface Map {

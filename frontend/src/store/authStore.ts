@@ -30,6 +30,7 @@ interface AuthStore {
   register: (data: { username: string; displayName: string; password: string; email?: string }) => Promise<void>;
   logout: () => Promise<void>;
   setAuth: (user: AuthUser, accessToken: string) => void;
+  setUser: (user: AuthUser) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   updateToken: (accessToken: string) => void;
@@ -90,6 +91,7 @@ export const useAuthStore = create<AuthStore>()(
 
       setAuth: (user, accessToken) =>
         set({ isAuthenticated: true, user, accessToken, refreshToken: accessToken, error: null }),
+      setUser: (user) => set({ user }),
       setLoading: (isLoading) => set({ isLoading }),
       setError: (error) => set({ error }),
       updateToken: (accessToken) => set({ accessToken }),

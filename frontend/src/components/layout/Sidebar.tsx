@@ -54,18 +54,39 @@ export function Sidebar({ isOpen }: SidebarProps) {
 
       <div className="mt-auto px-2 pt-4 border-t border-dark-700">
         <div className="space-y-1">
-          <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-gray-200 hover:bg-dark-800/50 transition-all">
+          <NavLink
+            to="/settings"
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all ${
+                isActive ? "text-purple-300 bg-dark-800/50" : "text-gray-400 hover:text-gray-200 hover:bg-dark-800/50"
+              }`
+            }
+          >
             <Settings size={18} />
             <span>Settings</span>
-          </button>
-          <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-gray-200 hover:bg-dark-800/50 transition-all">
+          </NavLink>
+          <NavLink
+            to="/codex"
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all ${
+                isActive ? "text-purple-300 bg-dark-800/50" : "text-gray-400 hover:text-gray-200 hover:bg-dark-800/50"
+              }`
+            }
+          >
             <BookOpen size={18} />
             <span>Codex</span>
-          </button>
-          <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-gray-200 hover:bg-dark-800/50 transition-all">
+          </NavLink>
+          <NavLink
+            to="/support"
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all ${
+                isActive ? "text-purple-300 bg-dark-800/50" : "text-gray-400 hover:text-gray-200 hover:bg-dark-800/50"
+              }`
+            }
+          >
             <MessageCircle size={18} />
             <span>Support</span>
-          </button>
+          </NavLink>
         </div>
       </div>
     </nav>
