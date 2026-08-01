@@ -44,40 +44,33 @@ export function createCharacterModule(app: Express): void {
     }
   });
 
-  // Roll random options for a race or trait (consumes one ticket, max 3 each)
+  // Roll: sorteia uma raça + um trait (por sorte, sem escolha do player)
   app.post("/api/characters/roll", authenticate, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { type } = req.body;
-      if (type !== "race" && type !== "trait") {
-        throw new AppError(400, "Invalid roll type (must be 'race' or 'trait')");
-      }
-
       const user = await prisma.user.findUnique({
         where: { id: req.user!.userId },
-        select: { raceRerolls: true, traitRerolls: true },
+        select: { raceRerolls: true },
       });
       if (!user) throw new AppError(404, "User not found");
 
-      const field = type === "race" ? "raceRerolls" : "traitRerolls";
-      if (user[field] <= 0) throw new AppError(400, "No tickets remaining for this roll");
+      if (user.raceRerolls <= 0) throw new AppError(400, "No roll tickets remaining");
 
-      let available: { id: string; name: string; slug: string; description: string }[] = [];
-      if (type === "race") {
-        available = await prisma.race.findMany({ where: { isActive: true } });
-      } else {
-        available = await prisma.trait.findMany({ where: { isActive: true } });
-      }
-      if (available.length === 0) throw new AppError(404, `No ${type}s available`);
+      const [races, traits] = await Promise.all([
+        prisma.race.findMany({ where: { isActive: true } }),
+        prisma.trait.findMany({ where: { isActive: true } }),
+      ]);
+      if (races.length === 0) throw new AppError(404, "No races available");
+      if (traits.length === 0) throw new AppError(404, "No traits available");
 
-      const shuffled = [...available].sort(() => Math.random() - 0.5);
-      const options = shuffled.slice(0, Math.min(3, shuffled.length));
+      const race = races[Math.floor(Math.random() * races.length)];
+      const trait = traits[Math.floor(Math.random() * traits.length)];
 
       await prisma.user.update({
         where: { id: req.user!.userId },
-        data: { [field]: { decrement: 1 } },
+        data: { raceRerolls: { decrement: 1 } },
       });
 
-      res.json({ type, options, ticketsLeft: user[field] - 1 });
+      res.json({ race, trait, ticketsLeft: user.raceRerolls - 1 });
     } catch (err) {
       next(err);
     }

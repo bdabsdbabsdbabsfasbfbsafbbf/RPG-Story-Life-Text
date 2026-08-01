@@ -35,7 +35,7 @@ export const authApi = {
 
 export const charactersApi = {
   index: () => api.get("/characters/index"),
-  roll: (type: "race" | "trait") => api.post("/characters/roll", { type }),
+  roll: () => api.post("/characters/roll"),
   create: (data: { name: string; classId: string; raceId?: string; traitId?: string }) =>
     api.post("/characters", data),
   my: () => api.get("/characters/my"),

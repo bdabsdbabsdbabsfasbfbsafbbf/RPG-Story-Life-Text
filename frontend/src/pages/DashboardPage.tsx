@@ -14,6 +14,8 @@ export function DashboardPage() {
   }, []);
 
   const hasCharacter = !!user?.characters && user.characters.length > 0;
+  const character = hasCharacter ? user!.characters![0] : null;
+  const classSlug = character?.class?.slug;
 
   const statCards = [
     { label: "Level", value: user?.level || 1, icon: Star, color: "from-purple-500 to-purple-600" },
@@ -31,7 +33,7 @@ export function DashboardPage() {
           </h1>
           <p className="text-gray-400 text-sm mt-1">Your adventure continues...</p>
         </div>
-        <Link to={hasCharacter ? "/class/shadowstalker" : "/character/create"} className="btn-primary flex items-center gap-2">
+        <Link to={hasCharacter ? (classSlug ? `/class/${classSlug}` : "/classes") : "/character/create"} className="btn-primary flex items-center gap-2">
           <Sword size={16} /> Classes
         </Link>
       </div>
@@ -53,15 +55,20 @@ export function DashboardPage() {
         </Link>
       )}
 
-      {hasCharacter && (
+      {hasCharacter && character && (
         <div className="panel p-4 border-cyan-500/30 bg-cyan-500/5">
           <div className="flex items-center gap-3">
             <Shield size={20} className="text-cyan-400" />
             <div className="flex-1">
               <p className="text-sm text-gray-400">Selected character</p>
-              <p className="font-display font-bold">{user!.characters![0].name}</p>
+              <p className="font-display font-bold">{character.name}</p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {character.class?.name || "Sem classe"}
+                {character.race?.name && <> • Raça: {character.race.name}</>}
+                {character.trait?.name && <> • Trait: {character.trait.name}</>}
+              </p>
             </div>
-            <span className="text-sm text-gray-400">Level {user!.characters![0].level}</span>
+            <span className="text-sm text-gray-400">Level {character.level}</span>
           </div>
         </div>
       )}

@@ -526,6 +526,7 @@ export interface Character {
   level: number;
   classId?: string | null;
   className?: string;
+  class?: { name: string; slug: string } | null;
   raceId?: string | null;
   traitId?: string | null;
   experience?: number;

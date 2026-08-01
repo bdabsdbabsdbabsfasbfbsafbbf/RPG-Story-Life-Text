@@ -141,7 +141,14 @@ export function createAuthModule(app: Express): void {
           id: true, username: true, displayName: true, email: true, avatar: true,
           experience: true, level: true, gold: true, diamonds: true,
           role: true, createdAt: true, isOnline: true,
-          characters: { select: { id: true, name: true, level: true, classId: true } },
+          characters: {
+            select: {
+              id: true, name: true, level: true, classId: true,
+              class: { select: { name: true, slug: true } },
+              race: { select: { name: true } },
+              trait: { select: { name: true } },
+            },
+          },
         },
       });
       if (!user) throw new AppError(404, "User not found");
@@ -168,7 +175,14 @@ export function createAuthModule(app: Express): void {
           id: true, username: true, displayName: true, email: true, avatar: true,
           experience: true, level: true, gold: true, diamonds: true,
           role: true, createdAt: true, isOnline: true,
-          characters: { select: { id: true, name: true, level: true, classId: true } },
+          characters: {
+            select: {
+              id: true, name: true, level: true, classId: true,
+              class: { select: { name: true, slug: true } },
+              race: { select: { name: true } },
+              trait: { select: { name: true } },
+            },
+          },
         },
       });
       res.json(user);
