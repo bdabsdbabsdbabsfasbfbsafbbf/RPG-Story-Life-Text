@@ -139,8 +139,196 @@ export function createAdminModule(app: Express): void {
 
   app.put("/api/admin/users/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const user = await prisma.user.update({ where: { id: req.params.id }, data: req.body });
+      const { displayName, email, role, level, experience, gold, diamonds, isBanned, isOnline } = req.body;
+      const data: Record<string, any> = {};
+      if (typeof displayName === "string") data.displayName = displayName.slice(0, 50);
+      if (typeof email === "string" || email === null) data.email = email;
+      if (typeof role === "string" && ["player", "admin", "owner"].includes(role)) data.role = role;
+      if (typeof level === "number" && level >= 1) data.level = Math.floor(level);
+      if (typeof experience === "number" && experience >= 0) data.experience = BigInt(Math.floor(experience));
+      if (typeof gold === "number" && gold >= 0) data.gold = BigInt(Math.floor(gold));
+      if (typeof diamonds === "number" && diamonds >= 0) data.diamonds = Math.floor(diamonds);
+      if (typeof isBanned === "boolean") data.isBanned = isBanned;
+      if (typeof isOnline === "boolean") data.isOnline = isOnline;
+      const user = await prisma.user.update({
+        where: { id: req.params.id },
+        data,
+        select: { id: true, username: true, displayName: true, role: true, level: true, gold: true, diamonds: true },
+      });
       res.json(user);
+    } catch (err) { next(err); }
+  });
+
+  // User detail: account + characters + inventory
+  app.get("/api/admin/users/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: req.params.id },
+        include: {
+          characters: {
+            include: {
+              class: { select: { id: true, name: true, slug: true, role: true } },
+              race: { select: { id: true, name: true } },
+              trait: { select: { id: true, name: true } },
+            },
+          },
+          inventory: {
+            include: { item: true },
+            orderBy: { acquiredAt: "desc" },
+          },
+        },
+      });
+      if (!user) throw new AppError(404, "User not found");
+      res.json(user);
+    } catch (err) { next(err); }
+  });
+
+  // Delete user (children cascade)
+  app.delete("/api/admin/users/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      await prisma.user.delete({ where: { id: req.params.id } });
+      res.json({ message: "User deleted" });
+    } catch (err) { next(err); }
+  });
+
+  // Edit a user's character: level, xp, class, name
+  app.put("/api/admin/users/:userId/characters/:charId", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { name, level, experience, classId } = req.body;
+      const character = await prisma.character.findFirst({
+        where: { id: req.params.charId, userId: req.params.userId },
+      });
+      if (!character) throw new AppError(404, "Character not found");
+
+      const data: Record<string, any> = {};
+      if (typeof name === "string" && name.trim()) data.name = name.trim().slice(0, 50);
+      if (typeof level === "number" && level >= 1) data.level = Math.floor(level);
+      if (typeof experience === "number" && experience >= 0) data.experience = BigInt(Math.floor(experience));
+      if (typeof classId === "string") {
+        const gameClass = await prisma.gameClass.findFirst({ where: { id: classId, isActive: true } });
+        if (!gameClass) throw new AppError(404, "Class not found");
+        data.classId = gameClass.id;
+      }
+
+      await prisma.$transaction(async (tx) => {
+        if (data.classId && data.classId !== character.classId) {
+          await tx.characterClass.upsert({
+            where: { characterId_classId: { characterId: character.id, classId: data.classId } },
+            update: { isActive: true },
+            create: { characterId: character.id, classId: data.classId, isActive: true },
+          });
+          await tx.characterClass.updateMany({
+            where: { characterId: character.id, classId: { not: data.classId } },
+            data: { isActive: false },
+          });
+        }
+        await tx.character.update({ where: { id: character.id }, data });
+      });
+
+      res.json({ message: "Character updated" });
+    } catch (err) { next(err); }
+  });
+
+  // User inventory
+  app.get("/api/admin/users/:id/inventory", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const inventory = await prisma.inventory.findMany({
+        where: { userId: req.params.id },
+        include: { item: true },
+        orderBy: { acquiredAt: "desc" },
+      });
+      res.json(inventory);
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/admin/users/:id/inventory", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { itemId, itemName, quantity } = req.body;
+      const qty = Math.max(1, Math.floor(Number(quantity) || 1));
+      let item = null;
+      if (itemId) item = await prisma.item.findUnique({ where: { id: itemId } });
+      else if (itemName) item = await prisma.item.findFirst({ where: { name: itemName, isActive: true } });
+      if (!item) throw new AppError(404, "Item not found");
+
+      const existing = await prisma.inventory.findFirst({
+        where: { userId: req.params.id, itemId: item.id, slotIndex: null },
+      });
+      let entry;
+      if (existing) {
+        entry = await prisma.inventory.update({
+          where: { id: existing.id },
+          data: { quantity: { increment: qty } },
+        });
+      } else {
+        entry = await prisma.inventory.create({
+          data: { userId: req.params.id, itemId: item.id, quantity: qty },
+        });
+      }
+      res.status(201).json(entry);
+    } catch (err) { next(err); }
+  });
+
+  app.delete("/api/admin/users/:id/inventory/:invId", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      await prisma.inventory.delete({
+        where: { id: req.params.invId },
+      });
+      res.json({ message: "Inventory entry deleted" });
+    } catch (err) { next(err); }
+  });
+
+  // Redeem codes CRUD
+  app.get("/api/admin/codes", requireAdmin, async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      res.json(
+        await prisma.redeemCode.findMany({
+          orderBy: { createdAt: "desc" },
+          include: { _count: { select: { redemptions: true } } },
+        })
+      );
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/admin/codes", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { code, description, gold, diamonds, experience, items, maxUses, expiresAt, isActive } = req.body;
+      if (!code || typeof code !== "string" || !code.trim()) throw new AppError(400, "Code required");
+      const data: Record<string, any> = {
+        code: code.trim().toUpperCase(),
+        description: typeof description === "string" ? description : null,
+        gold: BigInt(Math.max(0, Math.floor(Number(gold) || 0))),
+        diamonds: Math.max(0, Math.floor(Number(diamonds) || 0)),
+        experience: BigInt(Math.max(0, Math.floor(Number(experience) || 0))),
+        maxUses: Math.max(1, Math.floor(Number(maxUses) || 1000)),
+      };
+      if (Array.isArray(items)) data.items = items;
+      if (expiresAt) data.expiresAt = new Date(expiresAt);
+      if (typeof isActive === "boolean") data.isActive = isActive;
+      res.status(201).json(await prisma.redeemCode.create({ data: data as any }));
+    } catch (err) { next(err); }
+  });
+
+  app.put("/api/admin/codes/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { code, description, gold, diamonds, experience, items, maxUses, expiresAt, isActive } = req.body;
+      const data: Record<string, any> = {};
+      if (typeof code === "string" && code.trim()) data.code = code.trim().toUpperCase();
+      if (typeof description === "string" || description === null) data.description = description;
+      if (typeof gold === "number" && gold >= 0) data.gold = BigInt(Math.floor(gold));
+      if (typeof diamonds === "number" && diamonds >= 0) data.diamonds = Math.floor(diamonds);
+      if (typeof experience === "number" && experience >= 0) data.experience = BigInt(Math.floor(experience));
+      if (Array.isArray(items)) data.items = items;
+      if (typeof maxUses === "number" && maxUses >= 1) data.maxUses = Math.floor(maxUses);
+      if (expiresAt) data.expiresAt = new Date(expiresAt);
+      if (typeof isActive === "boolean") data.isActive = isActive;
+      res.json(await prisma.redeemCode.update({ where: { id: req.params.id }, data }));
+    } catch (err) { next(err); }
+  });
+
+  app.delete("/api/admin/codes/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      await prisma.redeemCode.delete({ where: { id: req.params.id } });
+      res.json({ message: "Deleted" });
     } catch (err) { next(err); }
   });
 

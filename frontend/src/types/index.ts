@@ -582,15 +582,40 @@ export interface Map {
   connections?: { id: string; toMap: { slug: string; name: string }; requiredLevel: number }[];
 }
 
+export interface CombatSkill {
+  id: string;
+  name: string;
+  description: string;
+  type: string;
+  cooldown: number;
+  manaCost: number;
+  baseDamage: number;
+  healingBase: number;
+  buffsApplied: string | null;
+}
+
 export interface CombatUpdate {
   combatId: string;
+  skillId?: string;
+  skillName?: string;
   state: 'active' | 'won' | 'lost';
   characterHp: number;
   characterMana?: number;
+  maxHp?: number;
+  maxMana?: number;
   monsterHp: number;
+  monsterName?: string;
+  monsterMaxHp?: number;
+  characterName?: string;
+  characterLevel?: number;
+  monsterLevel?: number;
+  skills?: CombatSkill[];
   damage?: number;
+  healed?: number;
+  appliedBuffs?: string[];
   isCritical?: boolean;
   isDodged?: boolean;
+  attacker?: string;
 }
 
 export type ChatChannel = 'global' | 'local' | 'party' | 'guild' | 'trade' | 'system' | 'whisper';

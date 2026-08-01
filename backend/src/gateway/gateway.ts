@@ -19,6 +19,10 @@ export function createGateway(
   combatService: CombatService,
   cooldownManager: CooldownManager
 ): void {
+  combatService.setOnTick((payload) => {
+    io.to(`character:${payload.characterId}`).emit("combat:tick", payload);
+  });
+
   io.use((socket: AuthenticatedSocket, next) => {
     const token = socket.handshake.auth?.token || socket.handshake.query?.token;
     if (!token) {

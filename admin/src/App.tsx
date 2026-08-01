@@ -3,6 +3,7 @@ import Layout from "./components/Layout";
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import UsersPage from "./pages/UsersPage";
+import CodesPage from "./pages/CodesPage";
 import GuildSettingsPage from "./pages/GuildSettingsPage";
 import SkillsPage from "./pages/SkillsPage";
 import CrudPage from "./pages/CrudPage";
@@ -22,6 +23,7 @@ export default function App() {
         ))}
         <Route path="/skills" element={<SkillsPage />} />
         <Route path="/users" element={<UsersPage />} />
+        <Route path="/codes" element={<CodesPage />} />
         <Route path="/guild-settings" element={<GuildSettingsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

@@ -99,6 +99,44 @@ export function createQuestsModule(app: Express): void {
             gold: { increment: Number(progress.quest.goldReward) },
           },
         });
+
+        // Grant item rewards (JSON: [{ "itemName": "Poção de Vida", "quantity": 2 }])
+        let rewards: any[] = [];
+        try {
+          rewards = JSON.parse(progress.quest.itemRewards || "[]");
+        } catch {
+          rewards = [];
+        }
+        if (Array.isArray(rewards) && rewards.length > 0) {
+          const names = rewards
+            .map((r) => (typeof r?.itemName === "string" ? r.itemName : ""))
+            .filter(Boolean);
+          if (names.length > 0) {
+            const items = await tx.item.findMany({
+              where: { name: { in: names }, isActive: true },
+            });
+            for (const reward of rewards) {
+              const item = items.find(
+                (i) => i.name.toLowerCase() === String(reward.itemName).toLowerCase()
+              );
+              if (!item) continue;
+              const quantity = Math.max(1, Math.floor(Number(reward.quantity) || 1));
+              const existing = await tx.inventory.findFirst({
+                where: { userId: req.user!.userId, itemId: item.id, slotIndex: null },
+              });
+              if (existing) {
+                await tx.inventory.update({
+                  where: { id: existing.id },
+                  data: { quantity: { increment: quantity } },
+                });
+              } else {
+                await tx.inventory.create({
+                  data: { userId: req.user!.userId, itemId: item.id, quantity },
+                });
+              }
+            }
+          }
+        }
       });
 
       res.json({ message: "Rewards claimed" });

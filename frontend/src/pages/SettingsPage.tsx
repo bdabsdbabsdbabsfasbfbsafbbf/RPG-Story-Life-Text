@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useAuthStore } from "../store/authStore";
-import { authApi } from "../services/api";
-import { Settings, User as UserIcon, Mail, Crown, Star, TrendingUp, Zap, Calendar } from "lucide-react";
+import { authApi, redeemApi } from "../services/api";
+import { Settings, User as UserIcon, Mail, Crown, Star, TrendingUp, Zap, Calendar, Ticket } from "lucide-react";
 import toast from "react-hot-toast";
 
 export function SettingsPage() {
@@ -9,6 +9,8 @@ export function SettingsPage() {
   const setUser = useAuthStore((s) => s.setUser);
   const [displayName, setDisplayName] = useState(user?.displayName || "");
   const [saving, setSaving] = useState(false);
+  const [code, setCode] = useState("");
+  const [redeeming, setRedeeming] = useState(false);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,6 +24,24 @@ export function SettingsPage() {
       toast.error(err.response?.data?.error || "Failed to save settings");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleRedeem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!code.trim()) return;
+    setRedeeming(true);
+    try {
+      const { data } = await redeemApi.redeem(code.trim().toUpperCase());
+      if (user) {
+        setUser({ ...user, gold: data.gold, diamonds: data.diamonds });
+      }
+      toast.success(`Código resgatado! +${Number(data.gold).toLocaleString()} gold, +${data.diamonds} diamantes, +${Number(data.experience).toLocaleString()} XP`);
+      setCode("");
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Código inválido");
+    } finally {
+      setRedeeming(false);
     }
   };
 
@@ -71,6 +91,26 @@ export function SettingsPage() {
           </button>
         </div>
         <p className="text-xs text-gray-500">O nome mostrado no jogo. Máximo de 30 caracteres.</p>
+      </form>
+
+      <form onSubmit={handleRedeem} className="panel p-4 space-y-3">
+        <h2 className="font-display font-semibold flex items-center gap-2">
+          <Ticket size={16} className="text-yellow-400" /> Resgatar código
+        </h2>
+        <div className="flex gap-3">
+          <input
+            value={code}
+            onChange={(e) => setCode(e.target.value.toUpperCase())}
+            className="input-rpg flex-1 font-mono uppercase"
+            placeholder="EX: BEMVINDO"
+            maxLength={30}
+            required
+          />
+          <button type="submit" disabled={redeeming} className="btn-primary">
+            {redeeming ? "Resgatando..." : "Resgatar"}
+          </button>
+        </div>
+        <p className="text-xs text-gray-500">Códigos dão gold, diamantes, XP e itens. Cada código pode ser usado uma vez.</p>
       </form>
     </div>
   );

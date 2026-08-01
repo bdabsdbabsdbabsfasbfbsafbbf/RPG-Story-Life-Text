@@ -3,6 +3,29 @@ import { prisma } from "../../core/database";
 import { authenticate } from "../../core/middleware/auth";
 import { AppError } from "../../core/middleware/errorHandler";
 
+// Starter items granted per class (matched by item name)
+const STARTER_KITS: Record<string, { itemName: string; quantity: number }[]> = {
+  cavaleiro: [
+    { itemName: "Espada de Iniciante", quantity: 1 },
+    { itemName: "Escudo de Madeira", quantity: 1 },
+    { itemName: "Poção de Vida", quantity: 5 },
+  ],
+  mago: [
+    { itemName: "Cajado do Aprendiz", quantity: 1 },
+    { itemName: "Poção de Mana", quantity: 5 },
+    { itemName: "Poção de Vida", quantity: 3 },
+  ],
+  assassino: [
+    { itemName: "Adaga de Iniciante", quantity: 1 },
+    { itemName: "Poção de Vida", quantity: 5 },
+  ],
+  suporte: [
+    { itemName: "Cajado da Luz", quantity: 1 },
+    { itemName: "Poção de Mana", quantity: 5 },
+    { itemName: "Poção de Vida", quantity: 3 },
+  ],
+};
+
 export function createCharacterModule(app: Express): void {
   // Catalog (index) for the creation screen: races, traits and starter classes
   app.get("/api/characters/index", async (_req: Request, res: Response, next: NextFunction) => {
@@ -107,6 +130,31 @@ export function createCharacterModule(app: Express): void {
         await tx.characterClass.create({
           data: { characterId: created.id, classId: gameClass.id, isActive: true },
         });
+
+        const kit = STARTER_KITS[gameClass.slug];
+        if (kit && kit.length > 0) {
+          const items = await tx.item.findMany({
+            where: { name: { in: kit.map((k) => k.itemName) }, isActive: true },
+          });
+          for (const entry of kit) {
+            const item = items.find((i) => i.name.toLowerCase() === entry.itemName.toLowerCase());
+            if (!item) continue;
+            const existing = await tx.inventory.findFirst({
+              where: { userId: req.user!.userId, itemId: item.id, slotIndex: null },
+            });
+            if (existing) {
+              await tx.inventory.update({
+                where: { id: existing.id },
+                data: { quantity: { increment: entry.quantity } },
+              });
+            } else {
+              await tx.inventory.create({
+                data: { userId: req.user!.userId, itemId: item.id, quantity: entry.quantity },
+              });
+            }
+          }
+        }
+
         return created;
       });
 

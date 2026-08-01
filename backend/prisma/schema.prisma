@@ -27,17 +27,18 @@ model User {
   role          String   @default("player")
   raceRerolls   Int      @default(3)
   traitRerolls  Int      @default(3)
-  characters    Character[]
-  guildMembers  GuildMember[]
-  inventory     Inventory[]
-  questProgress QuestProgress[]
+  characters    Character[] @relation()
+  guildMembers  GuildMember[] @relation()
+  inventory     Inventory[] @relation()
+  questProgress QuestProgress[] @relation()
   mailSent      Mail[]      @relation("MailSender")
   mailReceived  Mail[]      @relation("MailReceiver")
-  marketListings MarketListing[]
-  friendships   Friendship[]
-  userTitles    UserTitle[]
-  userAchievements UserAchievement[]
-  partyMembers  PartyMember[]
+  marketListings MarketListing[] @relation()
+  friendships   Friendship[] @relation()
+  userTitles    UserTitle[] @relation()
+  userAchievements UserAchievement[] @relation()
+  partyMembers  PartyMember[] @relation()
+  redeemRedemptions RedeemRedemption[]
 
   @@index([discordId])
   @@index([username])
@@ -59,16 +60,16 @@ model Character {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  user          User     @relation(fields: [userId], references: [id])
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   class         GameClass @relation(fields: [classId], references: [id])
   race          Race?    @relation(fields: [raceId], references: [id])
   trait         Trait?   @relation(fields: [traitId], references: [id])
-  equipment     Equipment?
-  combatStats   CombatStats?
-  activeBuffs   ActiveBuff[]
-  activeCooldowns ActiveCooldown[]
-  stacks        Stack[]
-  classProgress CharacterClass[]
+  equipment     Equipment? @relation()
+  combatStats   CombatStats? @relation()
+  activeBuffs   ActiveBuff[] @relation()
+  activeCooldowns ActiveCooldown[] @relation()
+  stacks        Stack[] @relation()
+  classProgress CharacterClass[] @relation()
 
   @@index([userId])
   @@index([classId])
@@ -316,7 +317,7 @@ model ActiveBuff {
   sourceId      String?
   appliedAt     DateTime @default(now())
   expiresAt     DateTime?
-  character     Character @relation(fields: [characterId], references: [id])
+  character     Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
   buff          Buff      @relation(fields: [buffId], references: [id])
   @@index([characterId])
   @@index([characterId, buffId])
@@ -332,7 +333,7 @@ model Stack {
   duration      Int      @default(0)
   createdAt     DateTime @default(now())
   expiresAt     DateTime?
-  character     Character @relation(fields: [characterId], references: [id])
+  character     Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
   @@unique([characterId, stackDefId])
   @@index([characterId])
 }
@@ -358,7 +359,7 @@ model ActiveCooldown {
   remainingMs   Int
   startedAt     DateTime @default(now())
   expiresAt     DateTime
-  character     Character @relation(fields: [characterId], references: [id])
+  character     Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
   skill         Skill     @relation(fields: [skillId], references: [id])
   @@index([characterId])
   @@index([characterId, skillId])
@@ -368,7 +369,8 @@ model CombatStats {
   id              String   @id @default(uuid())
   characterId     String   @unique
   updatedAt       DateTime @updatedAt
-  character       Character @relation(fields: [characterId], references: [id])
+  character     Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  @@index([characterId])
 
   // ===== CORE STATS =====
   // Weapon / Equipment Base
@@ -457,7 +459,7 @@ model Equipment {
   relicId       String?  @unique
   petId         String?  @unique
   updatedAt     DateTime @updatedAt
-  character     Character @relation(fields: [characterId], references: [id])
+  character     Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
   helmet        Item?     @relation("EquippedHelmet", fields: [helmetId], references: [id])
   chestplate    Item?     @relation("EquippedChestplate", fields: [chestplateId], references: [id])
   pants         Item?     @relation("EquippedPants", fields: [pantsId], references: [id])
@@ -565,7 +567,7 @@ model Inventory {
   isEquipped    Boolean  @default(false)
   slotIndex     Int?
   acquiredAt    DateTime @default(now())
-  user          User     @relation(fields: [userId], references: [id])
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   item          Item     @relation(fields: [itemId], references: [id])
   @@unique([userId, itemId, slotIndex])
   @@index([userId])
@@ -752,7 +754,7 @@ model QuestProgress {
   startedAt     DateTime @default(now())
   completedAt   DateTime?
   claimedAt     DateTime?
-  user          User     @relation(fields: [userId], references: [id])
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   quest         Quest    @relation(fields: [questId], references: [id])
   @@unique([userId, questId])
   @@index([userId])
@@ -791,7 +793,7 @@ model GuildMember {
   joinedAt      DateTime @default(now())
   contribution  BigInt   @default(0)
   guild         Guild    @relation(fields: [guildId], references: [id])
-  user          User     @relation(fields: [userId], references: [id])
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@unique([guildId, userId])
   @@index([guildId])
   @@index([userId])
@@ -854,7 +856,7 @@ model MarketListing {
   status        String   @default("active")
   createdAt     DateTime @default(now())
   expiresAt     DateTime?
-  seller        User     @relation(fields: [sellerId], references: [id])
+  seller        User     @relation(fields: [sellerId], references: [id], onDelete: Cascade)
   item          Item     @relation(fields: [itemId], references: [id])
   @@index([sellerId])
   @@index([itemId])
@@ -874,9 +876,9 @@ model Mail {
   goldAmount    BigInt   @default(0)
   sentAt        DateTime @default(now())
   expiresAt     DateTime?
-  sender        User     @relation("MailSender", fields: [senderId], references: [id])
-  receiver      User     @relation("MailReceiver", fields: [receiverId], references: [id])
-  items         MailItem[]
+  sender        User     @relation("MailSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver      User     @relation("MailReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  items         MailItem[] @relation()
   @@index([receiverId])
   @@index([receiverId, isRead])
 }
@@ -886,7 +888,7 @@ model MailItem {
   mailId        String
   itemId        String
   quantity      Int      @default(1)
-  mail          Mail     @relation(fields: [mailId], references: [id])
+  mail          Mail     @relation(fields: [mailId], references: [id], onDelete: Cascade)
   item          Item     @relation(fields: [itemId], references: [id])
   @@index([mailId])
 }
@@ -908,7 +910,7 @@ model UserTitle {
   titleId       String
   isActive      Boolean  @default(false)
   unlockedAt    DateTime @default(now())
-  user          User?    @relation(fields: [userId], references: [id])
+  user          User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   title         Title    @relation(fields: [titleId], references: [id])
   @@unique([userId, titleId])
   @@index([userId])
@@ -936,7 +938,7 @@ model UserAchievement {
   isCompleted   Boolean  @default(false)
   completedAt   DateTime?
   unlockedAt    DateTime @default(now())
-  user          User?        @relation(fields: [userId], references: [id])
+  user          User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
   achievement   Achievement  @relation(fields: [achievementId], references: [id])
   @@unique([userId, achievementId])
   @@index([userId])
@@ -949,7 +951,7 @@ model Friendship {
   status        String   @default("pending")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-  user          User     @relation(fields: [userId], references: [id])
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@unique([userId, friendId])
   @@index([userId])
   @@index([friendId])
@@ -972,7 +974,7 @@ model PartyMember {
   userId        String
   joinedAt      DateTime @default(now())
   party         Party    @relation(fields: [partyId], references: [id])
-  user          User     @relation(fields: [userId], references: [id])
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@unique([partyId, userId])
   @@index([partyId])
 }
@@ -1075,4 +1077,32 @@ model AnalyticsEvent {
   createdAt     DateTime @default(now())
   @@index([eventType])
   @@index([createdAt])
+}
+
+model RedeemCode {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  description String?
+  gold        BigInt   @default(0)
+  diamonds    Int      @default(0)
+  experience  BigInt   @default(0)
+  items       Json     @default("[]") // [{ "itemSlug": "pocao-de-vida", "quantity": 5 }]
+  maxUses     Int      @default(1000)
+  uses        Int      @default(0)
+  expiresAt   DateTime?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  redemptions RedeemRedemption[]
+  @@index([code])
+}
+
+model RedeemRedemption {
+  id         String      @id @default(uuid())
+  codeId     String
+  userId     String
+  redeemedAt DateTime    @default(now())
+  code       RedeemCode  @relation(fields: [codeId], references: [id], onDelete: Cascade)
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([codeId, userId])
+  @@index([userId])
 }

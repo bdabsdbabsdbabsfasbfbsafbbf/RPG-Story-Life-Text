@@ -13,6 +13,7 @@ import {
   Swords,
   Sparkles,
   Fingerprint,
+  Ticket,
   LogOut,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -35,6 +36,7 @@ const navItems: NavItem[] = [
   { to: '/races', icon: <Fingerprint size={18} />, label: 'Races' },
   { to: '/traits', icon: <Sparkles size={18} />, label: 'Traits' },
   { to: '/users', icon: <Users size={18} />, label: 'Users' },
+  { to: '/codes', icon: <Ticket size={18} />, label: 'Redeem Codes' },
   { to: '/guild-settings', icon: <Swords size={18} />, label: 'Guild Settings' },
 ];
 

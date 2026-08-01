@@ -98,6 +98,24 @@ export const adminApi = {
   stats: () => api.get("/admin/stats"),
   users: {
     list: () => api.get("/admin/users"),
+    get: (id: string) => api.get(`/admin/users/${id}`),
     update: (id: string, data: any) => api.put(`/admin/users/${id}`, data),
+    delete: (id: string) => api.delete(`/admin/users/${id}`),
+    characters: {
+      update: (userId: string, characterId: string, data: any) =>
+        api.put(`/admin/users/${userId}/characters/${characterId}`, data),
+    },
+    inventory: {
+      list: (userId: string) => api.get(`/admin/users/${userId}/inventory`),
+      add: (userId: string, data: any) => api.post(`/admin/users/${userId}/inventory`, data),
+      remove: (userId: string, inventoryId: string) =>
+        api.delete(`/admin/users/${userId}/inventory/${inventoryId}`),
+    },
+  },
+  codes: {
+    list: () => api.get("/admin/codes"),
+    create: (data: any) => api.post("/admin/codes", data),
+    update: (id: string, data: any) => api.put(`/admin/codes/${id}`, data),
+    delete: (id: string) => api.delete(`/admin/codes/${id}`),
   },
 };

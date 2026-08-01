@@ -42,6 +42,10 @@ export const charactersApi = {
   tickets: () => api.get("/characters/tickets"),
 };
 
+export const redeemApi = {
+  redeem: (code: string) => api.post("/redeem", { code }),
+};
+
 export const classesApi = {
   list: () => api.get("/classes"),
   get: (slug: string) => api.get(`/classes/${slug}`),
