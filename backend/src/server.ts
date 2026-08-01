@@ -72,6 +72,17 @@ createGateway(io, combatService, cooldownManager);
 
 const frontendDist = path.resolve(__dirname, "../../frontend/dist");
 app.use(express.static(frontendDist));
+
+const adminDist = path.resolve(__dirname, "../../admin/dist");
+app.use("/admin", express.static(adminDist));
+app.get("/admin/*", (req, res, next) => {
+  if (req.path.startsWith("/api")) {
+    next();
+    return;
+  }
+  res.sendFile(path.join(adminDist, "index.html"));
+});
+
 app.get("*", (req, res, next) => {
   if (req.path.startsWith("/api")) {
     next();
