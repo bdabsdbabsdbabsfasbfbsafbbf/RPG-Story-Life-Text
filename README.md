@@ -137,15 +137,19 @@ docker-compose -f docker-compose.prod.yml up
 
 ## Deploy na Railway
 
-1. Conecte o repositório ao Railway
-2. Configure as variáveis de ambiente no Railway:
-   - `DATABASE_URL` - PostgreSQL connection string
-   - `REDIS_URL` - Redis connection string
+O projeto roda como **um único serviço** no Railway (monolito): o backend Express serve a API (`/api/*`), o WebSocket (Socket.IO) e também o frontend buildado (`/`). O healthcheck usa `GET /api/health`.
+
+1. Conecte o repositório ao Railway (serviço único, root directory = raiz do repositório)
+2. Provisione os plugins **PostgreSQL** e **Redis** no projeto
+3. Configure as variáveis de ambiente no Railway:
+   - `DATABASE_URL` - PostgreSQL connection string (injetada automaticamente pelo plugin)
+   - `REDIS_URL` - Redis connection string (injetada automaticamente pelo plugin)
    - `JWT_SECRET` - Chave secreta JWT
-   - `DISCORD_CLIENT_ID` - Discord OAuth client ID
-   - `DISCORD_CLIENT_SECRET` - Discord OAuth client secret
-   - `FRONTEND_URL` - URL do frontend
-3. O `railway.json` já está configurado para build/deploy automático
+   - `FRONTEND_URL` - URL pública do serviço (ex: `https://<app>.up.railway.app`)
+   - `ADMIN_URL` - URL do painel admin
+   - `NODE_ENV=production`
+4. O `railway.json` na raiz define build (`npm run build` = backend + frontend), start e healthcheck `/api/health`
+5. A cada push na `main`, o Railway faz deploy automático via integração GitHub
 
 ## API REST
 

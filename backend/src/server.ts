@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import path from "path";
 import http from "http";
 import cors from "cors";
 import helmet from "helmet";
@@ -68,6 +69,16 @@ app.set("redis", redis);
 import { registerModules } from "./app";
 registerModules(app);
 createGateway(io, combatService, cooldownManager);
+
+const frontendDist = path.resolve(__dirname, "../../frontend/dist");
+app.use(express.static(frontendDist));
+app.get("*", (req, res, next) => {
+  if (req.path.startsWith("/api")) {
+    next();
+    return;
+  }
+  res.sendFile(path.join(frontendDist, "index.html"));
+});
 
 app.use(errorHandler);
 
