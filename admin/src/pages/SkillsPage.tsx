@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { adminApi } from "../api";
 import JsonField from "../components/JsonField";
@@ -54,10 +55,29 @@ const defaultPassive = {
   effectData: {} as Record<string, any>,
 };
 
+const passiveStatFields = [
+  { key: "maxHpPercent", label: "HP Máx (%)" },
+  { key: "maxManaPercent", label: "Mana Máx (%)" },
+  { key: "attack", label: "Ataque" },
+  { key: "defense", label: "Defesa" },
+  { key: "magic", label: "Magia" },
+  { key: "magicDefense", label: "Res. Mágica" },
+  { key: "speed", label: "Velocidade" },
+  { key: "critChance", label: "Chance Crítica (%)" },
+  { key: "critDamage", label: "Dano Crítico (%)" },
+  { key: "dodge", label: "Esquiva (%)" },
+  { key: "healingPowerPercent", label: "Poder de Cura (%)" },
+  { key: "cooldownReduction", label: "Redução de CD (%)" },
+  { key: "lifeSteal", label: "Roubo de Vida (%)" },
+];
+
 export default function SkillsPage() {
+  const [searchParams] = useSearchParams();
+  const urlClassId = searchParams.get("class") || "";
+  const urlTab = searchParams.get("tab") === "passives" ? "passives" : "skills";
   const [classes, setClasses] = useState<GameClassLite[]>([]);
-  const [selectedClassId, setSelectedClassId] = useState("");
-  const [tab, setTab] = useState<"skills" | "passives">("skills");
+  const [selectedClassId, setSelectedClassId] = useState(urlClassId);
+  const [tab, setTab] = useState<"skills" | "passives">(urlTab);
   const [skills, setSkills] = useState<any[]>([]);
   const [passives, setPassives] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,7 +95,10 @@ export default function SkillsPage() {
       .then(({ data }) => {
         const list = Array.isArray(data) ? data : [];
         setClasses(list);
-        if (list.length > 0) setSelectedClassId(list[0].id);
+        if (list.length > 0) {
+          const initial = urlClassId && list.some((c) => c.id === urlClassId) ? urlClassId : list[0].id;
+          setSelectedClassId(initial);
+        }
       })
       .catch(() => toast.error("Failed to load classes"));
   }, []);
@@ -511,9 +534,9 @@ export default function SkillsPage() {
                   </select>
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block text-sm text-gray-400 mb-1.5">Stat Modifiers (JSON)</label>
+                  <label className="block text-sm text-gray-400 mb-1.5">Stat Modifiers (só valores)</label>
                   <JsonField
-                    schema={{ mode: "record", valueType: "number", addLabel: "Adicionar modificador", keyPlaceholder: "ex: attack, defense, hp", valuePlaceholder: "valor (ex: 10)" }}
+                    schema={{ mode: "fixed-record", allowExtra: true, extraKeyPlaceholder: "outro stat", fields: passiveStatFields }}
                     value={passiveForm.statModifiers}
                     onChange={(v) => setPassiveForm({ ...passiveForm, statModifiers: v })}
                   />

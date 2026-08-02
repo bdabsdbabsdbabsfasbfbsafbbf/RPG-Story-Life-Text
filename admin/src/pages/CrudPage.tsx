@@ -19,7 +19,7 @@ export interface FieldConfig {
 export interface ColumnConfig {
   key: string;
   label: string;
-  render?: (value: any) => any;
+  render?: (value: any, item?: any) => any;
 }
 
 export interface CrudConfig {
@@ -27,6 +27,7 @@ export interface CrudConfig {
   title: string;
   columns: ColumnConfig[];
   fields: FieldConfig[];
+  extraActions?: (item: any) => React.ReactNode;
 }
 
 interface CrudPageProps {
@@ -271,10 +272,11 @@ export default function CrudPage({ config }: CrudPageProps) {
                 <tr key={item.id} className="border-b border-dark-700 hover:bg-dark-800/50">
                   {config.columns.map((col) => (
                     <td key={col.key} className="py-2.5 px-4">
-                      {col.render ? col.render(item[col.key]) : item[col.key] ?? "-"}
+                      {col.render ? col.render(item[col.key], item) : item[col.key] ?? "-"}
                     </td>
                   ))}
                   <td className="py-2.5 px-4 text-right whitespace-nowrap">
+                    {config.extraActions && config.extraActions(item)}
                     <button
                       onClick={() => openEdit(item)}
                       className="text-blue-400 hover:text-blue-300 mr-3"

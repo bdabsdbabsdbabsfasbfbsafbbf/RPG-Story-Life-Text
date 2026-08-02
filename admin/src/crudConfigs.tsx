@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+import { Sparkles } from "lucide-react";
 import { CrudConfig } from "./pages/CrudPage";
 
 const boolBadge = (v: any, yesClass = "bg-green-500/20 text-green-400", noClass = "bg-gray-600/20 text-gray-400") => (
@@ -39,7 +41,29 @@ export const crudConfigs: CrudConfig[] = [
       { key: "baseHp", label: "Base HP" },
       { key: "baseAttack", label: "Base ATK" },
       { key: "isActive", label: "Active", render: (v) => boolBadge(v) },
+      {
+        key: "_passives",
+        label: "Passivas",
+        render: (_v, item) => (
+          <Link
+            to={`/skills?class=${item.id}&tab=passives`}
+            className="inline-flex items-center gap-1 text-xs text-green-400 hover:text-green-300"
+            title="Editar passivas desta classe"
+          >
+            <Sparkles size={12} /> Passivas
+          </Link>
+        ),
+      },
     ],
+    extraActions: (item) => (
+      <Link
+        to={`/skills?class=${item.id}&tab=passives`}
+        className="inline-flex items-center gap-1 text-xs text-green-400 hover:text-green-300 mr-3"
+        title="Editar passivas desta classe"
+      >
+        <Sparkles size={14} /> Passivas
+      </Link>
+    ),
     fields: [
       { name: "name", label: "Name", type: "text", required: true },
       { name: "slug", label: "Slug", type: "text", placeholder: "e.g. cavaleiro", hint: "Lowercase, no spaces" },
