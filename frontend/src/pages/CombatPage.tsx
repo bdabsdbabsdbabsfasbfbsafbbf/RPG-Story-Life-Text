@@ -150,7 +150,7 @@ export function CombatPage() {
     });
 
     socket.on("combat:skillUsed", (data: CombatUpdate) => {
-      setCombat(data);
+      setCombat((prev) => (prev ? { ...prev, ...data } : data));
       if (data.state === "won") {
         toast.success("Vitória!");
         refreshUser();
@@ -366,16 +366,6 @@ export function CombatPage() {
             </div>
           )}
 
-          {combat && combat.state === "active" && (
-            <button
-              onClick={flee}
-              className="mt-4 w-full flex items-center justify-center gap-2 px-3 py-2.5 text-sm rounded-xl border border-dark-600 text-gray-400 hover:text-amber-300 hover:border-amber-500/40 transition-colors"
-              title="Tenta fugir do combate (70% de chance)"
-            >
-              <DoorOpen size={16} /> Fugir
-            </button>
-          )}
-
           {combat && combat.state === "won" && (
             <div className="mt-4 text-center py-3 space-y-2">
               <p className="text-green-400 font-bold text-lg">Vitória!</p>
@@ -484,6 +474,16 @@ export function CombatPage() {
                   </button>
                 );
               })}
+              <button
+                onClick={flee}
+                disabled={combat.state !== "active"}
+                className={`w-20 card-hover py-3 text-center ${combat.state !== "active" ? "opacity-40 cursor-not-allowed" : "hover:border-amber-500/40"}`}
+                title="Tenta fugir do combate (70% de chance)"
+              >
+                <DoorOpen size={18} className="mx-auto mb-1 text-amber-400" />
+                <span className="text-[11px] block">Fugir</span>
+                <span className="text-[9px] text-gray-500 block">70%</span>
+              </button>
             </div>
 
             {/* Poções */}

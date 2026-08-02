@@ -406,6 +406,7 @@ export class CombatService {
     const snap = entry.battle.snapshot();
     const payload: any = {
       combatId,
+      skills: entry.skills.map((s) => serializeSkillForClient(s, entry.battle.getSkillModifiersFor(s.slug))),
       skillId: skill.id,
       skillName: skill.name,
       damage: result.damage,

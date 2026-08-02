@@ -163,7 +163,7 @@ export default function SkillsPage() {
   const buildPayload = () => {
     const payload: Record<string, any> = {
       name: form.name,
-      slug: form.slug || null,
+      slug: form.slug || form.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || `skill-${Date.now()}`,
       description: form.description,
       icon: form.icon || null,
       kind: form.kind,
