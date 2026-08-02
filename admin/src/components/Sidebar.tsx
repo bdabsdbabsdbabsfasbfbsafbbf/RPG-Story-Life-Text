@@ -15,6 +15,7 @@ import {
   Fingerprint,
   Ticket,
   LogOut,
+  Scale,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -38,6 +39,7 @@ const navItems: NavItem[] = [
   { to: '/users', icon: <Users size={18} />, label: 'Users' },
   { to: '/codes', icon: <Ticket size={18} />, label: 'Redeem Codes' },
   { to: '/guild-settings', icon: <Swords size={18} />, label: 'Guild Settings' },
+  { to: '/limits', icon: <Scale size={18} />, label: 'Limits' },
 ];
 
 export default function Sidebar() {

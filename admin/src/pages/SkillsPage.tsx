@@ -253,6 +253,7 @@ export default function SkillsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-dark-600">
+                <th className="text-left py-3 px-4 text-gray-400 font-medium">ID</th>
                 <th className="text-left py-3 px-4 text-gray-400 font-medium">Name</th>
                 <th className="text-left py-3 px-4 text-gray-400 font-medium">Type</th>
                 <th className="text-left py-3 px-4 text-gray-400 font-medium">Subtype</th>
@@ -266,6 +267,9 @@ export default function SkillsPage() {
             <tbody>
               {skills.map((s) => (
                 <tr key={s.id} className="border-b border-dark-700 hover:bg-dark-800/50">
+                  <td className="py-2.5 px-4">
+                    <span className="font-mono text-[11px] text-gray-500" title={s.id}>{String(s.id ?? "").slice(0, 8)}</span>
+                  </td>
                   <td className="py-2.5 px-4">
                     <span className="font-medium text-white">{s.name}</span>
                     <p className="text-xs text-gray-500 max-w-xs truncate">{s.description}</p>

@@ -10,11 +10,22 @@ const jsonPreview = (v: any) => (
   <span className="text-xs text-gray-500">{v ? JSON.stringify(v).slice(0, 40) : "-"}</span>
 );
 
+const idColumn = {
+  key: "id",
+  label: "ID",
+  render: (v: any) => (
+    <span className="font-mono text-[11px] text-gray-500" title={v}>
+      {String(v ?? "").slice(0, 8)}
+    </span>
+  ),
+};
+
 export const crudConfigs: CrudConfig[] = [
   {
     key: "classes",
     title: "Classes",
     columns: [
+      idColumn,
       { key: "name", label: "Name", render: (v) => <span className="font-medium text-white">{v}</span> },
       { key: "role", label: "Role" },
       { key: "element", label: "Element" },
@@ -81,6 +92,7 @@ export const crudConfigs: CrudConfig[] = [
     key: "items",
     title: "Items",
     columns: [
+      idColumn,
       { key: "name", label: "Name", render: (v) => <span className="font-medium text-white">{v}</span> },
       { key: "type", label: "Type" },
       { key: "rarity", label: "Rarity" },
@@ -112,6 +124,7 @@ export const crudConfigs: CrudConfig[] = [
     key: "monsters",
     title: "Monsters / Bosses",
     columns: [
+      idColumn,
       { key: "name", label: "Name", render: (v) => <span className="font-medium text-white">{v}</span> },
       { key: "level", label: "Level" },
       { key: "hp", label: "HP" },
@@ -143,6 +156,7 @@ export const crudConfigs: CrudConfig[] = [
     key: "maps",
     title: "Maps",
     columns: [
+      idColumn,
       { key: "name", label: "Name", render: (v) => <span className="font-medium text-white">{v}</span> },
       { key: "slug", label: "Slug", render: (v) => <span className="text-xs text-gray-500">{v}</span> },
       { key: "region", label: "Region" },
@@ -166,6 +180,7 @@ export const crudConfigs: CrudConfig[] = [
     key: "quests",
     title: "Quests",
     columns: [
+      idColumn,
       { key: "title", label: "Title", render: (v) => <span className="font-medium text-white">{v}</span> },
       { key: "type", label: "Type" },
       { key: "difficulty", label: "Difficulty" },
@@ -200,6 +215,7 @@ export const crudConfigs: CrudConfig[] = [
     key: "buffs",
     title: "Buffs / Debuffs",
     columns: [
+      idColumn,
       { key: "name", label: "Name", render: (v) => <span className="font-medium text-white">{v}</span> },
       { key: "type", label: "Type" },
       { key: "duration", label: "Duration (ms)", render: (v) => <span className="font-mono text-xs">{v ?? 0}</span> },
@@ -224,6 +240,7 @@ export const crudConfigs: CrudConfig[] = [
     key: "races",
     title: "Races",
     columns: [
+      idColumn,
       { key: "name", label: "Name", render: (v) => <span className="font-medium text-white">{v}</span> },
       { key: "slug", label: "Slug", render: (v) => <span className="text-xs text-gray-500">{v}</span> },
       { key: "description", label: "Description", render: (v) => <span className="text-gray-400 max-w-xs truncate block">{v}</span> },
@@ -248,6 +265,7 @@ export const crudConfigs: CrudConfig[] = [
     key: "traits",
     title: "Traits",
     columns: [
+      idColumn,
       { key: "name", label: "Name", render: (v) => <span className="font-medium text-white">{v}</span> },
       { key: "slug", label: "Slug", render: (v) => <span className="text-xs text-gray-500">{v}</span> },
       { key: "description", label: "Description", render: (v) => <span className="text-gray-400 max-w-xs truncate block">{v}</span> },

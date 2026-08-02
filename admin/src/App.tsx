@@ -5,6 +5,7 @@ import DashboardPage from "./pages/DashboardPage";
 import UsersPage from "./pages/UsersPage";
 import CodesPage from "./pages/CodesPage";
 import GuildSettingsPage from "./pages/GuildSettingsPage";
+import LimitsPage from "./pages/LimitsPage";
 import SkillsPage from "./pages/SkillsPage";
 import CrudPage from "./pages/CrudPage";
 import { crudConfigs } from "./crudConfigs";
@@ -25,6 +26,7 @@ export default function App() {
         <Route path="/users" element={<UsersPage />} />
         <Route path="/codes" element={<CodesPage />} />
         <Route path="/guild-settings" element={<GuildSettingsPage />} />
+        <Route path="/limits" element={<LimitsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

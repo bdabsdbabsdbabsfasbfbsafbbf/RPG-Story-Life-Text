@@ -40,6 +40,8 @@ export const adminApi = {
   settings: {
     guild: () => api.get("/admin/settings/guild"),
     updateGuild: (data: any) => api.put("/admin/settings/guild", data),
+    limits: () => api.get("/admin/settings/limits"),
+    updateLimits: (data: any) => api.put("/admin/settings/limits", data),
   },
   classes: {
     list: () => api.get("/admin/classes"),

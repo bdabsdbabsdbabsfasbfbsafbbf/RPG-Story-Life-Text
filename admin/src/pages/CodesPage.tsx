@@ -149,6 +149,7 @@ export default function CodesPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-dark-600">
+                <th className="text-left py-3 px-4 text-gray-400 font-medium">ID</th>
                 <th className="text-left py-3 px-4 text-gray-400 font-medium">Code</th>
                 <th className="text-left py-3 px-4 text-gray-400 font-medium">Description</th>
                 <th className="text-left py-3 px-4 text-gray-400 font-medium">Gold</th>
@@ -163,6 +164,9 @@ export default function CodesPage() {
             <tbody>
               {codes.map((c) => (
                 <tr key={c.id} className="border-b border-dark-700 hover:bg-dark-800/50">
+                  <td className="py-2.5 px-4">
+                    <span className="font-mono text-[11px] text-gray-500" title={c.id}>{String(c.id ?? "").slice(0, 8)}</span>
+                  </td>
                   <td className="py-2.5 px-4 font-mono font-medium text-yellow-300">{c.code}</td>
                   <td className="py-2.5 px-4 text-gray-400 max-w-xs truncate">{c.description || "-"}</td>
                   <td className="py-2.5 px-4 font-mono">{Number(c.gold).toLocaleString()}</td>
