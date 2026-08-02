@@ -43,32 +43,82 @@ export function createRedeemModule(app: Express): void {
         });
 
         const rawItems = Array.isArray(code.items) ? (code.items as any[]) : [];
+        const grantedClasses: string[] = [];
+        const character = await tx.character.findFirst({
+          where: { userId: req.user!.userId },
+        });
+
         for (const entry of rawItems) {
+          const wantsClass =
+            entry?.type === "class" ||
+            entry?.className ||
+            entry?.classSlug ||
+            entry?.classId;
+
+          if (wantsClass) {
+            const name = String(entry?.className ?? entry?.itemName ?? "").trim();
+            const slug = String(entry?.classSlug ?? "").trim();
+            const id = String(entry?.classId ?? "").trim();
+            let gameClass = null;
+            if (id) gameClass = await tx.gameClass.findUnique({ where: { id } });
+            if (!gameClass && slug) gameClass = await tx.gameClass.findFirst({ where: { slug, isActive: true } });
+            if (!gameClass && name) gameClass = await tx.gameClass.findFirst({ where: { name, isActive: true } });
+            if (!gameClass) continue;
+            if (character) {
+              await tx.characterClass.upsert({
+                where: {
+                  characterId_classId: { characterId: character.id, classId: gameClass.id },
+                },
+                update: {},
+                create: { characterId: character.id, classId: gameClass.id, isActive: false },
+              });
+              grantedClasses.push(gameClass.name);
+            }
+            continue;
+          }
+
           const name = typeof entry?.itemName === "string" ? entry.itemName : "";
           const quantity = Number(entry?.quantity) || 1;
           if (!name) continue;
           const item = await tx.item.findFirst({ where: { name, isActive: true } });
-          if (!item) continue;
-          const existing = await tx.inventory.findFirst({
-            where: { userId: req.user!.userId, itemId: item.id, slotIndex: null },
-          });
-          if (existing) {
-            await tx.inventory.update({
-              where: { id: existing.id },
-              data: { quantity: { increment: quantity } },
+          if (item) {
+            const existing = await tx.inventory.findFirst({
+              where: { userId: req.user!.userId, itemId: item.id, slotIndex: null },
             });
-          } else {
-            await tx.inventory.create({
-              data: { userId: req.user!.userId, itemId: item.id, quantity },
-            });
+            if (existing) {
+              await tx.inventory.update({
+                where: { id: existing.id },
+                data: { quantity: { increment: quantity } },
+              });
+            } else {
+              await tx.inventory.create({
+                data: { userId: req.user!.userId, itemId: item.id, quantity },
+              });
+            }
+            grantedItems.push({ name: item.name, quantity });
+            continue;
           }
-          grantedItems.push({ name: item.name, quantity });
+
+          const gameClass = await tx.gameClass.findFirst({ where: { name, isActive: true } });
+          if (gameClass) {
+            if (character) {
+              await tx.characterClass.upsert({
+                where: {
+                  characterId_classId: { characterId: character.id, classId: gameClass.id },
+                },
+                update: {},
+                create: { characterId: character.id, classId: gameClass.id, isActive: false },
+              });
+              grantedClasses.push(gameClass.name);
+            }
+          }
         }
 
         return {
           gold: Number(code.gold),
           diamonds: code.diamonds,
           experience: Number(code.experience),
+          classes: grantedClasses,
         };
       });
 

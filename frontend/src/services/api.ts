@@ -53,6 +53,9 @@ export const classesApi = {
   getSkills: (slug: string) => api.get(`/classes/${slug}/skills`),
   getPassives: (slug: string) => api.get(`/classes/${slug}/passives`),
   characterClass: (characterId: string) => api.get(`/characters/${characterId}/class`),
+  listClasses: (characterId: string) => api.get(`/characters/${characterId}/classes`),
+  switchClass: (characterId: string, classId: string) =>
+    api.post(`/characters/${characterId}/class`, { classId }),
 };
 
 export const itemsApi = {

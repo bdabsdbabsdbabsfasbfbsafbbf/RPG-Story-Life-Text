@@ -74,8 +74,8 @@ export default function CodesPage() {
     if (!form.code.trim()) return "Code is required";
     if (!Array.isArray(form.items)) return "Items must be a list";
     for (const entry of form.items) {
-      if (!entry.itemName) return 'Each item must have "itemName"';
-      if (!entry.quantity) return 'Each item must have "quantity"';
+      if (!entry.itemName) return 'Each reward must have "itemName"';
+      if (entry.type !== "class" && !entry.quantity) return 'Each item must have "quantity"';
     }
     return null;
   };
@@ -174,7 +174,7 @@ export default function CodesPage() {
                   <td className="py-2.5 px-4 font-mono">{Number(c.experience).toLocaleString()}</td>
                   <td className="py-2.5 px-4 text-xs text-gray-400">
                     {(c.items || []).length > 0
-                      ? (c.items as any[]).map((i: any) => `${i.itemName} x${i.quantity}`).join(", ")
+                      ? (c.items as any[]).map((i: any) => i.type === "class" ? `[CLASSE] ${i.itemName}` : `${i.itemName} x${i.quantity}`).join(", ")
                       : "-"}
                   </td>
                   <td className="py-2.5 px-4 font-mono">{c.uses}/{c.maxUses}</td>
@@ -289,20 +289,22 @@ export default function CodesPage() {
                   <option value="false">No</option>
                 </select>
               </label>
-              <div className="col-span-2">
-                <label className="block text-xs text-gray-400 mb-1.5">Itens da recompensa</label>
+                  <div className="col-span-2">
+                <label className="block text-xs text-gray-400 mb-1.5">Recompensas (itens ou classes)</label>
                 <JsonField
                   schema={{
                     mode: "object-array",
-                    addLabel: "Adicionar item",
+                    addLabel: "Adicionar recompensa",
                     fields: [
-                      { name: "itemName", label: "Nome do Item", type: "text", placeholder: "Pocao de Vida" },
-                      { name: "quantity", label: "Quantidade", type: "number" },
+                      { name: "type", label: "Tipo", type: "select", options: ["item", "class"] },
+                      { name: "itemName", label: "Nome (Item ou Classe)", type: "text", placeholder: "Pocao de Vida / Mago" },
+                      { name: "quantity", label: "Quantidade (só item)", type: "number" },
                     ],
                   }}
                   value={form.items}
                   onChange={(v) => setForm({ ...form, items: v })}
                 />
+                <p className="text-[11px] text-gray-500 mt-1">Tipo "class" desbloqueia a classe pelo nome exato (ex.: "Mago").</p>
               </div>
             </div>
             <button type="submit" className="btn-primary w-full">Save code</button>

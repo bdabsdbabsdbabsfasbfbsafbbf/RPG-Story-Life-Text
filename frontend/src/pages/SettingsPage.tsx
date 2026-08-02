@@ -36,7 +36,10 @@ export function SettingsPage() {
       if (user) {
         setUser({ ...user, gold: data.gold, diamonds: data.diamonds });
       }
-      toast.success(`Código resgatado! +${Number(data.gold).toLocaleString()} gold, +${data.diamonds} diamantes, +${Number(data.experience).toLocaleString()} XP`);
+      const classesGranted = Array.isArray(data.classes) && data.classes.length > 0
+        ? ` Classe(s) desbloqueada(s): ${data.classes.join(", ")}`
+        : "";
+      toast.success(`Código resgatado! +${Number(data.gold).toLocaleString()} gold, +${data.diamonds} diamantes, +${Number(data.experience).toLocaleString()} XP${classesGranted}`);
       setCode("");
     } catch (err: any) {
       toast.error(err.response?.data?.error || "Código inválido");
