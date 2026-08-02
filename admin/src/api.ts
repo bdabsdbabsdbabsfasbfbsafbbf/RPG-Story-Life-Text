@@ -79,6 +79,12 @@ export const adminApi = {
     update: (id: string, data: any) => api.put(`/admin/skills/${id}`, data),
     delete: (id: string) => api.delete(`/admin/skills/${id}`),
   },
+  passives: {
+    list: (classId: string) => api.get(`/admin/classes/${classId}/passives`),
+    create: (classId: string, data: any) => api.post(`/admin/classes/${classId}/passives`, data),
+    update: (id: string, data: any) => api.put(`/admin/class-passives/${id}`, data),
+    delete: (id: string) => api.delete(`/admin/class-passives/${id}`),
+  },
   buffs: {
     list: () => api.get("/admin/buffs"),
     create: (data: any) => api.post("/admin/buffs", data),
@@ -106,6 +112,8 @@ export const adminApi = {
     characters: {
       update: (userId: string, characterId: string, data: any) =>
         api.put(`/admin/users/${userId}/characters/${characterId}`, data),
+      rankMax: (userId: string, characterId: string) =>
+        api.post(`/admin/users/${userId}/characters/${characterId}/rank-max`),
     },
     inventory: {
       list: (userId: string) => api.get(`/admin/users/${userId}/inventory`),

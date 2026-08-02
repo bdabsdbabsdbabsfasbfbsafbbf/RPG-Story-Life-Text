@@ -611,7 +611,7 @@ export interface CombatUpdate {
   combatId: string;
   skillId?: string;
   skillName?: string;
-  state: 'active' | 'won' | 'lost';
+  state: 'active' | 'won' | 'lost' | 'fled';
   characterHp: number;
   characterMana?: number;
   maxHp?: number;
@@ -627,10 +627,14 @@ export interface CombatUpdate {
   playerDamage?: number;
   playerSkillName?: string;
   healed?: number;
+  manaRestored?: number;
   appliedBuffs?: string[];
   isCritical?: boolean;
   isDodged?: boolean;
   attacker?: string;
+  action?: string;
+  fled?: boolean;
+  itemName?: string;
   rewards?: { xpGain?: number; goldGain?: number; levelUps?: number; classXpGain?: number } | null;
 }
 

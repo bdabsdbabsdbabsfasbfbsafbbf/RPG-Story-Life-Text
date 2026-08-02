@@ -206,6 +206,10 @@ export function createAdminModule(app: Express): void {
               class: { select: { id: true, name: true, slug: true, role: true } },
               race: { select: { id: true, name: true } },
               trait: { select: { id: true, name: true } },
+              classProgress: {
+                include: { gameClass: { select: { id: true, name: true, slug: true } } },
+                orderBy: { isActive: "desc" },
+              },
             },
           },
           inventory: {
@@ -262,6 +266,23 @@ export function createAdminModule(app: Express): void {
       });
 
       res.json({ message: "Character updated" });
+    } catch (err) { next(err); }
+  });
+
+  // Set all of a character's classes to max rank
+  app.post("/api/admin/users/:userId/characters/:charId/rank-max", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const character = await prisma.character.findFirst({
+        where: { id: req.params.charId, userId: req.params.userId },
+      });
+      if (!character) throw new AppError(404, "Character not found");
+
+      const maxRank = 10;
+      await prisma.characterClass.updateMany({
+        where: { characterId: character.id },
+        data: { rank: maxRank },
+      });
+      res.json({ message: `All classes set to rank ${maxRank}` });
     } catch (err) { next(err); }
   });
 
@@ -468,6 +489,23 @@ export function createAdminModule(app: Express): void {
 
   app.delete("/api/admin/skills/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try { await prisma.skill.delete({ where: { id: req.params.id } }); res.json({ message: "Deleted" }); } catch (err) { next(err); }
+  });
+
+  // Class passives CRUD
+  app.get("/api/admin/classes/:classId/passives", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try { res.json(await prisma.classPassive.findMany({ where: { classId: req.params.classId }, orderBy: { rankRequired: "asc" } })); } catch (err) { next(err); }
+  });
+
+  app.post("/api/admin/classes/:classId/passives", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try { res.status(201).json(await prisma.classPassive.create({ data: { ...req.body, classId: req.params.classId } })); } catch (err) { next(err); }
+  });
+
+  app.put("/api/admin/class-passives/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try { res.json(await prisma.classPassive.update({ where: { id: req.params.id }, data: req.body })); } catch (err) { next(err); }
+  });
+
+  app.delete("/api/admin/class-passives/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try { await prisma.classPassive.delete({ where: { id: req.params.id } }); res.json({ message: "Deleted" }); } catch (err) { next(err); }
   });
 
   // Buffs CRUD

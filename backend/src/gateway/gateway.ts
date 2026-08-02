@@ -158,6 +158,26 @@ export function createGateway(
       }
     });
 
+    socket.on("combat:flee", async (data: { combatId: string }) => {
+      if (!socket.currentCharacterId) return;
+      try {
+        const result = await combatService.flee(socket.currentCharacterId, data.combatId);
+        socket.emit("combat:action", sanitize({ ...result, action: "flee" }));
+      } catch (err: any) {
+        socket.emit("combat:error", { message: err.message });
+      }
+    });
+
+    socket.on("combat:useItem", async (data: { combatId: string; inventoryId: string }) => {
+      if (!socket.currentCharacterId) return;
+      try {
+        const result = await combatService.useItem(socket.currentCharacterId, data.combatId, data.inventoryId);
+        socket.emit("combat:action", sanitize({ ...result, action: "item" }));
+      } catch (err: any) {
+        socket.emit("combat:error", { message: err.message });
+      }
+    });
+
     socket.on("party:invite", async (data: { targetUserId: string }) => {
       io.to(`user:${data.targetUserId}`).emit("party:invite", {
         fromUserId: socket.userId,

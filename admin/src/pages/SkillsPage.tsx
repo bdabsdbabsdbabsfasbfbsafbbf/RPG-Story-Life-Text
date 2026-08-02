@@ -38,15 +38,36 @@ const subTypeOptions = ["melee", "ranged", "spell", "heal", "buff", "debuff", "d
 const targetTypeOptions = ["self", "enemy", "ally", "area", "all"];
 const damageTypeOptions = ["physical", "magic", "true"];
 
+const effectTypeOptions = [
+  "stat_bonus", "stat_boost", "damage_increase", "damage_reduction",
+  "critical_chance", "critical_damage", "cooldown_reduction", "life_steal",
+  "mana_regen", "health_regen", "resistance", "reflect", "absorb", "chance_proc",
+];
+
+const defaultPassive = {
+  name: "",
+  description: "",
+  icon: "",
+  rankRequired: 1,
+  effectType: "stat_bonus",
+  statModifiers: {} as Record<string, number>,
+  effectData: {} as Record<string, any>,
+};
+
 export default function SkillsPage() {
   const [classes, setClasses] = useState<GameClassLite[]>([]);
   const [selectedClassId, setSelectedClassId] = useState("");
+  const [tab, setTab] = useState<"skills" | "passives">("skills");
   const [skills, setSkills] = useState<any[]>([]);
+  const [passives, setPassives] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState<any>({ ...defaultSkill });
   const [saving, setSaving] = useState(false);
+  const [passiveModalOpen, setPassiveModalOpen] = useState(false);
+  const [passiveEditing, setPassiveEditing] = useState<any>(null);
+  const [passiveForm, setPassiveForm] = useState<any>({ ...defaultPassive });
 
   useEffect(() => {
     adminApi.classes
@@ -72,9 +93,23 @@ export default function SkillsPage() {
     }
   };
 
+  const loadPassives = async (classId: string) => {
+    if (!classId) return;
+    setLoading(true);
+    try {
+      const { data } = await adminApi.passives.list(classId);
+      setPassives(Array.isArray(data) ? data : []);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to load passives");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    load(selectedClassId);
-  }, [selectedClassId]);
+    if (tab === "skills") load(selectedClassId);
+    else loadPassives(selectedClassId);
+  }, [selectedClassId, tab]);
 
   const openCreate = () => {
     setEditing(null);
@@ -167,6 +202,71 @@ export default function SkillsPage() {
     }
   };
 
+  const openCreatePassive = () => {
+    setPassiveEditing(null);
+    setPassiveForm({ ...defaultPassive });
+    setPassiveModalOpen(true);
+  };
+
+  const openEditPassive = (p: any) => {
+    setPassiveEditing(p);
+    let statModifiers: Record<string, number> = {};
+    let effectData: Record<string, any> = {};
+    try { statModifiers = p.statModifiers ? JSON.parse(p.statModifiers) : {}; } catch { statModifiers = {}; }
+    try { effectData = p.effectData ? JSON.parse(p.effectData) : {}; } catch { effectData = {}; }
+    setPassiveForm({
+      name: p.name ?? "",
+      description: p.description ?? "",
+      icon: p.icon ?? "",
+      rankRequired: p.rankRequired ?? 1,
+      effectType: p.effectType ?? "stat_bonus",
+      statModifiers: typeof statModifiers === "object" ? statModifiers : {},
+      effectData: typeof effectData === "object" ? effectData : {},
+    });
+    setPassiveModalOpen(true);
+  };
+
+  const handleSubmitPassive = async (e: FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const payload: Record<string, any> = {
+        name: passiveForm.name,
+        description: passiveForm.description,
+        icon: passiveForm.icon || null,
+        rankRequired: Number(passiveForm.rankRequired) || 1,
+        effectType: passiveForm.effectType,
+        statModifiers: passiveForm.statModifiers && Object.keys(passiveForm.statModifiers).length ? JSON.stringify(passiveForm.statModifiers) : null,
+        effectData: passiveForm.effectData && Object.keys(passiveForm.effectData).length ? JSON.stringify(passiveForm.effectData) : null,
+      };
+      if (passiveEditing?.id) {
+        await adminApi.passives.update(passiveEditing.id, payload);
+        toast.success("Passive updated");
+      } else {
+        await adminApi.passives.create(selectedClassId, payload);
+        toast.success("Passive created");
+      }
+      setPassiveModalOpen(false);
+      setPassiveEditing(null);
+      loadPassives(selectedClassId);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || err.message || "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeletePassive = async (p: any) => {
+    if (!window.confirm(`Delete passive "${p.name}"?`)) return;
+    try {
+      await adminApi.passives.delete(p.id);
+      toast.success("Passive deleted");
+      loadPassives(selectedClassId);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to delete");
+    }
+  };
+
   const renderField = (
     field: { name: string; label: string; type?: string; options?: string[] },
     span2 = false
@@ -228,6 +328,20 @@ export default function SkillsPage() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl font-bold">Skills</h1>
         <div className="flex items-center gap-3">
+          <div className="flex bg-dark-900 border border-dark-600 rounded-lg p-0.5">
+            <button
+              onClick={() => setTab("skills")}
+              className={`px-3 py-1.5 text-sm rounded-md transition-colors ${tab === "skills" ? "bg-accent-600 text-white" : "text-gray-400 hover:text-white"}`}
+            >
+              Habilidades
+            </button>
+            <button
+              onClick={() => setTab("passives")}
+              className={`px-3 py-1.5 text-sm rounded-md transition-colors ${tab === "passives" ? "bg-accent-600 text-white" : "text-gray-400 hover:text-white"}`}
+            >
+              Passivas
+            </button>
+          </div>
           <select
             value={selectedClassId}
             onChange={(e) => setSelectedClassId(e.target.value)}
@@ -240,7 +354,7 @@ export default function SkillsPage() {
             ))}
           </select>
           <button
-            onClick={openCreate}
+            onClick={tab === "skills" ? openCreate : openCreatePassive}
             className="flex items-center gap-2 px-4 py-2 bg-accent-600 hover:bg-accent-500 text-white rounded-lg text-sm font-medium transition-colors"
           >
             <span className="text-lg leading-none">+</span> New
@@ -248,7 +362,60 @@ export default function SkillsPage() {
         </div>
       </div>
 
-      <div className="bg-dark-800 border border-dark-600 rounded-xl overflow-hidden">
+      {tab === "passives" ? (
+        <div className="bg-dark-800 border border-dark-600 rounded-xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-dark-600">
+                  <th className="text-left py-3 px-4 text-gray-400 font-medium">ID</th>
+                  <th className="text-left py-3 px-4 text-gray-400 font-medium">Name</th>
+                  <th className="text-left py-3 px-4 text-gray-400 font-medium">Rank</th>
+                  <th className="text-left py-3 px-4 text-gray-400 font-medium">Effect Type</th>
+                  <th className="text-left py-3 px-4 text-gray-400 font-medium">Stat Modifiers</th>
+                  <th className="text-right py-3 px-4 text-gray-400 font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {passives.map((p) => (
+                  <tr key={p.id} className="border-b border-dark-700 hover:bg-dark-800/50">
+                    <td className="py-2.5 px-4">
+                      <span className="font-mono text-[11px] text-gray-500" title={p.id}>{String(p.id ?? "").slice(0, 8)}</span>
+                    </td>
+                    <td className="py-2.5 px-4">
+                      <span className="font-medium text-white">{p.name}</span>
+                      <p className="text-xs text-gray-500 max-w-xs truncate">{p.description}</p>
+                    </td>
+                    <td className="py-2.5 px-4">
+                      <span className="font-mono text-xs text-gray-400">Rank {p.rankRequired}</span>
+                    </td>
+                    <td className="py-2.5 px-4">
+                      <span className="px-2 py-0.5 rounded-full text-xs bg-gray-600/20 text-gray-400">{p.effectType}</span>
+                    </td>
+                    <td className="py-2.5 px-4 font-mono text-xs text-gray-400">
+                      {(() => {
+                        try { return Object.entries(JSON.parse(p.statModifiers || "{}")).map(([k, v]) => `${k}: ${v}`).join(", ") || "-"; } catch { return "-"; }
+                      })()}
+                    </td>
+                    <td className="py-2.5 px-4 text-right whitespace-nowrap">
+                      <button onClick={() => openEditPassive(p)} className="text-blue-400 hover:text-blue-300 mr-3">
+                        Edit
+                      </button>
+                      <button onClick={() => handleDeletePassive(p)} className="text-red-400 hover:text-red-300">
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {!loading && passives.length === 0 && (
+              <p className="text-center text-gray-500 py-8">No passives for this class — click "New" to add one</p>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="bg-dark-800 border border-dark-600 rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -303,6 +470,75 @@ export default function SkillsPage() {
           )}
         </div>
       </div>
+      )}
+
+      {passiveModalOpen && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => { setPassiveModalOpen(false); setPassiveEditing(null); }}>
+          <div
+            className="bg-dark-800 border border-dark-600 rounded-xl p-6 max-w-3xl w-full max-h-[85vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-bold">{passiveEditing?.id ? "Edit Passive" : "New Passive"}</h2>
+              <button onClick={() => { setPassiveModalOpen(false); setPassiveEditing(null); }} className="text-gray-500 hover:text-gray-300 text-xl leading-none">
+                ✕
+              </button>
+            </div>
+            <form onSubmit={handleSubmitPassive} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1.5">Name *</label>
+                  <input type="text" value={passiveForm.name} onChange={(e) => setPassiveForm({ ...passiveForm, name: e.target.value })} className={inputClass} required />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1.5">Icon</label>
+                  <input type="text" value={passiveForm.icon} onChange={(e) => setPassiveForm({ ...passiveForm, icon: e.target.value })} className={inputClass} placeholder="e.g. 'Shield'" />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-sm text-gray-400 mb-1.5">Description *</label>
+                  <textarea value={passiveForm.description} onChange={(e) => setPassiveForm({ ...passiveForm, description: e.target.value })} className={`${inputClass} resize-y`} rows={2} required />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1.5">Rank Required</label>
+                  <input type="number" min={1} max={10} value={passiveForm.rankRequired} onChange={(e) => setPassiveForm({ ...passiveForm, rankRequired: Number(e.target.value) })} className={inputClass} />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1.5">Effect Type</label>
+                  <select value={passiveForm.effectType} onChange={(e) => setPassiveForm({ ...passiveForm, effectType: e.target.value })} className={inputClass}>
+                    {effectTypeOptions.map((opt) => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-sm text-gray-400 mb-1.5">Stat Modifiers (JSON)</label>
+                  <JsonField
+                    schema={{ mode: "record", valueType: "number", addLabel: "Adicionar modificador", keyPlaceholder: "ex: attack, defense, hp", valuePlaceholder: "valor (ex: 10)" }}
+                    value={passiveForm.statModifiers}
+                    onChange={(v) => setPassiveForm({ ...passiveForm, statModifiers: v })}
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-sm text-gray-400 mb-1.5">Effect Data (JSON)</label>
+                  <JsonField
+                    schema={{ mode: "record", valueType: "string", addLabel: "Adicionar dado", keyPlaceholder: "chave", valuePlaceholder: "valor" }}
+                    value={passiveForm.effectData}
+                    onChange={(v) => setPassiveForm({ ...passiveForm, effectData: v })}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button type="button" onClick={() => { setPassiveModalOpen(false); setPassiveEditing(null); }} className="px-4 py-2 text-sm text-gray-400 hover:text-white hover:bg-dark-700 rounded-lg transition-colors">
+                  Cancel
+                </button>
+                <button type="submit" disabled={saving} className="px-4 py-2 bg-accent-600 hover:bg-accent-500 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50">
+                  {saving ? "Saving..." : passiveEditing?.id ? "Save changes" : "Create"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {modalOpen && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => { setModalOpen(false); setEditing(null); }}>

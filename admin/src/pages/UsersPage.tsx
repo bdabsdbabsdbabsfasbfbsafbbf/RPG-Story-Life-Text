@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { adminApi } from "../api";
-import { RefreshCw, ShieldCheck, ShieldOff, Trash2, Pencil, X, Plus, Minus } from "lucide-react";
+import { RefreshCw, ShieldCheck, ShieldOff, Trash2, Pencil, X, Plus, Minus, Eye, Trophy } from "lucide-react";
 
 interface AdminUser {
   id: string;
@@ -28,6 +28,12 @@ interface AdminCharacter {
   class: { id: string; name: string; slug: string };
   race?: { id: string; name: string } | null;
   trait?: { id: string; name: string } | null;
+  classProgress?: {
+    id: string;
+    rank: number;
+    isActive: boolean;
+    gameClass: { id: string; name: string; slug: string };
+  }[];
 }
 
 interface AdminInventoryEntry {
@@ -192,6 +198,18 @@ export default function UsersPage() {
     }
   };
 
+  const rankMax = async (char: AdminCharacter) => {
+    if (!detail) return;
+    if (!window.confirm(`Set ALL classes of "${char.name}" to max rank (10)?`)) return;
+    try {
+      await adminApi.users.characters.rankMax(detail.id, char.id);
+      toast.success(`${char.name}: all classes at rank 10`);
+      openDetail(detail);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to set max rank");
+    }
+  };
+
   const modalBg = "fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center p-4 overflow-y-auto";
 
   return (
@@ -264,6 +282,13 @@ export default function UsersPage() {
                     {new Date(u.createdAt).toLocaleDateString()}
                   </td>
                   <td className="py-2.5 px-4 text-right whitespace-nowrap">
+                    <button
+                      onClick={() => openDetail(u)}
+                      title="View inventory, classes and details"
+                      className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-white mr-3"
+                    >
+                      <Eye size={14} /> Details
+                    </button>
                     <button
                       onClick={() => setEditing(u)}
                       title="Edit user"
@@ -477,6 +502,32 @@ export default function UsersPage() {
                         Save
                       </button>
                     </div>
+                    {c.classProgress && c.classProgress.length > 0 && (
+                      <div className="flex items-center justify-between flex-wrap gap-2 pt-1 border-t border-dark-700">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {c.classProgress.map((p) => (
+                            <span
+                              key={p.id}
+                              className={`inline-flex items-center gap-1.5 text-[11px] px-2 py-1 rounded-md border ${
+                                p.isActive
+                                  ? "bg-accent-500/15 border-accent-500/40 text-accent-300"
+                                  : "bg-dark-900 border-dark-600 text-gray-400"
+                              }`}
+                            >
+                              {p.gameClass?.name || "?"}
+                              <span className="font-mono">R{p.rank}</span>
+                            </span>
+                          ))}
+                        </div>
+                        <button
+                          onClick={() => rankMax(c)}
+                          className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-lg bg-yellow-500/10 text-yellow-300 border border-yellow-500/30 hover:bg-yellow-500/20"
+                          title="Set all classes to max rank (10)"
+                        >
+                          <Trophy size={12} /> Rank máx
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

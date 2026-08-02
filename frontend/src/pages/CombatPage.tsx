@@ -3,10 +3,39 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { getSocket } from "../services/socket";
 import { useGameStore } from "../store/gameStore";
 import { useAuthStore } from "../store/authStore";
-import { CombatUpdate } from "../types";
-import { authApi, charactersApi, monstersApi } from "../services/api";
-import { ArrowLeft, Sword, Shield, Zap, Skull, Heart, Sparkles, Coins, Lock, Star } from "lucide-react";
+import { CombatUpdate, InventoryItem } from "../types";
+import { authApi, charactersApi, inventoryApi, monstersApi } from "../services/api";
+import { ArrowLeft, Sword, Shield, Zap, Skull, Heart, Sparkles, Coins, Lock, Star, DoorOpen, FlaskConical, HeartPulse, Droplets } from "lucide-react";
 import toast from "react-hot-toast";
+
+interface CombatPotion {
+  inventoryId: string;
+  itemName: string;
+  quantity: number;
+  heal: number;
+  manaRestore: number;
+}
+
+function itemEffects(item: any): { heal: number; manaRestore: number } {
+  let heal = 0;
+  let manaRestore = 0;
+  if (!item?.effects) return { heal, manaRestore };
+  try {
+    const effects = JSON.parse(item.effects);
+    if (Array.isArray(effects)) {
+      for (const e of effects) {
+        if (e?.type === "heal") heal += Number(e.value) || 0;
+        else if (e?.type === "manaRestore") manaRestore += Number(e.value) || 0;
+      }
+    } else {
+      heal = Number(effects.heal) || 0;
+      manaRestore = Number(effects.manaRestore) || 0;
+    }
+  } catch {
+    // ignore malformed effects
+  }
+  return { heal, manaRestore };
+}
 
 export function CombatPage() {
   const { monsterId } = useParams<{ monsterId: string }>();
@@ -18,6 +47,8 @@ export function CombatPage() {
   const [loading, setLoading] = useState(false);
   const [monsterInfo, setMonsterInfo] = useState<{ name: string; level: number } | null>(null);
   const [cooldowns, setCooldowns] = useState<Record<string, number>>({});
+  const [now, setNow] = useState(Date.now());
+  const [potions, setPotions] = useState<CombatPotion[]>([]);
   const [classRank, setClassRank] = useState(1);
   const rewardsRefreshed = useRef(false);
 
@@ -53,6 +84,30 @@ export function CombatPage() {
       if (rank) setClassRank(rank);
     }).catch(() => {});
   }, []);
+
+  const loadPotions = () => {
+    inventoryApi.list().then(({ data }) => {
+      const list: InventoryItem[] = Array.isArray(data) ? data : [];
+      const usable = list
+        .map((inv) => {
+          const { heal, manaRestore } = itemEffects(inv.item);
+          return { inventoryId: inv.id, itemName: inv.item.name, quantity: inv.quantity, heal, manaRestore };
+        })
+        .filter((p) => p.heal > 0 || p.manaRestore > 0);
+      setPotions(usable);
+    }).catch(() => {});
+  };
+
+  useEffect(() => {
+    loadPotions();
+  }, []);
+
+  useEffect(() => {
+    const hasActiveCooldowns = Object.values(cooldowns).some((t) => Date.now() - t < 30000);
+    if (!hasActiveCooldowns) return;
+    const interval = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(interval);
+  }, [cooldowns]);
 
   useEffect(() => {
     if (monsterId) {
@@ -142,11 +197,34 @@ export function CombatPage() {
       setLoading(false);
     });
 
+    socket.on("combat:action", (data: any) => {
+      setCombat((prev) => {
+        if (!prev) return data as any;
+        return { ...prev, ...data };
+      });
+      if (data.action === "flee") {
+        if (data.fled) {
+          toast.success("Você fugiu do combate!");
+          setCombatLog(prev => [...prev.slice(-19), "Você conseguiu fugir!"]);
+        } else {
+          toast.error("A fuga falhou!");
+          setCombatLog(prev => [...prev.slice(-19), "A fuga falhou! O monstro atacou você."]);
+        }
+      } else if (data.action === "item") {
+        const parts: string[] = [];
+        if ((data.healed ?? 0) > 0) parts.push(`${data.healed} de vida`);
+        if ((data.manaRestored ?? 0) > 0) parts.push(`${data.manaRestored} de mana`);
+        setCombatLog(prev => [...prev.slice(-19), `Você usou ${data.itemName || "poção"} (+${parts.join(", ")})`]);
+        loadPotions();
+      }
+    });
+
     return () => {
       socket.off("combat:started");
       socket.off("combat:skillUsed");
       socket.off("combat:tick");
       socket.off("combat:error");
+      socket.off("combat:action");
     };
   }, [socket]);
 
@@ -163,10 +241,26 @@ export function CombatPage() {
     socket.emit("combat:useSkill", { combatId: combat.combatId, skillId });
   };
 
+  const usePotion = (inventoryId: string) => {
+    if (!socket || !combat) return;
+    socket.emit("combat:useItem", { combatId: combat.combatId, inventoryId });
+  };
+
+  const flee = () => {
+    if (!socket || !combat) return;
+    socket.emit("combat:flee", { combatId: combat.combatId });
+  };
+
   const isOnCooldown = (skillId: string, cooldown: number) => {
     const last = cooldowns[skillId];
     if (!last) return false;
-    return Date.now() - last < cooldown;
+    return now - last < cooldown;
+  };
+
+  const cooldownRemaining = (skillId: string, cooldown: number) => {
+    const last = cooldowns[skillId];
+    if (!last) return 0;
+    return Math.max(0, cooldown - (now - last));
   };
 
   const monsterName = combat?.monsterName || monsterInfo?.name || "Monstro";
@@ -251,6 +345,16 @@ export function CombatPage() {
             </div>
           </div>
 
+          {combat && combat.state === "active" && (
+            <button
+              onClick={flee}
+              className="mt-4 w-full flex items-center justify-center gap-2 px-3 py-2.5 text-sm rounded-xl border border-dark-600 text-gray-400 hover:text-amber-300 hover:border-amber-500/40 transition-colors"
+              title="Tenta fugir do combate (70% de chance)"
+            >
+              <DoorOpen size={16} /> Fugir
+            </button>
+          )}
+
           {combat && combat.state === "won" && (
             <div className="mt-4 text-center py-3 space-y-2">
               <p className="text-green-400 font-bold text-lg">Vitória!</p>
@@ -268,6 +372,14 @@ export function CombatPage() {
             <div className="mt-4 text-center py-3">
               <p className="text-red-400 font-bold text-lg">Derrota</p>
               <button onClick={startCombat} className="btn-primary mt-2">Tentar novamente</button>
+            </div>
+          )}
+
+          {combat && combat.state === "fled" && (
+            <div className="mt-4 text-center py-3">
+              <p className="text-amber-400 font-bold text-lg">Você fugiu do combate</p>
+              <p className="text-xs text-gray-500 mt-1">Você não recebeu recompensas desta luta.</p>
+              <button onClick={() => navigate("/map")} className="btn-primary mt-3">Voltar ao mapa</button>
             </div>
           )}
 
@@ -301,7 +413,8 @@ export function CombatPage() {
           {!combat ? (
             <p className="text-center text-sm text-gray-500">Clique em "Iniciar combate" para liberar suas habilidades.</p>
           ) : (
-            <div className="flex items-stretch justify-center gap-2 flex-wrap">
+            <div>
+              <div className="flex items-stretch justify-center gap-2 flex-wrap">
               {/* Auto attack */}
               <div className="w-20 card-hover py-3 text-center opacity-80" title={autoSkill?.description ?? "Ataque automático"}>
                 <Sword size={18} className="mx-auto mb-1 text-purple-400" />
@@ -312,6 +425,7 @@ export function CombatPage() {
               {usableSkills.map((skill) => {
                 const locked = (skill.rankRequired ?? 1) > classRank;
                 const cd = isOnCooldown(skill.id, skill.cooldown);
+                const cdLeft = cooldownRemaining(skill.id, skill.cooldown);
                 const noMana = (combat.characterMana ?? 0) < skill.manaCost;
                 const disabled = locked || cd || noMana || combat.state !== "active";
                 return (
@@ -319,11 +433,18 @@ export function CombatPage() {
                     key={skill.id}
                     onClick={() => useSkill(skill.id)}
                     disabled={disabled}
-                    className={`w-20 card-hover py-3 text-center ${
+                    className={`w-20 card-hover py-3 text-center relative ${
                       disabled ? "opacity-40 cursor-not-allowed" : ""
                     } ${skill.type === "ultimate" ? "border-yellow-500/40" : ""}`}
                     title={locked ? `Requer Rank ${skill.rankRequired}` : skill.description}
                   >
+                    {cd && (
+                      <span className="absolute inset-0 bg-black/70 rounded-xl flex items-center justify-center">
+                        <span className="text-lg font-bold text-white font-mono">
+                          {(cdLeft / 1000).toFixed(1)}s
+                        </span>
+                      </span>
+                    )}
                     {locked ? (
                       <Lock size={16} className="mx-auto mb-1 text-gray-500" />
                     ) : skill.type === "ultimate" ? (
@@ -343,6 +464,42 @@ export function CombatPage() {
                 );
               })}
             </div>
+
+            {/* Poções */}
+            {potions.length > 0 && combat.state === "active" && (
+              <div className="mt-3 border-t border-dark-700 pt-3">
+                <p className="text-[11px] text-gray-500 uppercase tracking-wider mb-2 text-center">Itens</p>
+                <div className="flex items-stretch justify-center gap-2 flex-wrap">
+                  {potions.map((p) => {
+                    const canUse = p.quantity > 0;
+                    const needsHp = p.heal > 0 && (combat.characterHp ?? 0) < (combat.maxHp ?? 0);
+                    const needsMana = p.manaRestore > 0 && (combat.characterMana ?? 0) < (combat.maxMana ?? 0);
+                    const useful = needsHp || needsMana;
+                    const disabled = !canUse || !useful;
+                    return (
+                      <button
+                        key={p.inventoryId}
+                        onClick={() => usePotion(p.inventoryId)}
+                        disabled={disabled}
+                        className={`w-24 card-hover py-2.5 px-2 text-center ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
+                        title={`${p.heal > 0 ? `Cura ${p.heal} de vida. ` : ""}${p.manaRestore > 0 ? `Restaura ${p.manaRestore} de mana.` : ""}`}
+                      >
+                        {p.heal > 0 && p.manaRestore === 0 ? (
+                          <HeartPulse size={16} className="mx-auto mb-1 text-red-400" />
+                        ) : p.manaRestore > 0 && p.heal === 0 ? (
+                          <Droplets size={16} className="mx-auto mb-1 text-blue-400" />
+                        ) : (
+                          <FlaskConical size={16} className="mx-auto mb-1 text-purple-400" />
+                        )}
+                        <span className="text-[11px] block truncate">{p.itemName}</span>
+                        <span className="text-[9px] text-gray-500 block">x{p.quantity}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
           )}
         </div>
       </div>

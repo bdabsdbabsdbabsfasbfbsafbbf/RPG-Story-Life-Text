@@ -304,6 +304,136 @@ export class CombatService {
     };
   }
 
+  async flee(characterId: string, combatId: string): Promise<any> {
+    const combat = this.activeCombats.get(combatId);
+    if (!combat || combat.characterId !== characterId) {
+      throw new Error("Combat not found");
+    }
+    if (combat.state !== "active") {
+      throw new Error("Combat is over");
+    }
+
+    const escaped = Math.random() < 0.7;
+
+    const payload: any = {
+      combatId: combat.id,
+      characterId: combat.characterId,
+      state: combat.state,
+      characterHp: Math.max(0, combat.characterHp),
+      characterMana: combat.characterMana,
+      maxHp: combat.maxHp,
+      maxMana: combat.maxMana,
+      monsterHp: Math.max(0, combat.monsterHp),
+      monsterName: combat.monsterName,
+      monsterMaxHp: combat.monsterMaxHp,
+      fled: escaped,
+    };
+
+    if (escaped) {
+      combat.state = "fled";
+      payload.state = "fled";
+      const interval = this.tickIntervals.get(combat.id);
+      if (interval) clearInterval(interval);
+      this.tickIntervals.delete(combat.id);
+    } else {
+      const monsterDamage = Math.max(1, combat.monster.attack - 5);
+      combat.characterHp -= monsterDamage;
+      payload.damage = monsterDamage;
+      payload.attacker = "monster";
+      if (combat.characterHp <= 0) {
+        combat.characterHp = 0;
+        combat.state = "lost";
+        payload.state = "lost";
+        const interval = this.tickIntervals.get(combat.id);
+        if (interval) clearInterval(interval);
+        this.tickIntervals.delete(combat.id);
+      }
+    }
+
+    return payload;
+  }
+
+  async useItem(characterId: string, combatId: string, inventoryId: string): Promise<any> {
+    const combat = this.activeCombats.get(combatId);
+    if (!combat || combat.characterId !== characterId) {
+      throw new Error("Combat not found");
+    }
+    if (combat.state !== "active") {
+      throw new Error("Combat is over");
+    }
+
+    const character = await this.prisma.character.findUnique({
+      where: { id: characterId },
+      select: { userId: true },
+    });
+    if (!character) throw new Error("Character not found");
+
+    const inv = await this.prisma.inventory.findFirst({
+      where: { id: inventoryId, userId: character.userId },
+      include: { item: true },
+    });
+    if (!inv || inv.quantity <= 0) throw new Error("Item not found");
+
+    const item = inv.item;
+    if (item.type !== "consumable" && item.type !== "potion") {
+      throw new Error("This item cannot be used in combat");
+    }
+
+    let heal = 0;
+    let manaRestore = 0;
+    if (item.effects) {
+      try {
+        const effects = JSON.parse(item.effects);
+        if (Array.isArray(effects)) {
+          for (const e of effects) {
+            if (e?.type === "heal") heal += Number(e.value) || 0;
+            else if (e?.type === "manaRestore") manaRestore += Number(e.value) || 0;
+          }
+        } else {
+          heal = Number(effects.heal) || 0;
+          manaRestore = Number(effects.manaRestore) || 0;
+        }
+      } catch {
+        // ignore malformed effects
+      }
+    }
+
+    if (heal <= 0 && manaRestore <= 0) {
+      throw new Error("This item cannot be used in combat");
+    }
+
+    const actualHeal = Math.min(combat.maxHp - combat.characterHp, heal);
+    const actualMana = Math.min(combat.maxMana - combat.characterMana, manaRestore);
+    combat.characterHp += actualHeal;
+    combat.characterMana += actualMana;
+
+    if (inv.quantity > 1) {
+      await this.prisma.inventory.update({
+        where: { id: inv.id },
+        data: { quantity: { decrement: 1 } },
+      });
+    } else {
+      await this.prisma.inventory.delete({ where: { id: inv.id } });
+    }
+
+    return {
+      combatId: combat.id,
+      characterId: combat.characterId,
+      inventoryId: inv.id,
+      itemName: item.name,
+      healed: actualHeal,
+      manaRestored: actualMana,
+      characterHp: combat.characterHp,
+      characterMana: combat.characterMana,
+      maxHp: combat.maxHp,
+      maxMana: combat.maxMana,
+      monsterHp: Math.max(0, combat.monsterHp),
+      monsterName: combat.monsterName,
+      monsterMaxHp: combat.monsterMaxHp,
+      state: combat.state,
+    };
+  }
+
   private async grantRewards(characterId: string, monster: any): Promise<any> {
     const [character, limits] = await Promise.all([
       this.prisma.character.findUnique({
