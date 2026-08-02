@@ -10,7 +10,8 @@ export type JsonFieldDef =
     }
   | {
       mode: "fixed-record";
-      fields: { key: string; label: string; valueType?: "number" | "string"; placeholder?: string }[];
+      fields?: { key: string; label: string; valueType?: "number" | "string"; placeholder?: string }[];
+      groups?: { label: string; fields: { key: string; label: string; valueType?: "number" | "string"; placeholder?: string }[] }[];
     };
 
 interface JsonFieldProps {
@@ -29,36 +30,50 @@ export default function JsonField({ schema, value, onChange }: JsonFieldProps) {
   if (schema.mode === "fixed-record") {
     const current: Record<string, any> =
       value && typeof value === "object" && !Array.isArray(value) ? value : {};
-    const knownKeys = new Set(schema.fields.map((f) => f.key));
+    const allFields = schema.fields ?? (schema.groups || []).flatMap((g) => g.fields);
+    const knownKeys = new Set(allFields.map((f) => f.key));
 
     const setKnown = (key: string, raw: string) => {
       const next = { ...current };
       if (raw === "") {
         delete next[key];
       } else {
-        const field = schema.fields.find((f) => f.key === key);
+        const field = allFields.find((f) => f.key === key);
         next[key] = field?.valueType === "string" ? raw : Number(raw);
       }
       onChange(next);
     };
 
+    const renderGrid = (fields: { key: string; label: string; valueType?: "number" | "string"; placeholder?: string }[]) => (
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {fields.map((f) => (
+          <div key={f.key}>
+            <label className="block text-[11px] text-gray-500 mb-1">{f.label}</label>
+            <input
+              type={f.valueType === "string" ? "text" : "number"}
+              step={f.valueType === "string" ? undefined : "any"}
+              className={inputClass}
+              placeholder={f.placeholder ?? (f.valueType === "string" ? "valor" : "0")}
+              value={current[f.key] ?? ""}
+              onChange={(e) => setKnown(f.key, e.target.value)}
+            />
+          </div>
+        ))}
+      </div>
+    );
+
     return (
-      <div className="space-y-2">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {schema.fields.map((f) => (
-            <div key={f.key}>
-              <label className="block text-[11px] text-gray-500 mb-1">{f.label}</label>
-              <input
-                type={f.valueType === "string" ? "text" : "number"}
-                step={f.valueType === "string" ? undefined : "any"}
-                className={inputClass}
-                placeholder={f.placeholder ?? (f.valueType === "string" ? "valor" : "0")}
-                value={current[f.key] ?? ""}
-                onChange={(e) => setKnown(f.key, e.target.value)}
-              />
-            </div>
-          ))}
-        </div>
+      <div className="space-y-3">
+        {schema.groups
+          ? schema.groups.map((g) => (
+              <div key={g.label}>
+                <div className="text-xs font-semibold text-accent-400 uppercase tracking-wide mb-1.5">
+                  {g.label}
+                </div>
+                {renderGrid(g.fields)}
+              </div>
+            ))
+          : renderGrid(schema.fields || [])}
       </div>
     );
   }

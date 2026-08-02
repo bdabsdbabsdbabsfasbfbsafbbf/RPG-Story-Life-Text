@@ -3,6 +3,19 @@ import { useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { adminApi } from "../api";
 import JsonField from "../components/JsonField";
+import {
+  ALL_GROUPS,
+  FLAT_GROUP,
+  PERCENT_GROUP,
+  OFFENSIVE_GROUP,
+  DEFENSIVE_GROUP,
+  CRIT_GROUP,
+  HEALING_GROUP,
+  MANA_GROUP,
+  VAMP_GROUP,
+  UTILITY_GROUP,
+  StatGroup,
+} from "../statFields";
 
 interface GameClassLite {
   id: string;
@@ -40,7 +53,7 @@ const targetTypeOptions = ["self", "enemy", "ally", "area", "all"];
 const damageTypeOptions = ["physical", "magic", "true"];
 
 const effectTypeOptions = [
-  "stat_bonus", "stat_boost", "damage_increase", "damage_reduction",
+  "stat", "stat_bonus", "stat_boost", "damage_increase", "damage_reduction",
   "critical_chance", "critical_damage", "cooldown_reduction", "life_steal",
   "mana_regen", "health_regen", "resistance", "reflect", "absorb", "chance_proc",
 ];
@@ -50,144 +63,27 @@ const defaultPassive = {
   description: "",
   icon: "",
   rankRequired: 1,
-  effectType: "stat_bonus",
+  effectType: "stat",
   statModifiers: {} as Record<string, number>,
   effectData: {} as Record<string, any>,
 };
 
-const baseStatFields = [
-  { key: "attack", label: "Ataque" },
-  { key: "defense", label: "Defesa" },
-  { key: "magic", label: "Magia" },
-  { key: "magicDefense", label: "Res. Mágica" },
-  { key: "speed", label: "Velocidade" },
-  { key: "maxHp", label: "HP Máx" },
-  { key: "maxMana", label: "Mana Máx" },
-  { key: "maxHpPercent", label: "HP Máx (%)" },
-  { key: "maxManaPercent", label: "Mana Máx (%)" },
-];
-
-const passiveStatFieldsByType: Record<string, { key: string; label: string }[]> = {
-  stat_bonus: [
-    ...baseStatFields,
-    { key: "baseHp", label: "HP Base" },
-    { key: "baseMana", label: "Mana Base" },
-    { key: "baseAttack", label: "Ataque Base" },
-    { key: "baseDefense", label: "Defesa Base" },
-    { key: "baseMagic", label: "Magia Base" },
-    { key: "baseMagicDefense", label: "Res. Mágica Base" },
-    { key: "baseSpeed", label: "Velocidade Base" },
-    { key: "manaRecovery", label: "Regen de Mana" },
-    { key: "attackScaling", label: "Scaling Ataque" },
-    { key: "magicScaling", label: "Scaling Magia" },
-    { key: "critScaling", label: "Scaling Crit" },
-    { key: "dodgeScaling", label: "Scaling Esquiva" },
-    { key: "cooldownScaling", label: "Scaling CD" },
-    { key: "manaEfficiency", label: "Efic. Mana" },
-  ],
-  stat_boost: [
-    ...baseStatFields,
-    { key: "attackPercent", label: "Ataque (%)" },
-    { key: "defensePercent", label: "Defesa (%)" },
-    { key: "magicPercent", label: "Magia (%)" },
-    { key: "magicDefensePercent", label: "Res. Mágica (%)" },
-    { key: "speedPercent", label: "Velocidade (%)" },
-    { key: "hpPercent", label: "Vida (%)" },
-    { key: "manaPercent", label: "Mana (%)" },
-    { key: "attackFlat", label: "Ataque (plano)" },
-    { key: "defenseFlat", label: "Defesa (plano)" },
-  ],
-  damage_increase: [
-    { key: "attack", label: "Ataque" },
-    { key: "magic", label: "Magia" },
-    { key: "attackPercent", label: "Ataque (%)" },
-    { key: "magicPercent", label: "Magia (%)" },
-    { key: "damagePercent", label: "Dano Total (%)" },
-    { key: "skillDamagePercent", label: "Dano de Skill (%)" },
-    { key: "baseDamagePercent", label: "Dano Base (%)" },
-    { key: "damageBonus", label: "Bônus de Dano" },
-    { key: "critChance", label: "Chance Crítica (%)" },
-    { key: "critDamage", label: "Dano Crítico (%)" },
-  ],
-  damage_reduction: [
-    { key: "defense", label: "Defesa" },
-    { key: "magicDefense", label: "Res. Mágica" },
-    { key: "defensePercent", label: "Defesa (%)" },
-    { key: "magicDefensePercent", label: "Res. Mágica (%)" },
-    { key: "damageReductionPercent", label: "Redução de Dano (%)" },
-    { key: "incomingDamageReduction", label: "Dano Recebido (%)" },
-    { key: "damageReduction", label: "Redução (plano)" },
-  ],
-  critical_chance: [
-    { key: "critChance", label: "Chance Crítica (%)" },
-    { key: "critChancePercent", label: "Chance Crítica (%) bônus" },
-    { key: "critDamage", label: "Dano Crítico (%)" },
-    { key: "critDamagePercent", label: "Dano Crítico (%) bônus" },
-    { key: "attackPercent", label: "Ataque (%)" },
-    { key: "critScaling", label: "Scaling Crit" },
-  ],
-  critical_damage: [
-    { key: "critDamage", label: "Dano Crítico (%)" },
-    { key: "critDamagePercent", label: "Dano Crítico (%) bônus" },
-    { key: "critChance", label: "Chance Crítica (%)" },
-    { key: "critChancePercent", label: "Chance Crítica (%) bônus" },
-  ],
-  cooldown_reduction: [
-    { key: "cooldownReduction", label: "Redução de CD (%)" },
-    { key: "cooldownReductionPercent", label: "Redução de CD (%) bônus" },
-    { key: "cdrFlat", label: "CDR (plano)" },
-    { key: "haste", label: "Haste" },
-    { key: "cooldownScaling", label: "Scaling CD" },
-  ],
-  life_steal: [
-    { key: "lifeSteal", label: "Roubo de Vida (%)" },
-    { key: "lifeStealPercent", label: "Roubo de Vida (%) bônus" },
-    { key: "lifeStealFlat", label: "Roubo (plano)" },
-    { key: "damagePercent", label: "Dano Total (%)" },
-    { key: "magicVamp", label: "Vampirismo Mágico (%)" },
-  ],
-  mana_regen: [
-    { key: "manaRegen", label: "Regen de Mana" },
-    { key: "manaRegenPercent", label: "Regen de Mana (%)" },
-    { key: "manaRecovery", label: "Recuperação de Mana" },
-    { key: "maxManaPercent", label: "Mana Máx (%)" },
-    { key: "maxMana", label: "Mana Máx" },
-  ],
-  health_regen: [
-    { key: "healthRegen", label: "Regen de Vida" },
-    { key: "healthRegenPercent", label: "Regen de Vida (%)" },
-    { key: "hpRegenPercent", label: "Regen HP (%)" },
-    { key: "maxHpPercent", label: "HP Máx (%)" },
-    { key: "maxHp", label: "HP Máx" },
-  ],
-  resistance: [
-    { key: "defense", label: "Defesa" },
-    { key: "magicDefense", label: "Res. Mágica" },
-    { key: "resistancePercent", label: "Resistência (%)" },
-    { key: "ailmentResistance", label: "Res. a Status (%)" },
-    { key: "statusResistance", label: "Res. a Efeitos (%)" },
-    { key: "slowResist", label: "Res. Lentidão (%)" },
-    { key: "stunResist", label: "Res. Stun (%)" },
-  ],
-  reflect: [
-    { key: "reflectPercent", label: "Refletir (%)" },
-    { key: "reflectFlat", label: "Refletir (plano)" },
-    { key: "reflectDamagePercent", label: "Dano Refletido (%)" },
-    { key: "defense", label: "Defesa" },
-  ],
-  absorb: [
-    { key: "absorbPercent", label: "Absorver (%)" },
-    { key: "absorbFlat", label: "Absorver (plano)" },
-    { key: "shieldPercent", label: "Escudo (%)" },
-    { key: "maxHpPercent", label: "HP Máx (%)" },
-  ],
-  chance_proc: [
-    { key: "procChance", label: "Chance de Ativação (%)" },
-    { key: "procChancePercent", label: "Chance de Ativação (%) bônus" },
-    { key: "triggerChance", label: "Chance de Gatilho (%)" },
-    { key: "procCooldown", label: "CD do Proc (ms)" },
-    { key: "critChance", label: "Chance Crítica (%)" },
-  ],
+const passiveGroupsByType: Record<string, StatGroup[]> = {
+  stat: ALL_GROUPS,
+  stat_bonus: ALL_GROUPS,
+  stat_boost: [FLAT_GROUP, PERCENT_GROUP, VAMP_GROUP],
+  damage_increase: [OFFENSIVE_GROUP, CRIT_GROUP],
+  damage_reduction: [DEFENSIVE_GROUP],
+  critical_chance: [CRIT_GROUP, OFFENSIVE_GROUP],
+  critical_damage: [CRIT_GROUP, OFFENSIVE_GROUP],
+  cooldown_reduction: [MANA_GROUP],
+  life_steal: [VAMP_GROUP, OFFENSIVE_GROUP],
+  mana_regen: [MANA_GROUP, FLAT_GROUP],
+  health_regen: [HEALING_GROUP, FLAT_GROUP],
+  resistance: [DEFENSIVE_GROUP],
+  reflect: [DEFENSIVE_GROUP, UTILITY_GROUP],
+  absorb: [DEFENSIVE_GROUP],
+  chance_proc: [UTILITY_GROUP, CRIT_GROUP],
 };
 
 export default function SkillsPage() {
@@ -374,7 +270,7 @@ export default function SkillsPage() {
       description: p.description ?? "",
       icon: p.icon ?? "",
       rankRequired: p.rankRequired ?? 1,
-      effectType: p.effectType ?? "stat_bonus",
+      effectType: p.effectType ?? "stat",
       statModifiers: typeof statModifiers === "object" ? statModifiers : {},
       effectData: typeof effectData === "object" ? effectData : {},
     });
@@ -668,7 +564,7 @@ export default function SkillsPage() {
                 <div className="sm:col-span-2">
                   <label className="block text-sm text-gray-400 mb-1.5">Stat Modifiers (só valores — muda conforme o Effect Type)</label>
                   <JsonField
-                    schema={{ mode: "fixed-record", fields: passiveStatFieldsByType[passiveForm.effectType] || passiveStatFieldsByType.stat_bonus }}
+                    schema={{ mode: "fixed-record", groups: passiveGroupsByType[passiveForm.effectType] || ALL_GROUPS }}
                     value={passiveForm.statModifiers}
                     onChange={(v) => setPassiveForm({ ...passiveForm, statModifiers: v })}
                   />

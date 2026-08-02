@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Sparkles } from "lucide-react";
 import { CrudConfig } from "./pages/CrudPage";
+import { EQUIP_GROUPS, TRAIT_GROUPS, RACE_GROUPS } from "./statFields";
 
 const boolBadge = (v: any, yesClass = "bg-green-500/20 text-green-400", noClass = "bg-gray-600/20 text-gray-400") => (
   <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${v ? yesClass : noClass}`}>
@@ -161,18 +162,7 @@ export const crudConfigs: CrudConfig[] = [
       { name: "tier", label: "Tier", type: "number", defaultValue: 1 },
       { name: "buyPrice", label: "Buy Price", type: "number", defaultValue: 0 },
       { name: "sellPrice", label: "Sell Price", type: "number", defaultValue: 0 },
-      { name: "stats", label: "Stats", type: "json", jsonSchema: { mode: "fixed-record", fields: [
-          { key: "attack", label: "Ataque" },
-          { key: "defense", label: "Defesa" },
-          { key: "magic", label: "Magia" },
-          { key: "magicDefense", label: "Res. Mágica" },
-          { key: "speed", label: "Velocidade" },
-          { key: "maxHp", label: "HP Máx" },
-          { key: "maxMana", label: "Mana Máx" },
-          { key: "critChance", label: "Chance Crítica (%)" },
-          { key: "critDamage", label: "Dano Crítico (%)" },
-          { key: "dodge", label: "Esquiva (%)" },
-        ] } },
+      { name: "stats", label: "Stats", type: "json", jsonSchema: { mode: "fixed-record", groups: EQUIP_GROUPS } },
       { name: "requirements", label: "Requirements", type: "json", jsonSchema: { mode: "fixed-record", fields: [
           { key: "level", label: "Level" },
         ] } },
@@ -299,18 +289,7 @@ export const crudConfigs: CrudConfig[] = [
       { name: "maxStacks", label: "Max Stacks", type: "number", defaultValue: 1 },
       { name: "tickInterval", label: "Tick Interval (ms)", type: "number", defaultValue: 0 },
       { name: "tickEffect", label: "Tick Effect", type: "text", placeholder: "damage, heal..." },
-      { name: "statModifiers", label: "Stat Modifiers", type: "json", jsonSchema: { mode: "fixed-record", fields: [
-          { key: "attack", label: "Ataque" },
-          { key: "defense", label: "Defesa" },
-          { key: "magic", label: "Magia" },
-          { key: "magicDefense", label: "Res. Mágica" },
-          { key: "speed", label: "Velocidade" },
-          { key: "maxHp", label: "HP Máx" },
-          { key: "maxMana", label: "Mana Máx" },
-          { key: "critChance", label: "Chance Crítica (%)" },
-          { key: "critDamage", label: "Dano Crítico (%)" },
-          { key: "dodge", label: "Esquiva (%)" },
-        ] }, hint: "Valores negativos reduzem o stat" },
+      { name: "statModifiers", label: "Stat Modifiers", type: "json", jsonSchema: { mode: "fixed-record", groups: EQUIP_GROUPS }, hint: "Valores negativos reduzem o stat" },
       { name: "specialEffect", label: "Special Effect", type: "text" },
       { name: "stackBehavior", label: "Stack Behavior", type: "select", defaultValue: "independent", options: ["independent", "overwrite", "refresh", "accumulate"] },
     ],
@@ -334,15 +313,7 @@ export const crudConfigs: CrudConfig[] = [
         name: "traits",
         label: "Stat Modifiers",
         type: "json",
-        jsonSchema: { mode: "fixed-record", fields: [
-          { key: "baseHp", label: "HP Base" },
-          { key: "baseAttack", label: "Ataque Base" },
-          { key: "baseDefense", label: "Defesa Base" },
-          { key: "baseMagic", label: "Magia Base" },
-          { key: "baseMagicDefense", label: "Res. Mágica Base" },
-          { key: "baseSpeed", label: "Velocidade Base" },
-          { key: "manaRecovery", label: "Regen de Mana" },
-        ] },
+        jsonSchema: { mode: "fixed-record", groups: RACE_GROUPS },
       },
       { name: "isActive", label: "Active", type: "boolean", defaultValue: true },
     ],
@@ -366,13 +337,7 @@ export const crudConfigs: CrudConfig[] = [
         name: "modifiers",
         label: "Modifiers",
         type: "json",
-        jsonSchema: { mode: "fixed-record", fields: [
-          { key: "xpBonus", label: "Bônus de XP (%)" },
-          { key: "goldBonus", label: "Bônus de Gold (%)" },
-          { key: "critBonus", label: "Chance Crítica (%)" },
-          { key: "dodgeBonus", label: "Esquiva (%)" },
-          { key: "cooldownReduction", label: "Redução de CD (%)" },
-        ] },
+        jsonSchema: { mode: "fixed-record", groups: TRAIT_GROUPS },
         hint: "Todos em percentual (%)",
       },
       { name: "isActive", label: "Active", type: "boolean", defaultValue: true },
