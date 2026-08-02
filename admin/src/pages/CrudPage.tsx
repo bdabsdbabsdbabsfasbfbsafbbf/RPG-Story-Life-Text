@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { adminApi } from "../api";
+import JsonField, { JsonFieldDef } from "../components/JsonField";
 
 export interface FieldConfig {
   name: string;
@@ -12,6 +13,7 @@ export interface FieldConfig {
   step?: string;
   placeholder?: string;
   hint?: string;
+  jsonSchema?: JsonFieldDef;
 }
 
 export interface ColumnConfig {
@@ -61,7 +63,11 @@ export default function CrudPage({ config }: CrudPageProps) {
   const buildDefaults = () => {
     const defaults: Record<string, any> = {};
     for (const field of config.fields) {
-      defaults[field.name] = field.defaultValue ?? (field.type === "boolean" ? false : field.type === "number" ? 0 : "");
+      if (field.jsonSchema) {
+        defaults[field.name] = field.jsonSchema.mode === "record" ? {} : [];
+      } else {
+        defaults[field.name] = field.defaultValue ?? (field.type === "boolean" ? false : field.type === "number" ? 0 : "");
+      }
     }
     return defaults;
   };
@@ -78,7 +84,11 @@ export default function CrudPage({ config }: CrudPageProps) {
     for (const field of config.fields) {
       const raw = item[field.name];
       if (field.type === "json") {
-        values[field.name] = raw ? JSON.stringify(raw, null, 2) : "";
+        if (field.jsonSchema) {
+          values[field.name] = raw ?? (field.jsonSchema.mode === "record" ? {} : []);
+        } else {
+          values[field.name] = raw ? JSON.stringify(raw, null, 2) : "";
+        }
       } else if (field.type === "number") {
         values[field.name] = raw ?? 0;
       } else if (field.type === "boolean") {
@@ -101,7 +111,7 @@ export default function CrudPage({ config }: CrudPageProps) {
     for (const field of config.fields) {
       let value = form[field.name];
       if (field.type === "json") {
-        payload[field.name] = value && value.trim() ? value : null;
+        payload[field.name] = field.jsonSchema ? value : value && value.trim() ? value : null;
       } else if (field.type === "number") {
         payload[field.name] = Number(value) || 0;
       } else if (field.type === "boolean") {
@@ -199,6 +209,15 @@ export default function CrudPage({ config }: CrudPageProps) {
           />
         );
       case "json":
+        if (field.jsonSchema) {
+          return (
+            <JsonField
+              schema={field.jsonSchema}
+              value={value}
+              onChange={(v) => setForm({ ...form, [field.name]: v })}
+            />
+          );
+        }
         return (
           <textarea
             value={value ?? ""}

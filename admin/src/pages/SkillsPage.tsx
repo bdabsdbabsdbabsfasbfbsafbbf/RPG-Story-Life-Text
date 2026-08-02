@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { adminApi } from "../api";
+import JsonField from "../components/JsonField";
 
 interface GameClassLite {
   id: string;
@@ -27,9 +28,9 @@ const defaultSkill = {
   healingBase: 0,
   sortOrder: 0,
   isActive: true,
-  effects: "",
-  buffsApplied: "",
-  debuffsApplied: "",
+  effects: [] as any[],
+  buffsApplied: [] as string[],
+  debuffsApplied: [] as string[],
 };
 
 const typeOptions = ["active", "passive", "ultimate"];
@@ -100,9 +101,9 @@ export default function SkillsPage() {
       healingBase: skill.healingBase ?? 0,
       sortOrder: skill.sortOrder ?? 0,
       isActive: skill.isActive ?? true,
-      effects: skill.effects ? JSON.stringify(skill.effects, null, 2) : "",
-      buffsApplied: skill.buffsApplied ? JSON.stringify(skill.buffsApplied, null, 2) : "",
-      debuffsApplied: skill.debuffsApplied ? JSON.stringify(skill.debuffsApplied, null, 2) : "",
+      effects: skill.effects ?? [],
+      buffsApplied: skill.buffsApplied ?? [],
+      debuffsApplied: skill.debuffsApplied ?? [],
     });
     setModalOpen(true);
   };
@@ -128,7 +129,7 @@ export default function SkillsPage() {
     };
     for (const key of ["effects", "buffsApplied", "debuffsApplied"] as const) {
       const raw = form[key];
-      payload[key] = raw && raw.trim() ? raw : null;
+      payload[key] = Array.isArray(raw) && raw.length > 0 ? raw : null;
     }
     return payload;
   };
@@ -342,16 +343,37 @@ export default function SkillsPage() {
                   {renderField({ name: "isActive", label: "Active", type: "boolean" })}
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block text-sm text-gray-400 mb-1.5">Effects (JSON)</label>
-                  <textarea value={form.effects} onChange={(e) => setForm({ ...form, effects: e.target.value })} className={`${inputClass} resize-y font-mono text-xs`} rows={4} placeholder='[{"type":"stun","duration":2000}]' />
+                  <label className="block text-sm text-gray-400 mb-1.5">Effects</label>
+                  <JsonField
+                    schema={{
+                      mode: "object-array",
+                      addLabel: "Adicionar efeito",
+                      fields: [
+                        { name: "type", label: "Tipo", type: "select", options: ["damage", "heal", "stun", "silence", "slow", "root", "knockback", "shield", "cleanse", "buff", "taunt", "fear", "charm", "teleport", "revive"] },
+                        { name: "value", label: "Valor", type: "number" },
+                        { name: "duration", label: "Duração (ms)", type: "number" },
+                        { name: "chance", label: "Chance (%)", type: "number" },
+                      ],
+                    }}
+                    value={form.effects}
+                    onChange={(v) => setForm({ ...form, effects: v })}
+                  />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block text-sm text-gray-400 mb-1.5">Buffs Applied (JSON)</label>
-                  <textarea value={form.buffsApplied} onChange={(e) => setForm({ ...form, buffsApplied: e.target.value })} className={`${inputClass} resize-y font-mono text-xs`} rows={3} placeholder='["buffId1","buffId2"]' />
+                  <label className="block text-sm text-gray-400 mb-1.5">Buffs Aplicados</label>
+                  <JsonField
+                    schema={{ mode: "string-array", placeholder: "nome/ID do buff" }}
+                    value={form.buffsApplied}
+                    onChange={(v) => setForm({ ...form, buffsApplied: v })}
+                  />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block text-sm text-gray-400 mb-1.5">Debuffs Applied (JSON)</label>
-                  <textarea value={form.debuffsApplied} onChange={(e) => setForm({ ...form, debuffsApplied: e.target.value })} className={`${inputClass} resize-y font-mono text-xs`} rows={3} placeholder='["debuffId1"]' />
+                  <label className="block text-sm text-gray-400 mb-1.5">Debuffs Aplicados</label>
+                  <JsonField
+                    schema={{ mode: "string-array", placeholder: "nome/ID do debuff" }}
+                    value={form.debuffsApplied}
+                    onChange={(v) => setForm({ ...form, debuffsApplied: v })}
+                  />
                 </div>
               </div>
               <div className="flex justify-end gap-3 pt-2">

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { adminApi } from "../api";
 import { RefreshCw, Plus, Pencil, Trash2, X, Ticket } from "lucide-react";
+import JsonField from "../components/JsonField";
 
 interface RedeemCode {
   id: string;
@@ -23,7 +24,7 @@ const emptyForm = {
   gold: 0,
   diamonds: 0,
   experience: 0,
-  items: "[]",
+  items: [] as any[],
   maxUses: 500,
   isActive: true,
 };
@@ -63,7 +64,7 @@ export default function CodesPage() {
       gold: Number(code.gold),
       diamonds: code.diamonds,
       experience: Number(code.experience),
-      items: code.items ? JSON.stringify(code.items, null, 2) : "[]",
+      items: Array.isArray(code.items) ? code.items : [],
       maxUses: code.maxUses,
       isActive: code.isActive,
     });
@@ -71,15 +72,10 @@ export default function CodesPage() {
 
   const validate = () => {
     if (!form.code.trim()) return "Code is required";
-    try {
-      const parsed = JSON.parse(form.items || "[]");
-      if (!Array.isArray(parsed)) return "Items must be a JSON array";
-      for (const entry of parsed) {
-        if (!entry.itemName) return 'Each item must have "itemName"';
-        if (!entry.quantity) return 'Each item must have "quantity"';
-      }
-    } catch {
-      return "Items is not valid JSON";
+    if (!Array.isArray(form.items)) return "Items must be a list";
+    for (const entry of form.items) {
+      if (!entry.itemName) return 'Each item must have "itemName"';
+      if (!entry.quantity) return 'Each item must have "quantity"';
     }
     return null;
   };
@@ -97,7 +93,7 @@ export default function CodesPage() {
       gold: Number(form.gold) || 0,
       diamonds: Number(form.diamonds) || 0,
       experience: Number(form.experience) || 0,
-      items: JSON.parse(form.items || "[]"),
+      items: form.items.filter((i: any) => i.itemName || i.quantity),
       maxUses: Math.max(1, Number(form.maxUses) || 1),
       isActive: form.isActive,
     };
@@ -289,15 +285,21 @@ export default function CodesPage() {
                   <option value="false">No</option>
                 </select>
               </label>
-              <label className="block col-span-2 text-xs text-gray-400">
-                Items (JSON)
-                <textarea
-                  className="input-rpg mt-1 w-full font-mono text-xs h-28"
+              <div className="col-span-2">
+                <label className="block text-xs text-gray-400 mb-1.5">Itens da recompensa</label>
+                <JsonField
+                  schema={{
+                    mode: "object-array",
+                    addLabel: "Adicionar item",
+                    fields: [
+                      { name: "itemName", label: "Nome do Item", type: "text", placeholder: "Pocao de Vida" },
+                      { name: "quantity", label: "Quantidade", type: "number" },
+                    ],
+                  }}
                   value={form.items}
-                  onChange={(e) => setForm({ ...form, items: e.target.value })}
-                  placeholder='[{"itemName": "Pocao de Vida", "quantity": 5}]'
+                  onChange={(v) => setForm({ ...form, items: v })}
                 />
-              </label>
+              </div>
             </div>
             <button type="submit" className="btn-primary w-full">Save code</button>
           </form>
