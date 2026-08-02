@@ -18,7 +18,7 @@ export function DashboardPage() {
   const classSlug = character?.class?.slug;
 
   const statCards = [
-    { label: "Level", value: user?.level || 1, icon: Star, color: "from-purple-500 to-purple-600" },
+    { label: "Level do personagem", value: character?.level ?? user?.level ?? 1, icon: Star, color: "from-purple-500 to-purple-600" },
     { label: "Gold", value: (user?.gold ?? 0).toLocaleString(), icon: TrendingUp, color: "from-yellow-500 to-yellow-600" },
     { label: "Diamonds", value: user?.diamonds || 0, icon: Zap, color: "from-cyan-500 to-cyan-600" },
   ];
@@ -60,12 +60,29 @@ export function DashboardPage() {
             <Shield size={20} className="text-cyan-400" />
             <div className="flex-1">
               <p className="text-sm text-gray-400">Selected character</p>
-              <p className="font-display font-bold">{character.name}</p>
+              <p className="font-display font-bold">
+                {character.name}{" "}
+                <span className="text-sm text-purple-400 font-mono">Lv.{character.level}</span>
+              </p>
               <p className="text-xs text-gray-400 mt-0.5">
                 {character.class?.name || "Sem classe"}
                 {character.race?.name && <> • Raça: {character.race.name}</>}
                 {character.trait?.name && <> • Trait: {character.trait.name}</>}
               </p>
+              {(character.experience !== undefined || character.experienceToNext) && (
+                <div className="mt-2 max-w-xs">
+                  <div className="flex justify-between text-[10px] text-gray-500 mb-1">
+                    <span>XP para o próximo level</span>
+                    <span className="font-mono">{character.experience ?? 0} / {character.experienceToNext ?? 150}</span>
+                  </div>
+                  <div className="stat-bar h-1.5">
+                    <div
+                      className="stat-bar-fill bg-gradient-to-r from-purple-500 to-blue-500"
+                      style={{ width: `${Math.min(100, ((character.experience ?? 0) / (character.experienceToNext ?? 150)) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
             <span className="text-sm text-gray-400">Level {character.level}</span>
           </div>
