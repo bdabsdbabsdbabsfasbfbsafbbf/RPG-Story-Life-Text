@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { getSocket } from "../services/socket";
 import { useGameStore } from "../store/gameStore";
 import { useAuthStore } from "../store/authStore";
 import { CombatUpdate } from "../types";
-import { charactersApi, monstersApi } from "../services/api";
+import { authApi, charactersApi, monstersApi } from "../services/api";
 import { ArrowLeft, Sword, Shield, Zap, Skull, Heart, Sparkles, Coins, Lock, Star } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -12,13 +12,26 @@ export function CombatPage() {
   const { monsterId } = useParams<{ monsterId: string }>();
   const navigate = useNavigate();
   const { selectedCharacter } = useGameStore();
-  const { user } = useAuthStore();
+  const { user, setUser } = useAuthStore();
   const [combat, setCombat] = useState<CombatUpdate | null>(null);
   const [combatLog, setCombatLog] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [monsterInfo, setMonsterInfo] = useState<{ name: string; level: number } | null>(null);
   const [cooldowns, setCooldowns] = useState<Record<string, number>>({});
   const [classRank, setClassRank] = useState(1);
+  const rewardsRefreshed = useRef(false);
+
+  // Refresh user data (gold/XP) after a victory without needing F5
+  const refreshUser = () => {
+    if (rewardsRefreshed.current) return;
+    rewardsRefreshed.current = true;
+    authApi
+      .me()
+      .then(({ data }) => {
+        if (data) setUser(data);
+      })
+      .catch(() => {});
+  };
 
   const socket = getSocket();
 
@@ -75,6 +88,7 @@ export function CombatPage() {
     if (!socket) return;
 
     socket.on("combat:started", (data: any) => {
+      rewardsRefreshed.current = false;
       setCombat(data);
       setCombatLog([`Combate contra ${data.monsterName || "o monstro"} iniciado!`]);
       setLoading(false);
@@ -84,6 +98,7 @@ export function CombatPage() {
       setCombat(data);
       if (data.state === "won") {
         toast.success("Vitória!");
+        refreshUser();
       } else if (data.state === "lost") {
         toast.error("Derrota!");
       }
@@ -116,6 +131,7 @@ export function CombatPage() {
       }
       if (data.state === "won" && data.rewards) {
         log.push(`Vitória! +${data.rewards.xpGain ?? 0} XP, +${data.rewards.goldGain ?? 0} gold${data.rewards.levelUps ? `, LEVEL UP x${data.rewards.levelUps}!` : ""}`);
+        refreshUser();
       }
       if (log.length) setCombatLog(prev => [...prev.slice(-19), ...log]);
     });

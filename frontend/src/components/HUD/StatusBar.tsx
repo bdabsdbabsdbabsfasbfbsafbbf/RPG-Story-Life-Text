@@ -1,8 +1,10 @@
 import { useGameStore } from '../../store/gameStore';
+import { useAuthStore } from '../../store/authStore';
 import styles from './StatusBar.module.css';
 
 export default function StatusBar() {
   const { selectedCharacter, currentMap } = useGameStore();
+  const { user } = useAuthStore();
 
   if (!selectedCharacter) return null;
 
@@ -73,11 +75,11 @@ export default function StatusBar() {
       <div className={styles.currency}>
         <div className={styles.gold}>
           <span className={styles.currencyIcon}>G</span>
-          {(selectedCharacter.gold || 0).toLocaleString()}
+          {(user?.gold ?? 0).toLocaleString()}
         </div>
         <div className={styles.diamonds}>
           <span className={styles.currencyIcon}>D</span>
-          {(selectedCharacter.diamonds || 0).toLocaleString()}
+          {(user?.diamonds ?? 0).toLocaleString()}
         </div>
       </div>
     </div>
