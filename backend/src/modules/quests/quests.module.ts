@@ -76,6 +76,18 @@ export function createQuestsModule(app: Express): void {
     }
   });
 
+  app.post("/api/quests/:id/abandon", authenticate, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const deleted = await prisma.questProgress.deleteMany({
+        where: { userId: req.user!.userId, questId: req.params.id },
+      });
+      if (deleted.count === 0) throw new AppError(404, "Quest progress not found");
+      res.json({ message: "Quest canceled" });
+    } catch (err) {
+      next(err);
+    }
+  });
+
   app.post("/api/quests/:id/claim", authenticate, async (req: Request, res: Response, next: NextFunction) => {
     try {
       const progress = await prisma.questProgress.findUnique({

@@ -15,7 +15,6 @@ import { CreateCharacterPage } from './pages/CreateCharacterPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { CodexPage } from './pages/CodexPage';
 import { SupportPage } from './pages/SupportPage';
-import AdminPanel from './components/Admin/AdminPanel';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const accessToken = useAuthStore((s) => s.accessToken);
@@ -55,7 +54,6 @@ export default function App() {
         <Route path="settings" element={<CharacterGate><SettingsPage /></CharacterGate>} />
         <Route path="codex" element={<CharacterGate><CodexPage /></CharacterGate>} />
         <Route path="support" element={<CharacterGate><SupportPage /></CharacterGate>} />
-        <Route path="admin" element={<AdminPanel />} />
       </Route>
     </Routes>
   );

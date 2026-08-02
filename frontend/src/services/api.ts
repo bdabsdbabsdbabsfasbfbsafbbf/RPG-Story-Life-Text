@@ -47,12 +47,6 @@ export const redeemApi = {
   redeem: (code: string) => api.post("/redeem", { code }),
 };
 
-export const adminApi = {
-  getLimits: () => api.get("/admin/settings/limits"),
-  updateLimits: (data: { maxLevel: number; maxGold: number; maxDiamonds: number; xpPerLevel: number }) =>
-    api.put("/admin/settings/limits", data),
-};
-
 export const classesApi = {
   list: () => api.get("/classes"),
   get: (slug: string) => api.get(`/classes/${slug}`),
@@ -91,6 +85,7 @@ export const questsApi = {
   list: (params?: any) => api.get("/quests", { params }),
   get: (id: string) => api.get(`/quests/${id}`),
   accept: (id: string) => api.post(`/quests/${id}/accept`),
+  abandon: (id: string) => api.post(`/quests/${id}/abandon`),
   progress: () => api.get("/quests/progress"),
   claim: (id: string) => api.post(`/quests/${id}/claim`),
 };

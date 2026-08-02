@@ -92,6 +92,7 @@ export function MapPage() {
       toast.success("Quest aceita!");
       const { data } = await questsApi.progress();
       if (Array.isArray(data)) setQuestProgress(data);
+      window.dispatchEvent(new Event("quests-changed"));
     } catch (err: any) {
       toast.error(err.response?.data?.error || "Failed to accept quest");
     }
@@ -103,6 +104,7 @@ export function MapPage() {
       toast.success("Recompensa resgatada!");
       const { data } = await questsApi.progress();
       if (Array.isArray(data)) setQuestProgress(data);
+      window.dispatchEvent(new Event("quests-changed"));
     } catch (err: any) {
       toast.error(err.response?.data?.error || "Failed to claim rewards");
     }
