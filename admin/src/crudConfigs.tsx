@@ -183,7 +183,7 @@ export const crudConfigs: CrudConfig[] = [
       { name: "goldReward", label: "Gold Reward", type: "number", defaultValue: 0 },
       { name: "objectives", label: "Objectives", type: "json", jsonSchema: { mode: "object-array", addLabel: "Adicionar objetivo", fields: [
           { name: "type", label: "Tipo", type: "select", options: ["kill", "collect", "talk", "reach", "use", "escort", "defeat_boss"] },
-          { name: "target", label: "Alvo", type: "text", placeholder: "nome do monstro/item/npc" },
+          { name: "monsterName", label: "Alvo (nome ou ID)", type: "text", placeholder: "ex: Rato da Floresta" },
           { name: "amount", label: "Quantidade", type: "number" },
         ] } },
       { name: "itemRewards", label: "Item Rewards", type: "json", jsonSchema: { mode: "object-array", addLabel: "Adicionar recompensa", fields: [
