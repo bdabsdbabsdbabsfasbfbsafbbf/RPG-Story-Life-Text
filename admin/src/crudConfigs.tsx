@@ -161,7 +161,7 @@ export const crudConfigs: CrudConfig[] = [
       { name: "tier", label: "Tier", type: "number", defaultValue: 1 },
       { name: "buyPrice", label: "Buy Price", type: "number", defaultValue: 0 },
       { name: "sellPrice", label: "Sell Price", type: "number", defaultValue: 0 },
-      { name: "stats", label: "Stats", type: "json", jsonSchema: { mode: "fixed-record", allowExtra: true, extraKeyPlaceholder: "outro stat", fields: [
+      { name: "stats", label: "Stats", type: "json", jsonSchema: { mode: "fixed-record", fields: [
           { key: "attack", label: "Ataque" },
           { key: "defense", label: "Defesa" },
           { key: "magic", label: "Magia" },
@@ -173,10 +173,10 @@ export const crudConfigs: CrudConfig[] = [
           { key: "critDamage", label: "Dano Crítico (%)" },
           { key: "dodge", label: "Esquiva (%)" },
         ] } },
-      { name: "requirements", label: "Requirements", type: "json", jsonSchema: { mode: "fixed-record", allowExtra: true, extraKeyPlaceholder: "requisito", fields: [
+      { name: "requirements", label: "Requirements", type: "json", jsonSchema: { mode: "fixed-record", fields: [
           { key: "level", label: "Level" },
         ] } },
-      { name: "effects", label: "Effects", type: "json", jsonSchema: { mode: "fixed-record", allowExtra: true, extraKeyPlaceholder: "efeito", fields: [
+      { name: "effects", label: "Effects", type: "json", jsonSchema: { mode: "fixed-record", fields: [
           { key: "heal", label: "Cura" },
           { key: "manaRestore", label: "Recupera Mana" },
           { key: "shield", label: "Escudo" },
@@ -299,7 +299,7 @@ export const crudConfigs: CrudConfig[] = [
       { name: "maxStacks", label: "Max Stacks", type: "number", defaultValue: 1 },
       { name: "tickInterval", label: "Tick Interval (ms)", type: "number", defaultValue: 0 },
       { name: "tickEffect", label: "Tick Effect", type: "text", placeholder: "damage, heal..." },
-      { name: "statModifiers", label: "Stat Modifiers", type: "json", jsonSchema: { mode: "fixed-record", allowExtra: true, extraKeyPlaceholder: "outro stat", fields: [
+      { name: "statModifiers", label: "Stat Modifiers", type: "json", jsonSchema: { mode: "fixed-record", fields: [
           { key: "attack", label: "Ataque" },
           { key: "defense", label: "Defesa" },
           { key: "magic", label: "Magia" },
@@ -334,7 +334,7 @@ export const crudConfigs: CrudConfig[] = [
         name: "traits",
         label: "Stat Modifiers",
         type: "json",
-        jsonSchema: { mode: "fixed-record", allowExtra: true, extraKeyPlaceholder: "outro stat", fields: [
+        jsonSchema: { mode: "fixed-record", fields: [
           { key: "baseHp", label: "HP Base" },
           { key: "baseAttack", label: "Ataque Base" },
           { key: "baseDefense", label: "Defesa Base" },
@@ -366,7 +366,7 @@ export const crudConfigs: CrudConfig[] = [
         name: "modifiers",
         label: "Modifiers",
         type: "json",
-        jsonSchema: { mode: "fixed-record", allowExtra: true, extraKeyPlaceholder: "outro modificador", fields: [
+        jsonSchema: { mode: "fixed-record", fields: [
           { key: "xpBonus", label: "Bônus de XP (%)" },
           { key: "goldBonus", label: "Bônus de Gold (%)" },
           { key: "critBonus", label: "Chance Crítica (%)" },

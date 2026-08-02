@@ -668,7 +668,7 @@ export default function SkillsPage() {
                 <div className="sm:col-span-2">
                   <label className="block text-sm text-gray-400 mb-1.5">Stat Modifiers (só valores — muda conforme o Effect Type)</label>
                   <JsonField
-                    schema={{ mode: "fixed-record", allowExtra: true, extraKeyPlaceholder: "outro stat", fields: passiveStatFieldsByType[passiveForm.effectType] || passiveStatFieldsByType.stat_bonus }}
+                    schema={{ mode: "fixed-record", fields: passiveStatFieldsByType[passiveForm.effectType] || passiveStatFieldsByType.stat_bonus }}
                     value={passiveForm.statModifiers}
                     onChange={(v) => setPassiveForm({ ...passiveForm, statModifiers: v })}
                   />

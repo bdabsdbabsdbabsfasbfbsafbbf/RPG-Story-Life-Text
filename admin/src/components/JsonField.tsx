@@ -11,8 +11,6 @@ export type JsonFieldDef =
   | {
       mode: "fixed-record";
       fields: { key: string; label: string; valueType?: "number" | "string"; placeholder?: string }[];
-      allowExtra?: boolean;
-      extraKeyPlaceholder?: string;
     };
 
 interface JsonFieldProps {
@@ -44,19 +42,6 @@ export default function JsonField({ schema, value, onChange }: JsonFieldProps) {
       onChange(next);
     };
 
-    const extras: [string, any][] = Object.entries(current).filter(([k]) => !knownKeys.has(k));
-    const setExtra = (key: string, v: any) => {
-      const next: Record<string, any> = {};
-      for (const [k, val] of extras) if (k !== key) next[k] = val;
-      if (v !== "" && v !== null && v !== undefined) next[key] = v;
-      onChange({ ...current, ...next });
-    };
-    const addExtra = () => {
-      const next: Record<string, any> = { ...current };
-      next[""] = 0;
-      onChange(next);
-    };
-
     return (
       <div className="space-y-2">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -74,40 +59,6 @@ export default function JsonField({ schema, value, onChange }: JsonFieldProps) {
             </div>
           ))}
         </div>
-        {schema.allowExtra && (
-          <div className="pt-2 border-t border-dark-600/60 space-y-2">
-            <p className="text-[11px] text-gray-500">Extras</p>
-            {extras.map(([k, v]) => (
-              <div key={k + "-" + v} className="flex items-center gap-2">
-                <input
-                  type="text"
-                  className={`${inputClass} flex-1`}
-                  placeholder={schema.extraKeyPlaceholder || "chave"}
-                  value={k}
-                  onChange={(e) => setExtra(k, v)}
-                />
-                <input
-                  type="number"
-                  step="any"
-                  className={`${inputClass} w-28`}
-                  value={v}
-                  onChange={(e) => setExtra(k, e.target.value === "" ? 0 : Number(e.target.value))}
-                />
-                <button
-                  type="button"
-                  onClick={() => setExtra(k, "")}
-                  className="text-gray-500 hover:text-red-400 transition-colors shrink-0"
-                  title="Remove"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            ))}
-            <button type="button" onClick={addExtra} className={addBtnClass}>
-              <Plus size={14} /> Adicionar
-            </button>
-          </div>
-        )}
       </div>
     );
   }
