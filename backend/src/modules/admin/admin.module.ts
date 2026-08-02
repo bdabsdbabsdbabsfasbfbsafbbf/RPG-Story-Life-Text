@@ -402,12 +402,20 @@ export function createAdminModule(app: Express): void {
     statmodel: ["base", "perLevel", "scaling"],
   };
 
+  // Relações opcionais: string vazia/null vira null (evita FK error)
+  const NULLABLE_RELATIONS: Record<string, string[]> = {
+    class: ["statModelId"],
+  };
+
   function normalizeBody(model: string, body: any): any {
     if (!body || typeof body !== "object" || Array.isArray(body)) return body;
     const jsonFields = new Set(JSON_FIELDS[model] || []);
+    const nullableIds = new Set(NULLABLE_RELATIONS[model] || []);
     const out: Record<string, any> = {};
     for (const [k, v] of Object.entries(body)) {
-      if (jsonFields.has(k)) {
+      if (nullableIds.has(k) && (v === "" || v === null || v === undefined)) {
+        out[k] = null;
+      } else if (jsonFields.has(k)) {
         if (typeof v === "string") {
           try { out[k] = JSON.parse(v); } catch { out[k] = v; }
         } else {
@@ -422,17 +430,31 @@ export function createAdminModule(app: Express): void {
     return out;
   }
 
+  async function saveGameClass(id: string | null, body: any) {
+    const data = normalizeBody("class", body);
+    try {
+      return id
+        ? await prisma.gameClass.update({ where: { id }, data })
+        : await prisma.gameClass.create({ data });
+    } catch (err: any) {
+      if (err?.code === "P2003") {
+        throw new AppError(400, "Stat Model inválido — escolha um Stat Model existente no campo da classe");
+      }
+      throw err;
+    }
+  }
+
   // Classes CRUD
   app.get("/api/admin/classes", requireAdmin, async (_req: Request, res: Response, next: NextFunction) => {
     try { res.json(await prisma.gameClass.findMany({ include: { statModel: true }, orderBy: { name: "asc" } })); } catch (err) { next(err); }
   });
 
   app.post("/api/admin/classes", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
-    try { res.status(201).json(await prisma.gameClass.create({ data: normalizeBody("class", req.body) })); } catch (err) { next(err); }
+    try { res.status(201).json(await saveGameClass(null, req.body)); } catch (err) { next(err); }
   });
 
   app.put("/api/admin/classes/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
-    try { res.json(await prisma.gameClass.update({ where: { id: req.params.id }, data: normalizeBody("class", req.body) })); } catch (err) { next(err); }
+    try { res.json(await saveGameClass(req.params.id, req.body)); } catch (err) { next(err); }
   });
 
   app.delete("/api/admin/classes/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {

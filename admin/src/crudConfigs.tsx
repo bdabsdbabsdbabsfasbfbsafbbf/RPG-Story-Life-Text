@@ -112,7 +112,13 @@ export const crudConfigs: CrudConfig[] = [
         options: ["melee", "ranged", "caster"],
       },
       { name: "rankMax", label: "Max Rank", type: "number", defaultValue: 10 },
-      { name: "statModelId", label: "Stat Model ID", type: "text", hint: "ID do StatModel ligado (ver página Stat Models)" },
+      {
+        name: "statModelId",
+        label: "Stat Model",
+        type: "select",
+        optionsFrom: "statModels",
+        hint: "Modelo de atributos da classe (deixe vazio para nenhum)",
+      },
       {
         name: "resource",
         label: "Resource",

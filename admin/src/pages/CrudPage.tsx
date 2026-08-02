@@ -8,6 +8,7 @@ export interface FieldConfig {
   label: string;
   type: "text" | "number" | "textarea" | "select" | "boolean" | "json";
   options?: string[];
+  optionsFrom?: string;
   required?: boolean;
   defaultValue?: any;
   step?: string;
@@ -44,6 +45,20 @@ export default function CrudPage({ config }: CrudPageProps) {
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState<Record<string, any>>({});
   const [saving, setSaving] = useState(false);
+  const [remoteOptions, setRemoteOptions] = useState<Record<string, any[]>>({});
+
+  useEffect(() => {
+    const sources = config.fields.filter((f) => f.optionsFrom);
+    if (sources.length === 0) return;
+    sources.forEach((f) => {
+      (adminApi as any)[f.optionsFrom!]
+        .list()
+        .then(({ data }: any) =>
+          setRemoteOptions((prev) => ({ ...prev, [f.optionsFrom!]: Array.isArray(data) ? data : [] }))
+        )
+        .catch(() => {});
+    });
+  }, [config.key]);
 
   const load = async () => {
     setLoading(true);
@@ -174,7 +189,14 @@ export default function CrudPage({ config }: CrudPageProps) {
             required={field.required}
           />
         );
-      case "select":
+      case "select": {
+        const options = field.optionsFrom
+          ? remoteOptions[field.optionsFrom] || []
+          : field.options || [];
+        const optionLabel = (opt: any) => {
+          if (typeof opt === "string") return opt;
+          return opt.slug && opt.slug !== opt.name ? `${opt.name} (${opt.slug})` : opt.name;
+        };
         return (
           <select
             value={value ?? ""}
@@ -182,14 +204,15 @@ export default function CrudPage({ config }: CrudPageProps) {
             className={inputClass}
             required={field.required}
           >
-            <option value="">Select...</option>
-            {(field.options || []).map((opt) => (
-              <option key={opt} value={opt}>
-                {opt}
+            <option value="">{field.optionsFrom ? "Nenhum" : "Select..."}</option>
+            {options.map((opt: any) => (
+              <option key={typeof opt === "string" ? opt : opt.id} value={typeof opt === "string" ? opt : opt.id}>
+                {optionLabel(opt)}
               </option>
             ))}
           </select>
         );
+      }
       case "boolean":
         return (
           <div className="flex items-center gap-2 pt-1">
