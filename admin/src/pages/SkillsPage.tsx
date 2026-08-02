@@ -55,21 +55,140 @@ const defaultPassive = {
   effectData: {} as Record<string, any>,
 };
 
-const passiveStatFields = [
-  { key: "maxHpPercent", label: "HP Máx (%)" },
-  { key: "maxManaPercent", label: "Mana Máx (%)" },
+const baseStatFields = [
   { key: "attack", label: "Ataque" },
   { key: "defense", label: "Defesa" },
   { key: "magic", label: "Magia" },
   { key: "magicDefense", label: "Res. Mágica" },
   { key: "speed", label: "Velocidade" },
-  { key: "critChance", label: "Chance Crítica (%)" },
-  { key: "critDamage", label: "Dano Crítico (%)" },
-  { key: "dodge", label: "Esquiva (%)" },
-  { key: "healingPowerPercent", label: "Poder de Cura (%)" },
-  { key: "cooldownReduction", label: "Redução de CD (%)" },
-  { key: "lifeSteal", label: "Roubo de Vida (%)" },
+  { key: "maxHp", label: "HP Máx" },
+  { key: "maxMana", label: "Mana Máx" },
+  { key: "maxHpPercent", label: "HP Máx (%)" },
+  { key: "maxManaPercent", label: "Mana Máx (%)" },
 ];
+
+const passiveStatFieldsByType: Record<string, { key: string; label: string }[]> = {
+  stat_bonus: [
+    ...baseStatFields,
+    { key: "baseHp", label: "HP Base" },
+    { key: "baseMana", label: "Mana Base" },
+    { key: "baseAttack", label: "Ataque Base" },
+    { key: "baseDefense", label: "Defesa Base" },
+    { key: "baseMagic", label: "Magia Base" },
+    { key: "baseMagicDefense", label: "Res. Mágica Base" },
+    { key: "baseSpeed", label: "Velocidade Base" },
+    { key: "manaRecovery", label: "Regen de Mana" },
+    { key: "attackScaling", label: "Scaling Ataque" },
+    { key: "magicScaling", label: "Scaling Magia" },
+    { key: "critScaling", label: "Scaling Crit" },
+    { key: "dodgeScaling", label: "Scaling Esquiva" },
+    { key: "cooldownScaling", label: "Scaling CD" },
+    { key: "manaEfficiency", label: "Efic. Mana" },
+  ],
+  stat_boost: [
+    ...baseStatFields,
+    { key: "attackPercent", label: "Ataque (%)" },
+    { key: "defensePercent", label: "Defesa (%)" },
+    { key: "magicPercent", label: "Magia (%)" },
+    { key: "magicDefensePercent", label: "Res. Mágica (%)" },
+    { key: "speedPercent", label: "Velocidade (%)" },
+    { key: "hpPercent", label: "Vida (%)" },
+    { key: "manaPercent", label: "Mana (%)" },
+    { key: "attackFlat", label: "Ataque (plano)" },
+    { key: "defenseFlat", label: "Defesa (plano)" },
+  ],
+  damage_increase: [
+    { key: "attack", label: "Ataque" },
+    { key: "magic", label: "Magia" },
+    { key: "attackPercent", label: "Ataque (%)" },
+    { key: "magicPercent", label: "Magia (%)" },
+    { key: "damagePercent", label: "Dano Total (%)" },
+    { key: "skillDamagePercent", label: "Dano de Skill (%)" },
+    { key: "baseDamagePercent", label: "Dano Base (%)" },
+    { key: "damageBonus", label: "Bônus de Dano" },
+    { key: "critChance", label: "Chance Crítica (%)" },
+    { key: "critDamage", label: "Dano Crítico (%)" },
+  ],
+  damage_reduction: [
+    { key: "defense", label: "Defesa" },
+    { key: "magicDefense", label: "Res. Mágica" },
+    { key: "defensePercent", label: "Defesa (%)" },
+    { key: "magicDefensePercent", label: "Res. Mágica (%)" },
+    { key: "damageReductionPercent", label: "Redução de Dano (%)" },
+    { key: "incomingDamageReduction", label: "Dano Recebido (%)" },
+    { key: "damageReduction", label: "Redução (plano)" },
+  ],
+  critical_chance: [
+    { key: "critChance", label: "Chance Crítica (%)" },
+    { key: "critChancePercent", label: "Chance Crítica (%) bônus" },
+    { key: "critDamage", label: "Dano Crítico (%)" },
+    { key: "critDamagePercent", label: "Dano Crítico (%) bônus" },
+    { key: "attackPercent", label: "Ataque (%)" },
+    { key: "critScaling", label: "Scaling Crit" },
+  ],
+  critical_damage: [
+    { key: "critDamage", label: "Dano Crítico (%)" },
+    { key: "critDamagePercent", label: "Dano Crítico (%) bônus" },
+    { key: "critChance", label: "Chance Crítica (%)" },
+    { key: "critChancePercent", label: "Chance Crítica (%) bônus" },
+  ],
+  cooldown_reduction: [
+    { key: "cooldownReduction", label: "Redução de CD (%)" },
+    { key: "cooldownReductionPercent", label: "Redução de CD (%) bônus" },
+    { key: "cdrFlat", label: "CDR (plano)" },
+    { key: "haste", label: "Haste" },
+    { key: "cooldownScaling", label: "Scaling CD" },
+  ],
+  life_steal: [
+    { key: "lifeSteal", label: "Roubo de Vida (%)" },
+    { key: "lifeStealPercent", label: "Roubo de Vida (%) bônus" },
+    { key: "lifeStealFlat", label: "Roubo (plano)" },
+    { key: "damagePercent", label: "Dano Total (%)" },
+    { key: "magicVamp", label: "Vampirismo Mágico (%)" },
+  ],
+  mana_regen: [
+    { key: "manaRegen", label: "Regen de Mana" },
+    { key: "manaRegenPercent", label: "Regen de Mana (%)" },
+    { key: "manaRecovery", label: "Recuperação de Mana" },
+    { key: "maxManaPercent", label: "Mana Máx (%)" },
+    { key: "maxMana", label: "Mana Máx" },
+  ],
+  health_regen: [
+    { key: "healthRegen", label: "Regen de Vida" },
+    { key: "healthRegenPercent", label: "Regen de Vida (%)" },
+    { key: "hpRegenPercent", label: "Regen HP (%)" },
+    { key: "maxHpPercent", label: "HP Máx (%)" },
+    { key: "maxHp", label: "HP Máx" },
+  ],
+  resistance: [
+    { key: "defense", label: "Defesa" },
+    { key: "magicDefense", label: "Res. Mágica" },
+    { key: "resistancePercent", label: "Resistência (%)" },
+    { key: "ailmentResistance", label: "Res. a Status (%)" },
+    { key: "statusResistance", label: "Res. a Efeitos (%)" },
+    { key: "slowResist", label: "Res. Lentidão (%)" },
+    { key: "stunResist", label: "Res. Stun (%)" },
+  ],
+  reflect: [
+    { key: "reflectPercent", label: "Refletir (%)" },
+    { key: "reflectFlat", label: "Refletir (plano)" },
+    { key: "reflectDamagePercent", label: "Dano Refletido (%)" },
+    { key: "defense", label: "Defesa" },
+  ],
+  absorb: [
+    { key: "absorbPercent", label: "Absorver (%)" },
+    { key: "absorbFlat", label: "Absorver (plano)" },
+    { key: "shieldPercent", label: "Escudo (%)" },
+    { key: "maxHpPercent", label: "HP Máx (%)" },
+  ],
+  chance_proc: [
+    { key: "procChance", label: "Chance de Ativação (%)" },
+    { key: "procChancePercent", label: "Chance de Ativação (%) bônus" },
+    { key: "triggerChance", label: "Chance de Gatilho (%)" },
+    { key: "procCooldown", label: "CD do Proc (ms)" },
+    { key: "critChance", label: "Chance Crítica (%)" },
+  ],
+};
 
 export default function SkillsPage() {
   const [searchParams] = useSearchParams();
@@ -140,6 +259,19 @@ export default function SkillsPage() {
     setModalOpen(true);
   };
 
+  const parseJsonArray = (raw: any): any[] => {
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === "string" && raw.trim()) {
+      try {
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  };
+
   const openEdit = (skill: any) => {
     setEditing(skill);
     setForm({
@@ -159,9 +291,9 @@ export default function SkillsPage() {
       healingBase: skill.healingBase ?? 0,
       sortOrder: skill.sortOrder ?? 0,
       isActive: skill.isActive ?? true,
-      effects: skill.effects ?? [],
-      buffsApplied: skill.buffsApplied ?? [],
-      debuffsApplied: skill.debuffsApplied ?? [],
+      effects: parseJsonArray(skill.effects),
+      buffsApplied: parseJsonArray(skill.buffsApplied),
+      debuffsApplied: parseJsonArray(skill.debuffsApplied),
     });
     setModalOpen(true);
   };
@@ -187,7 +319,7 @@ export default function SkillsPage() {
     };
     for (const key of ["effects", "buffsApplied", "debuffsApplied"] as const) {
       const raw = form[key];
-      payload[key] = Array.isArray(raw) && raw.length > 0 ? raw : null;
+      payload[key] = Array.isArray(raw) && raw.length > 0 ? JSON.stringify(raw) : null;
     }
     return payload;
   };
@@ -534,9 +666,9 @@ export default function SkillsPage() {
                   </select>
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block text-sm text-gray-400 mb-1.5">Stat Modifiers (só valores)</label>
+                  <label className="block text-sm text-gray-400 mb-1.5">Stat Modifiers (só valores — muda conforme o Effect Type)</label>
                   <JsonField
-                    schema={{ mode: "fixed-record", allowExtra: true, extraKeyPlaceholder: "outro stat", fields: passiveStatFields }}
+                    schema={{ mode: "fixed-record", allowExtra: true, extraKeyPlaceholder: "outro stat", fields: passiveStatFieldsByType[passiveForm.effectType] || passiveStatFieldsByType.stat_bonus }}
                     value={passiveForm.statModifiers}
                     onChange={(v) => setPassiveForm({ ...passiveForm, statModifiers: v })}
                   />

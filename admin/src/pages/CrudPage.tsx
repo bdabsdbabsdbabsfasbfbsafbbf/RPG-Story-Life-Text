@@ -86,7 +86,11 @@ export default function CrudPage({ config }: CrudPageProps) {
       const raw = item[field.name];
       if (field.type === "json") {
         if (field.jsonSchema) {
-          values[field.name] = raw ?? (field.jsonSchema.mode === "record" ? {} : []);
+          let parsed = raw;
+          if (typeof raw === "string" && raw.trim()) {
+            try { parsed = JSON.parse(raw); } catch { parsed = undefined; }
+          }
+          values[field.name] = parsed ?? (field.jsonSchema.mode === "record" ? {} : []);
         } else {
           values[field.name] = raw ? JSON.stringify(raw, null, 2) : "";
         }
@@ -112,7 +116,7 @@ export default function CrudPage({ config }: CrudPageProps) {
     for (const field of config.fields) {
       let value = form[field.name];
       if (field.type === "json") {
-        payload[field.name] = field.jsonSchema ? value : value && value.trim() ? value : null;
+        payload[field.name] = field.jsonSchema ? JSON.stringify(value) : value && value.trim() ? value : null;
       } else if (field.type === "number") {
         payload[field.name] = Number(value) || 0;
       } else if (field.type === "boolean") {
