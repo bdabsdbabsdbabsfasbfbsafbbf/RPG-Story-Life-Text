@@ -19,6 +19,7 @@ import {
   Gauge,
   Contact,
   ShoppingBag,
+  Footprints,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -34,6 +35,7 @@ const navItems: NavItem[] = [
   { to: '/skills', icon: <Zap size={18} />, label: 'Skills' },
   { to: '/items', icon: <Box size={18} />, label: 'Items' },
   { to: '/monsters', icon: <Skull size={18} />, label: 'Monsters' },
+  { to: '/map-monsters', icon: <Footprints size={18} />, label: 'Map Monsters' },
   { to: '/maps', icon: <Map size={18} />, label: 'Maps' },
   { to: '/quests', icon: <ScrollText size={18} />, label: 'Quests' },
   { to: '/effects', icon: <Activity size={18} />, label: 'Effects' },

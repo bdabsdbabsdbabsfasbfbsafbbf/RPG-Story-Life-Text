@@ -156,4 +156,10 @@ export const adminApi = {
     update: (id: string, data: any) => api.put(`/admin/mapnpcs/${id}`, data),
     delete: (id: string) => api.delete(`/admin/mapnpcs/${id}`),
   },
+  mapMonsters: {
+    list: () => api.get("/admin/mapmonsters"),
+    create: (data: any) => api.post("/admin/mapmonsters", data),
+    update: (id: string, data: any) => api.put(`/admin/mapmonsters/${id}`, data),
+    delete: (id: string) => api.delete(`/admin/mapmonsters/${id}`),
+  },
 };

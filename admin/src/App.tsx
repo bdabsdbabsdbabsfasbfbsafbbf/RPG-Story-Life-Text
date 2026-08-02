@@ -9,6 +9,7 @@ import LimitsPage from "./pages/LimitsPage";
 import SkillsPage from "./pages/SkillsPage";
 import EffectsPage from "./pages/EffectsPage";
 import ShopsPage from "./pages/ShopsPage";
+import MapMonstersPage from "./pages/MapMonstersPage";
 import CrudPage from "./pages/CrudPage";
 import { crudConfigs } from "./crudConfigs";
 export default function App() {
@@ -27,6 +28,7 @@ export default function App() {
         <Route path="/skills" element={<SkillsPage />} />
         <Route path="/effects" element={<EffectsPage />} />
         <Route path="/shops" element={<ShopsPage />} />
+        <Route path="/map-monsters" element={<MapMonstersPage />} />
         <Route path="/users" element={<UsersPage />} />
         <Route path="/codes" element={<CodesPage />} />
         <Route path="/guild-settings" element={<GuildSettingsPage />} />

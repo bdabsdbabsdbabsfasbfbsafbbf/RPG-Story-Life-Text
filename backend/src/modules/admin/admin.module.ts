@@ -407,6 +407,7 @@ export function createAdminModule(app: Express): void {
     class: ["statModelId"],
     shopitem: ["npcId", "itemId"],
     mapnpc: ["mapId", "npcId"],
+    mapmonster: ["mapId", "monsterId"],
     quest: ["giverNpcId", "mapId"],
   };
 
@@ -543,7 +544,12 @@ export function createAdminModule(app: Express): void {
 
   // Maps CRUD
   app.get("/api/admin/maps", requireAdmin, async (_req: Request, res: Response, next: NextFunction) => {
-    try { res.json(await prisma.map.findMany({ orderBy: { name: "asc" } })); } catch (err) { next(err); }
+    try {
+      res.json(await prisma.map.findMany({
+        include: { monsters: true },
+        orderBy: { name: "asc" },
+      }));
+    } catch (err) { next(err); }
   });
 
   app.post("/api/admin/maps", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
@@ -724,5 +730,27 @@ export function createAdminModule(app: Express): void {
 
   app.delete("/api/admin/mapnpcs/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try { await prisma.mapNpc.delete({ where: { id: req.params.id } }); res.json({ message: "Deleted" }); } catch (err) { next(err); }
+  });
+
+  // MapMonsters CRUD (monstro com spawn em um mapa)
+  app.get("/api/admin/mapmonsters", requireAdmin, async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      res.json(await prisma.mapMonster.findMany({
+        include: { map: true, monster: true },
+        orderBy: { createdAt: "desc" },
+      }));
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/admin/mapmonsters", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try { res.status(201).json(await saveWithFk("mapMonster", null, req.body)); } catch (err) { next(err); }
+  });
+
+  app.put("/api/admin/mapmonsters/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try { res.json(await saveWithFk("mapMonster", req.params.id, req.body)); } catch (err) { next(err); }
+  });
+
+  app.delete("/api/admin/mapmonsters/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try { await prisma.mapMonster.delete({ where: { id: req.params.id } }); res.json({ message: "Deleted" }); } catch (err) { next(err); }
   });
 }
