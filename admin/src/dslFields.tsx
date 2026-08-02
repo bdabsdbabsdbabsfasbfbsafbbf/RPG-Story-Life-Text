@@ -44,6 +44,26 @@ export const actionFields = [
   { name: "hpPercent", label: "HP % (summon)", type: "number" as const },
 ];
 
+// Ações disponíveis nos gatilhos de efeito (onMaxStacks / onExpire / onTick)
+export const effectActionOptions = [
+  "damage",
+  "heal",
+  "mana",
+  "applyEffect",
+  "removeEffect",
+  "consumeStacks",
+];
+
+export const effectActionFields = [
+  { name: "action", label: "Ação", type: "select" as const, options: effectActionOptions },
+  { name: "amount", label: "Quantidade Base", type: "number" as const },
+  { name: "effect", label: "Efeito (slug)", type: "effect-slug" as const },
+  { name: "stacks", label: "Stacks", type: "number" as const },
+  { name: "target", label: "Alvo", type: "select" as const, options: targetOptions },
+  { name: "damageType", label: "Tipo de Dano", type: "select" as const, options: damageTypeOptions },
+  { name: "percent", label: "Percentual (heal %)", type: "number" as const },
+];
+
 export const conditionFields = [
   { name: "type", label: "Condição", type: "select" as const, options: conditionTypeOptions },
   { name: "effect", label: "Efeito (slug)", type: "effect-slug" as const },

@@ -1,4 +1,4 @@
-﻿import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { adminApi } from "../api";
 
@@ -138,7 +138,7 @@ export default function monstersPage() {
         <div>
           <h1 className="text-2xl font-bold">Monstros em Mapas</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Quais monstros aparecem em cada mapa e com que frequÃªncia. Crie monstros na pÃ¡gina Monsters.
+            Quais monstros aparecem em cada mapa e com que frequência. Crie monstros na página Monsters.
           </p>
         </div>
         <button onClick={load} className="px-4 py-2 bg-dark-700 hover:bg-dark-600 text-white rounded-lg text-sm transition-colors">
@@ -160,7 +160,7 @@ export default function monstersPage() {
           <div className="max-h-[70vh] overflow-y-auto">
             {loading && <p className="text-center text-gray-500 py-8">Loading...</p>}
             {!loading && filteredMaps.length === 0 && (
-              <p className="text-center text-gray-500 py-8">Nenhum mapa â€” crie um na pÃ¡gina Maps</p>
+              <p className="text-center text-gray-500 py-8">Nenhum mapa — crie um na página Maps</p>
             )}
             {filteredMaps.map((m) => (
               <button
@@ -172,7 +172,7 @@ export default function monstersPage() {
               >
                 <span className="font-medium text-white block">{m.name}</span>
                 <span className="text-xs text-gray-500">
-                  {m.slug} â€¢ {m.monsters?.length ?? 0} monstros
+                  {m.slug} • {m.monsters?.length ?? 0} monstros
                 </span>
               </button>
             ))}
@@ -207,15 +207,15 @@ export default function monstersPage() {
                 <input type="number" step="0.1" value={form.spawnRate ?? 1} onChange={(e) => setForm({ ...form, spawnRate: Number(e.target.value) })} className={inputClass} />
               </div>
               <div>
-                <label className={labelClass}>NÃ­vel mÃ­n.</label>
+                <label className={labelClass}>Nível mín.</label>
                 <input type="number" value={form.minLevel ?? 1} onChange={(e) => setForm({ ...form, minLevel: Number(e.target.value) })} className={inputClass} />
               </div>
               <div>
-                <label className={labelClass}>NÃ­vel mÃ¡x.</label>
+                <label className={labelClass}>Nível máx.</label>
                 <input type="number" value={form.maxLevel ?? 1} onChange={(e) => setForm({ ...form, maxLevel: Number(e.target.value) })} className={inputClass} />
               </div>
               <div>
-                <label className={labelClass}>MÃ¡x. instÃ¢ncias</label>
+                <label className={labelClass}>Máx. instâncias</label>
                 <input type="number" value={form.maxInstances ?? 10} onChange={(e) => setForm({ ...form, maxInstances: Number(e.target.value) })} className={inputClass} />
               </div>
               <div>
@@ -223,11 +223,11 @@ export default function monstersPage() {
                 <input type="number" value={form.respawnTime ?? 15000} onChange={(e) => setForm({ ...form, respawnTime: Number(e.target.value) })} className={inputClass} />
               </div>
               <div>
-                <label className={labelClass}>PosiÃ§Ã£o X</label>
+                <label className={labelClass}>Posição X</label>
                 <input type="number" value={form.positionX ?? 0} onChange={(e) => setForm({ ...form, positionX: Number(e.target.value) })} className={inputClass} />
               </div>
               <div>
-                <label className={labelClass}>PosiÃ§Ã£o Y</label>
+                <label className={labelClass}>Posição Y</label>
                 <input type="number" value={form.positionY ?? 0} onChange={(e) => setForm({ ...form, positionY: Number(e.target.value) })} className={inputClass} />
               </div>
               <div className="col-span-2 sm:col-span-4 flex justify-end gap-2">
@@ -237,7 +237,7 @@ export default function monstersPage() {
                   </button>
                 )}
                 <button type="submit" disabled={saving} className="px-4 py-2 bg-accent-600 hover:bg-accent-500 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50">
-                  {saving ? "Saving..." : editing?.id ? "Salvar alteraÃ§Ãµes" : "Adicionar ao mapa"}
+                  {saving ? "Saving..." : editing?.id ? "Salvar alterações" : "Adicionar ao mapa"}
                 </button>
               </div>
             </form>
@@ -248,11 +248,11 @@ export default function monstersPage() {
                   <tr className="border-b border-dark-600">
                     <th className="text-left py-2.5 px-4 text-gray-400 font-medium">Monstro</th>
                     <th className="text-left py-2.5 px-4 text-gray-400 font-medium">Spawn</th>
-                    <th className="text-left py-2.5 px-4 text-gray-400 font-medium">NÃ­veis</th>
-                    <th className="text-left py-2.5 px-4 text-gray-400 font-medium">MÃ¡x.</th>
+                    <th className="text-left py-2.5 px-4 text-gray-400 font-medium">Níveis</th>
+                    <th className="text-left py-2.5 px-4 text-gray-400 font-medium">Máx.</th>
                     <th className="text-left py-2.5 px-4 text-gray-400 font-medium">Respawn (ms)</th>
-                    <th className="text-left py-2.5 px-4 text-gray-400 font-medium">PosiÃ§Ã£o</th>
-                    <th className="text-right py-2.5 px-4 text-gray-400 font-medium">AÃ§Ãµes</th>
+                    <th className="text-left py-2.5 px-4 text-gray-400 font-medium">Posição</th>
+                    <th className="text-right py-2.5 px-4 text-gray-400 font-medium">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -260,7 +260,7 @@ export default function monstersPage() {
                     <tr key={s.id} className="border-b border-dark-700 hover:bg-dark-800/50">
                       <td className="py-2.5 px-4 font-medium text-white">{monsterName(s.monsterId)}</td>
                       <td className="py-2.5 px-4 font-mono text-xs">{s.spawnRate}</td>
-                      <td className="py-2.5 px-4 font-mono text-xs">{s.minLevel}â€“{s.maxLevel}</td>
+                      <td className="py-2.5 px-4 font-mono text-xs">{s.minLevel}–{s.maxLevel}</td>
                       <td className="py-2.5 px-4 font-mono text-xs">{s.maxInstances}</td>
                       <td className="py-2.5 px-4 font-mono text-xs">{s.respawnTime}</td>
                       <td className="py-2.5 px-4 font-mono text-xs">

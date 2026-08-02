@@ -3,7 +3,7 @@ import toast from "react-hot-toast";
 import { adminApi } from "../api";
 import JsonField from "../components/JsonField";
 import {
-  actionFields,
+  effectActionFields,
   scalingFields,
   effectKindOptions,
   effectCategoryOptions,
@@ -435,7 +435,7 @@ export default function EffectsPage() {
                 <div className="sm:col-span-2">
                   <label className="block text-sm text-gray-400 mb-1.5">On Max Stacks (ações)</label>
                   <JsonField
-                    schema={{ mode: "object-array", addLabel: "Adicionar ação", fields: actionFields }}
+                    schema={{ mode: "object-array", addLabel: "Adicionar ação", fields: effectActionFields }}
                     value={form.onMaxStacks}
                     onChange={(v) => setForm({ ...form, onMaxStacks: v })}
                   />
@@ -443,7 +443,7 @@ export default function EffectsPage() {
                 <div className="sm:col-span-2">
                   <label className="block text-sm text-gray-400 mb-1.5">On Expire (ações)</label>
                   <JsonField
-                    schema={{ mode: "object-array", addLabel: "Adicionar ação", fields: actionFields }}
+                    schema={{ mode: "object-array", addLabel: "Adicionar ação", fields: effectActionFields }}
                     value={form.onExpire}
                     onChange={(v) => setForm({ ...form, onExpire: v })}
                   />
@@ -451,7 +451,7 @@ export default function EffectsPage() {
                 <div className="sm:col-span-2">
                   <label className="block text-sm text-gray-400 mb-1.5">On Tick (ações)</label>
                   <JsonField
-                    schema={{ mode: "object-array", addLabel: "Adicionar ação", fields: actionFields }}
+                    schema={{ mode: "object-array", addLabel: "Adicionar ação", fields: effectActionFields }}
                     value={form.onTick}
                     onChange={(v) => setForm({ ...form, onTick: v })}
                   />
