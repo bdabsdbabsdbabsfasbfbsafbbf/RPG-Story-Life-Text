@@ -69,20 +69,25 @@ export function DashboardPage() {
                 {character.race?.name && <> • Raça: {character.race.name}</>}
                 {character.trait?.name && <> • Trait: {character.trait.name}</>}
               </p>
-              {(character.experience !== undefined || character.experienceToNext) && (
-                <div className="mt-2 max-w-xs">
-                  <div className="flex justify-between text-[10px] text-gray-500 mb-1">
-                    <span>XP para o próximo level</span>
-                    <span className="font-mono">{character.experience ?? 0} / {character.experienceToNext ?? 150}</span>
+              {(character.experience !== undefined || character.experienceToNext) &&
+                (character.level >= 999 ? (
+                  <div className="mt-2 max-w-xs">
+                    <p className="text-[10px] text-purple-400 font-semibold uppercase tracking-wider">Nível máximo alcançado</p>
                   </div>
-                  <div className="stat-bar h-1.5">
-                    <div
-                      className="stat-bar-fill bg-gradient-to-r from-purple-500 to-blue-500"
-                      style={{ width: `${Math.min(100, ((character.experience ?? 0) / (character.experienceToNext ?? 150)) * 100)}%` }}
-                    />
+                ) : (
+                  <div className="mt-2 max-w-xs">
+                    <div className="flex justify-between text-[10px] text-gray-500 mb-1">
+                      <span>XP para o próximo level</span>
+                      <span className="font-mono">{character.experience ?? 0} / {character.experienceToNext ?? 150}</span>
+                    </div>
+                    <div className="stat-bar h-1.5">
+                      <div
+                        className="stat-bar-fill bg-gradient-to-r from-purple-500 to-blue-500"
+                        style={{ width: `${Math.min(100, ((character.experience ?? 0) / (character.experienceToNext ?? 150)) * 100)}%` }}
+                      />
+                    </div>
                   </div>
-                </div>
-              )}
+                ))}
             </div>
             <span className="text-sm text-gray-400">Level {character.level}</span>
           </div>
