@@ -82,6 +82,7 @@ model Race {
   name        String   @unique
   slug        String   @unique
   description String
+  rarity      String   @default("comum") // comum, incomum, rara, epica, lendaria
   traits      Json     @default("{}") // stat modifiers: { baseHp, baseMana, baseAttack, baseDefense, baseMagic, baseMagicDefense, baseSpeed, manaRecovery }
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
@@ -94,6 +95,7 @@ model Trait {
   name        String   @unique
   slug        String   @unique
   description String
+  rarity      String   @default("comum") // comum, incomum, rara, epica, lendaria
   modifiers   Json     @default("{}") // { xpBonus, goldBonus, critBonus, dodgeBonus, cooldownReduction }
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())

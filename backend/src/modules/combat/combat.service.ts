@@ -10,6 +10,8 @@ interface CombatInstance {
   monster: any;
   characterName: string;
   characterLevel: number;
+  attack: number;
+  magic: number;
   monsterName: string;
   monsterLevel: number;
   monsterMaxHp: number;
@@ -85,6 +87,8 @@ export class CombatService {
       monster,
       characterName: character.name,
       characterLevel: character.level,
+      attack: character.class.baseAttack,
+      magic: character.class.baseMagic,
       monsterName: monster.name,
       monsterLevel: monster.level ?? 1,
       monsterMaxHp: monster.hp,
@@ -105,6 +109,21 @@ export class CombatService {
     return { ...combat, combatId: combat.id } as CombatInstance & { combatId: string };
   }
 
+  private computeSkillDamage(skill: any, attack: number, magic: number): number {
+    let damage = skill.baseDamage ?? 0;
+    if (skill.damageScaling) {
+      try {
+        const scaling = JSON.parse(skill.damageScaling);
+        damage += Math.floor(
+          (Number(scaling.attack) || 0) * attack + (Number(scaling.magic) || 0) * magic
+        );
+      } catch {
+        // ignore malformed scaling
+      }
+    }
+    return Math.max(0, damage);
+  }
+
   private startCombatTick(combat: CombatInstance): void {
     const interval = setInterval(async () => {
       const current = this.activeCombats.get(combat.id);
@@ -114,19 +133,33 @@ export class CombatService {
       }
 
       current.lastTick = Date.now();
+
       // Monster auto-attacks character
       const monsterDamage = Math.max(1, current.monster.attack - 5);
       current.characterHp -= monsterDamage;
+
+      // Player auto-attacks with the class "auto" skill
+      const autoSkill = (current.skills || []).find((s: any) => s.type === "auto");
+      let playerDamage = 0;
+      let playerSkillName = autoSkill?.name ?? "Ataque";
+      if (autoSkill) {
+        playerDamage = this.computeSkillDamage(autoSkill, current.attack, current.magic);
+        const isDodged = Math.random() * 100 < 5;
+        if (isDodged) playerDamage = 0;
+        current.monsterHp -= playerDamage;
+      }
 
       const payload: any = {
         combatId: current.id,
         characterId: current.characterId,
         damage: monsterDamage,
+        playerDamage,
+        playerSkillName,
         characterHp: Math.max(0, current.characterHp),
         characterMana: current.characterMana,
         maxHp: current.maxHp,
         maxMana: current.maxMana,
-        monsterHp: current.monsterHp,
+        monsterHp: Math.max(0, current.monsterHp),
         monsterName: current.monsterName,
         monsterMaxHp: current.monsterMaxHp,
         state: current.state,
@@ -137,6 +170,13 @@ export class CombatService {
         current.characterHp = 0;
         current.state = "lost";
         payload.state = "lost";
+        clearInterval(interval);
+        this.tickIntervals.delete(combat.id);
+      } else if (current.monsterHp <= 0) {
+        current.monsterHp = 0;
+        current.state = "won";
+        payload.state = "won";
+        payload.rewards = await this.grantRewards(current.characterId, current.monster);
         clearInterval(interval);
         this.tickIntervals.delete(combat.id);
       }
@@ -169,24 +209,10 @@ export class CombatService {
 
     combat.characterMana -= skill.manaCost;
 
-    const character = await this.prisma.character.findUnique({
-      where: { id: characterId },
-      include: { class: true },
-    });
-    const attack = character?.class.baseAttack ?? 5;
-    const magic = character?.class.baseMagic ?? 5;
+    const attack = combat.attack;
+    const magic = combat.magic;
 
-    let damage = skill.baseDamage;
-    if (skill.damageScaling) {
-      try {
-        const scaling = JSON.parse(skill.damageScaling);
-        damage += Math.floor(
-          (Number(scaling.attack) || 0) * attack + (Number(scaling.magic) || 0) * magic
-        );
-      } catch {
-        // ignore malformed scaling
-      }
-    }
+    let damage = this.computeSkillDamage(skill, attack, magic);
 
     const isCritical = Math.random() * 100 < 10;
     if (isCritical) {
@@ -243,6 +269,7 @@ export class CombatService {
 
     combat.monsterHp -= damage;
 
+    let rewards: any = null;
     if (combat.monsterHp <= 0) {
       combat.monsterHp = 0;
       combat.state = "won";
@@ -251,7 +278,7 @@ export class CombatService {
       this.tickIntervals.delete(combat.id);
 
       // Reward player
-      await this.grantRewards(characterId, combat.monster);
+      rewards = await this.grantRewards(characterId, combat.monster);
     }
 
     return {
@@ -272,27 +299,51 @@ export class CombatService {
       monsterMaxHp: combat.monsterMaxHp,
       skills: combat.skills,
       state: combat.state,
+      rewards,
     };
   }
 
-  private async grantRewards(characterId: string, monster: any): Promise<void> {
+  private async grantRewards(characterId: string, monster: any): Promise<any> {
     const character = await this.prisma.character.findUnique({
       where: { id: characterId },
-      include: { class: true },
+      include: { class: true, trait: true, classProgress: { where: { isActive: true } } },
     });
-    if (!character) return;
+    if (!character) return null;
 
-    const xpGain = Number(monster.xpReward);
-    const goldGain = Number(monster.goldReward);
+    const traitMods: any = (character.trait?.modifiers as any) ?? {};
+    const xpBonus = 1 + (Number(traitMods.xpBonus) || 0) / 100;
+    const goldBonus = 1 + (Number(traitMods.goldBonus) || 0) / 100;
+    const xpGain = Math.floor(Number(monster.xpReward || 0) * xpBonus);
+    const goldGain = Math.floor(Number(monster.goldReward || 0) * goldBonus);
+
+    let levelUps = 0;
+    let updatedCharacter = await this.prisma.character.update({
+      where: { id: characterId },
+      data: { experience: { increment: xpGain } },
+      select: { id: true, level: true, experience: true },
+    });
+    while (updatedCharacter.experience >= BigInt(updatedCharacter.level * 150)) {
+      updatedCharacter = await this.prisma.character.update({
+        where: { id: characterId },
+        data: { level: { increment: 1 } },
+        select: { id: true, level: true, experience: true },
+      });
+      levelUps++;
+    }
 
     await this.prisma.character.update({
       where: { id: characterId },
-      data: {
-        experience: { increment: xpGain },
-        currentHp: character.class.baseHp,
-        currentMana: character.class.baseMana,
-      },
+      data: { currentHp: character.class.baseHp, currentMana: character.class.baseMana },
     });
+
+    let classXpGain = 0;
+    if (character.classProgress && character.classProgress.length > 0) {
+      await this.prisma.characterClass.update({
+        where: { id: character.classProgress[0].id },
+        data: { experience: { increment: xpGain } },
+      });
+      classXpGain = xpGain;
+    }
 
     const user = await this.prisma.user.findUnique({
       where: { id: character.userId },
@@ -308,6 +359,8 @@ export class CombatService {
     }
 
     await this.updateQuestKillProgress(character.userId, monster);
+
+    return { xpGain, goldGain, levelUps, classXpGain };
   }
 
   private async updateQuestKillProgress(userId: string, monster: any): Promise<void> {

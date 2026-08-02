@@ -178,7 +178,7 @@ export interface Skill {
   name: string;
   description: string;
   icon: string | null;
-  type: 'active' | 'passive' | 'ultimate';
+  type: 'active' | 'passive' | 'ultimate' | 'auto';
   subType: string | null;
   cooldown: number;
   manaCost: number;
@@ -542,6 +542,7 @@ export interface Character {
   diamonds?: number;
   race?: Race | null;
   trait?: Trait | null;
+  classProgress?: CharacterClass[];
 }
 
 export interface Race {
@@ -549,6 +550,7 @@ export interface Race {
   name: string;
   slug: string;
   description: string;
+  rarity?: string; // comum, incomum, rara, epica, lendaria
   traits: Record<string, number>;
   isActive?: boolean;
 }
@@ -558,6 +560,7 @@ export interface Trait {
   name: string;
   slug: string;
   description: string;
+  rarity?: string; // comum, incomum, rara, epica, lendaria
   modifiers: Record<string, number>;
   isActive?: boolean;
 }
@@ -575,7 +578,7 @@ export interface Map {
   description: string;
   region: string;
   requiredLevel: number;
-  npcs?: { id: string; npc: { name: string; type?: string } }[];
+  npcs?: { id: string; npc: { id: string; name: string; type?: string } }[];
   monsters?: {
     id: string;
     monster: { id: string; name: string; level: number; hp: number; element: string; isBoss?: boolean; isElite?: boolean };
@@ -593,6 +596,7 @@ export interface CombatSkill {
   baseDamage: number;
   healingBase: number;
   buffsApplied: string | null;
+  rankRequired?: number;
 }
 
 export interface CombatUpdate {
@@ -612,11 +616,14 @@ export interface CombatUpdate {
   monsterLevel?: number;
   skills?: CombatSkill[];
   damage?: number;
+  playerDamage?: number;
+  playerSkillName?: string;
   healed?: number;
   appliedBuffs?: string[];
   isCritical?: boolean;
   isDodged?: boolean;
   attacker?: string;
+  rewards?: { xpGain?: number; goldGain?: number; levelUps?: number; classXpGain?: number } | null;
 }
 
 export type ChatChannel = 'global' | 'local' | 'party' | 'guild' | 'trade' | 'system' | 'whisper';

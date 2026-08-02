@@ -4,8 +4,8 @@ import { getSocket } from "../services/socket";
 import { useGameStore } from "../store/gameStore";
 import { useAuthStore } from "../store/authStore";
 import { CombatUpdate } from "../types";
-import { monstersApi } from "../services/api";
-import { ArrowLeft, Sword, Shield, Zap, Skull, Heart, Sparkles, Coins } from "lucide-react";
+import { charactersApi, monstersApi } from "../services/api";
+import { ArrowLeft, Sword, Shield, Zap, Skull, Heart, Sparkles, Coins, Lock, Star } from "lucide-react";
 import toast from "react-hot-toast";
 
 export function CombatPage() {
@@ -18,6 +18,7 @@ export function CombatPage() {
   const [loading, setLoading] = useState(false);
   const [monsterInfo, setMonsterInfo] = useState<{ name: string; level: number } | null>(null);
   const [cooldowns, setCooldowns] = useState<Record<string, number>>({});
+  const [classRank, setClassRank] = useState(1);
 
   const socket = getSocket();
 
@@ -25,17 +26,20 @@ export function CombatPage() {
   const maxMana = combat?.maxMana ?? selectedCharacter?.class?.baseMana ?? 50;
   const monsterMaxHp = combat?.monsterMaxHp ?? 100;
 
-  const characterHpPercent = combat ? Math.min(100, (combat.characterHp / maxHp) * 100) : 100;
-  const characterManaPercent = combat ? Math.min(100, ((combat.characterMana ?? 0) / maxMana) * 100) : 100;
-  const monsterHpPercent = combat ? Math.min(100, (combat.monsterHp / monsterMaxHp) * 100) : 100;
+  const characterHpPercent = Math.min(100, ((combat?.characterHp ?? maxHp) / maxHp) * 100);
+  const characterManaPercent = Math.min(100, ((combat?.characterMana ?? maxMana) / maxMana) * 100);
+  const monsterHpPercent = Math.min(100, ((combat?.monsterHp ?? monsterMaxHp) / monsterMaxHp) * 100);
 
   const skills = useMemo(() => (combat?.skills ?? []).filter((s) => s.type !== "passive"), [combat?.skills]);
+  const autoSkill = skills.find((s) => s.type === "auto");
+  const usableSkills = skills.filter((s) => s.type !== "auto");
 
-  const skillLabel = (skill: { type: string; subType?: string }) => {
-    if (skill.type === "ultimate") return "Ultimate";
-    if (skill.type === "passive") return "Passiva";
-    return skill.subType === "heal" ? "Cura" : "Ativo";
-  };
+  useEffect(() => {
+    charactersApi.my().then(({ data }) => {
+      const rank = data?.classProgress?.[0]?.rank;
+      if (rank) setClassRank(rank);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (monsterId) {
@@ -92,6 +96,9 @@ export function CombatPage() {
       if ((data.damage ?? 0) > 0) log.push(`Você causou ${data.damage} de dano`);
       if ((data.healed ?? 0) > 0) log.push(`Você curou ${data.healed} de vida`);
       if (data.appliedBuffs?.length) log.push(`Buff aplicado: ${data.appliedBuffs.join(", ")}`);
+      if (data.state === "won" && data.rewards) {
+        log.push(`Recompensas: +${data.rewards.xpGain ?? 0} XP, +${data.rewards.goldGain ?? 0} gold${data.rewards.levelUps ? `, LEVEL UP x${data.rewards.levelUps}!` : ""}`);
+      }
       setCombatLog(prev => [...prev.slice(-19), ...log]);
     });
 
@@ -100,9 +107,17 @@ export function CombatPage() {
         if (!prev) return data as any;
         return { ...prev, ...data };
       });
-      if ((data.damage ?? 0) > 0) {
-        setCombatLog(prev => [...prev.slice(-19), `${data.monsterName || "Monstro"} causou ${data.damage} de dano em você`]);
+      const log: string[] = [];
+      if ((data.playerDamage ?? 0) > 0) {
+        log.push(`Seu ${data.playerSkillName || "ataque automático"} causou ${data.playerDamage} de dano`);
       }
+      if ((data.damage ?? 0) > 0) {
+        log.push(`${data.monsterName || "Monstro"} causou ${data.damage} de dano em você`);
+      }
+      if (data.state === "won" && data.rewards) {
+        log.push(`Vitória! +${data.rewards.xpGain ?? 0} XP, +${data.rewards.goldGain ?? 0} gold${data.rewards.levelUps ? `, LEVEL UP x${data.rewards.levelUps}!` : ""}`);
+      }
+      if (log.length) setCombatLog(prev => [...prev.slice(-19), ...log]);
     });
 
     socket.on("combat:error", (data: any) => {
@@ -142,14 +157,15 @@ export function CombatPage() {
   const monsterLevel = combat?.monsterLevel || monsterInfo?.level || 1;
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <Link to="/map" className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-200">
+    <div className="min-h-full flex flex-col pb-40 animate-fade-in">
+      <Link to="/map" className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-200 mb-4">
         <ArrowLeft size={16} /> Voltar ao mapa
       </Link>
 
+      {/* ===== TOPO: vida e mana ===== */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Player Side */}
-        <div className="panel p-6">
+        {/* Player */}
+        <div className="panel p-5">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center">
               <Shield size={24} className="text-white" />
@@ -160,16 +176,19 @@ export function CombatPage() {
                 Level {combat?.characterLevel || selectedCharacter?.level || user?.level || 1}
                 {selectedCharacter?.class?.name && <> • {selectedCharacter.class.name}</>}
                 {selectedCharacter?.race?.name && <> • {selectedCharacter.race.name}</>}
-                {selectedCharacter?.trait?.name && <> • Trait: {selectedCharacter.trait.name}</>}
+                {selectedCharacter?.trait?.name && <> • {selectedCharacter.trait.name}</>}
               </p>
             </div>
+            <span className="ml-auto flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/30">
+              <Star size={12} /> Rank {classRank}
+            </span>
           </div>
 
-          <div className="space-y-2 mb-4">
+          <div className="space-y-3">
             <div>
               <div className="flex justify-between text-xs mb-1">
                 <span className="text-red-400">HP</span>
-                <span className="font-mono">{Math.max(0, combat?.characterHp ?? 100)} / {maxHp}</span>
+                <span className="font-mono">{Math.max(0, combat?.characterHp ?? maxHp)} / {maxHp}</span>
               </div>
               <div className="stat-bar">
                 <div className="stat-bar-fill bg-gradient-to-r from-red-500 to-red-600" style={{ width: `${characterHpPercent}%` }} />
@@ -178,127 +197,139 @@ export function CombatPage() {
             <div>
               <div className="flex justify-between text-xs mb-1">
                 <span className="text-blue-400">Mana</span>
-                <span className="font-mono">{Math.max(0, combat?.characterMana ?? 50)} / {maxMana}</span>
+                <span className="font-mono">{Math.max(0, combat?.characterMana ?? maxMana)} / {maxMana}</span>
               </div>
               <div className="stat-bar">
                 <div className="stat-bar-fill bg-gradient-to-r from-blue-500 to-blue-600" style={{ width: `${characterManaPercent}%` }} />
               </div>
             </div>
           </div>
-
-          {combat && combat.state === "active" && (
-            <div className="space-y-2">
-              <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Skills</p>
-              {skills.length === 0 && (
-                <p className="text-sm text-gray-500">Nenhuma skill ativa. Use o ataque básico.</p>
-              )}
-              <div className="grid grid-cols-2 gap-2">
-                {skills.map((skill) => {
-                  const cd = isOnCooldown(skill.id, skill.cooldown);
-                  return (
-                    <button
-                      key={skill.id}
-                      onClick={() => useSkill(skill.id)}
-                      disabled={cd || (combat.characterMana ?? 0) < skill.manaCost}
-                      className={`card-hover py-3 text-center ${cd ? "opacity-40 cursor-not-allowed" : ""}`}
-                      title={skill.description}
-                    >
-                      {skill.type === "ultimate" ? (
-                        <Zap size={18} className="mx-auto mb-1 text-yellow-400" />
-                      ) : skill.healingBase > 0 ? (
-                        <Heart size={18} className="mx-auto mb-1 text-green-400" />
-                      ) : (
-                        <Sword size={18} className="mx-auto mb-1 text-purple-400" />
-                      )}
-                      <span className="text-xs">{skill.name}</span>
-                      <span className="text-[10px] text-gray-500 block">
-                        {skill.manaCost > 0 ? `${skill.manaCost} mana · ` : ""}{cd ? "CD" : `${(skill.cooldown / 1000)}s CD`}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-              {skills.some(s => s.manaCost > 0) && (combat.characterMana ?? 0) < Math.min(...skills.filter(s => s.manaCost > 0).map(s => s.manaCost)) && (
-                <p className="text-xs text-yellow-500 mt-2">Mana insuficiente para usar skills.</p>
-              )}
-            </div>
-          )}
-
-          {!combat && (
-            <button onClick={startCombat} disabled={loading} className="btn-primary w-full py-3">
-              {loading ? "Engajando..." : "Iniciar combate"}
-            </button>
-          )}
-
-          {combat && combat.state === "won" && (
-            <div className="text-center py-4 space-y-3">
-              <p className="text-green-400 font-bold text-lg">Vitória!</p>
-              <div className="flex items-center justify-center gap-4 text-sm text-gray-300">
-                <span className="flex items-center gap-1"><Coins size={14} className="text-yellow-400" /> Recompensas concedidas</span>
-              </div>
-              <button onClick={() => navigate("/map")} className="btn-primary">Voltar ao mapa</button>
-            </div>
-          )}
-
-          {combat && combat.state === "lost" && (
-            <div className="text-center py-4">
-              <p className="text-red-400 font-bold text-lg">Derrota</p>
-              <button onClick={startCombat} className="btn-primary mt-3">Tentar novamente</button>
-            </div>
-          )}
         </div>
 
-        {/* Monster Side */}
-        <div className="panel p-6">
+        {/* Monster */}
+        <div className="panel p-5">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-600 to-orange-600 flex items-center justify-center">
               <Skull size={24} className="text-white" />
             </div>
             <div>
               <h2 className="font-display font-bold capitalize">{monsterName}</h2>
-              <p className="text-xs text-gray-400">Level {monsterLevel} · Monstro</p>
+              <p className="text-xs text-gray-400">Level {monsterLevel} • Monstro</p>
+            </div>
+            {combat && combat.state === "active" && (
+              <span className="ml-auto flex items-center gap-2 text-sm text-red-400">
+                <Sparkles size={14} className="animate-pulse" /> Em combate
+              </span>
+            )}
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <div className="flex justify-between text-xs mb-1">
+                <span className="text-red-400">HP</span>
+                <span className="font-mono">{Math.max(0, combat?.monsterHp ?? monsterMaxHp)} / {monsterMaxHp}</span>
+              </div>
+              <div className="stat-bar">
+                <div className="stat-bar-fill bg-gradient-to-r from-red-500 to-orange-500" style={{ width: `${monsterHpPercent}%` }} />
+              </div>
             </div>
           </div>
 
-          <div className="mb-4">
-            <div className="flex justify-between text-xs mb-1">
-              <span className="text-red-400">HP</span>
-              <span className="font-mono">{Math.max(0, combat?.monsterHp ?? 100)} / {monsterMaxHp}</span>
-            </div>
-            <div className="stat-bar">
-              <div className="stat-bar-fill bg-gradient-to-r from-red-500 to-orange-500" style={{ width: `${monsterHpPercent}%` }} />
-            </div>
-          </div>
-
-          {combat && combat.state === "active" && (
-            <div className="flex items-center gap-2 justify-center py-4">
-              <Sparkles size={16} className="text-red-400 animate-pulse" />
-              <span className="text-sm text-gray-400">Em combate</span>
+          {combat && combat.state === "won" && (
+            <div className="mt-4 text-center py-3 space-y-2">
+              <p className="text-green-400 font-bold text-lg">Vitória!</p>
+              {combat.rewards && (
+                <p className="text-sm text-gray-300 flex items-center justify-center gap-3">
+                  <span className="flex items-center gap-1"><Sparkles size={14} className="text-purple-400" /> +{combat.rewards.xpGain ?? 0} XP</span>
+                  <span className="flex items-center gap-1"><Coins size={14} className="text-yellow-400" /> +{combat.rewards.goldGain ?? 0} gold</span>
+                </p>
+              )}
+              <button onClick={() => navigate("/map")} className="btn-primary mt-1">Voltar ao mapa</button>
             </div>
           )}
 
-          {combat && combat.state === "won" && (
-            <div className="flex items-center gap-2 justify-center py-4">
-              <Skull size={16} className="text-gray-500" />
-              <span className="text-sm text-gray-500">Derrotado</span>
+          {combat && combat.state === "lost" && (
+            <div className="mt-4 text-center py-3">
+              <p className="text-red-400 font-bold text-lg">Derrota</p>
+              <button onClick={startCombat} className="btn-primary mt-2">Tentar novamente</button>
             </div>
+          )}
+
+          {!combat && (
+            <button onClick={startCombat} disabled={loading} className="btn-primary w-full mt-4 py-3">
+              {loading ? "Engajando..." : "Iniciar combate"}
+            </button>
           )}
         </div>
       </div>
 
-      {/* Combat Log */}
-      {combatLog.length > 0 && (
-        <div className="panel p-4">
-          <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Log de Combate</p>
-          <div className="space-y-1 max-h-32 overflow-y-auto">
-            {combatLog.map((log, i) => (
-              <p key={i} className="text-sm text-gray-300 font-mono">
-                {log}
-              </p>
-            ))}
-          </div>
+      {/* ===== MEIO: log ===== */}
+      <div className="panel p-4 mt-6">
+        <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Log de Combate</p>
+        <div className="space-y-1 max-h-48 overflow-y-auto min-h-[4rem]">
+          {combatLog.length === 0 && (
+            <p className="text-sm text-gray-600">O combate ainda não começou. Seu ataque automático acontece sozinho a cada 2s.</p>
+          )}
+          {combatLog.map((log, i) => (
+            <p key={i} className="text-sm text-gray-300 font-mono">{log}</p>
+          ))}
         </div>
-      )}
+      </div>
+
+      {/* ===== BAIXO: barra de skills (fixa) ===== */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-dark-900/95 backdrop-blur-md border-t border-dark-700 px-4 py-3">
+        <div className="max-w-5xl mx-auto">
+          <p className="text-[11px] text-gray-500 uppercase tracking-wider mb-2 text-center">
+            Skill Bar {combat ? "" : "· inicie o combate para usar"}
+          </p>
+          {!combat ? (
+            <p className="text-center text-sm text-gray-500">Clique em "Iniciar combate" para liberar suas habilidades.</p>
+          ) : (
+            <div className="flex items-stretch justify-center gap-2 flex-wrap">
+              {/* Auto attack */}
+              <div className="w-20 card-hover py-3 text-center opacity-80" title={autoSkill?.description ?? "Ataque automático"}>
+                <Sword size={18} className="mx-auto mb-1 text-purple-400" />
+                <span className="text-[11px] block">{autoSkill?.name || "Auto"}</span>
+                <span className="text-[9px] text-gray-500 block">Automático</span>
+              </div>
+
+              {usableSkills.map((skill) => {
+                const locked = (skill.rankRequired ?? 1) > classRank;
+                const cd = isOnCooldown(skill.id, skill.cooldown);
+                const noMana = (combat.characterMana ?? 0) < skill.manaCost;
+                const disabled = locked || cd || noMana || combat.state !== "active";
+                return (
+                  <button
+                    key={skill.id}
+                    onClick={() => useSkill(skill.id)}
+                    disabled={disabled}
+                    className={`w-20 card-hover py-3 text-center ${
+                      disabled ? "opacity-40 cursor-not-allowed" : ""
+                    } ${skill.type === "ultimate" ? "border-yellow-500/40" : ""}`}
+                    title={locked ? `Requer Rank ${skill.rankRequired}` : skill.description}
+                  >
+                    {locked ? (
+                      <Lock size={16} className="mx-auto mb-1 text-gray-500" />
+                    ) : skill.type === "ultimate" ? (
+                      <Zap size={18} className="mx-auto mb-1 text-yellow-400" />
+                    ) : skill.healingBase > 0 ? (
+                      <Heart size={18} className="mx-auto mb-1 text-green-400" />
+                    ) : (
+                      <Sword size={18} className="mx-auto mb-1 text-purple-400" />
+                    )}
+                    <span className="text-[11px] block">{skill.name}</span>
+                    <span className="text-[9px] text-gray-500 block">
+                      {locked
+                        ? `Rank ${skill.rankRequired}+`
+                        : `${skill.manaCost} mana${cd ? " · CD" : ""}`}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

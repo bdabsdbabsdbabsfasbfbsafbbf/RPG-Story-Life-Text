@@ -26,13 +26,36 @@ const STARTER_KITS: Record<string, { itemName: string; quantity: number }[]> = {
   ],
 };
 
+// Weight per rarity (rarer = harder to roll)
+const RARITY_WEIGHTS: Record<string, number> = {
+  comum: 50,
+  incomum: 30,
+  rara: 14,
+  epica: 5,
+  lendaria: 1,
+};
+
+function weightedPick<T extends { rarity?: string | null }>(items: T[]): T {
+  const total = items.reduce(
+    (sum, item) => sum + (RARITY_WEIGHTS[item.rarity ?? "comum"] ?? 10),
+    0
+  );
+  let roll = Math.random() * total;
+  for (const item of items) {
+    roll -= RARITY_WEIGHTS[item.rarity ?? "comum"] ?? 10;
+    if (roll <= 0) return item;
+  }
+  return items[items.length - 1];
+}
+
 export function createCharacterModule(app: Express): void {
-  // Catalog (index) for the creation screen: races, traits and starter classes
+  // Catalog (index) for the creation screen: races, traits and starter classes.
+  // Races/traits grouped by rarity so the player can compare which is better.
   app.get("/api/characters/index", async (_req: Request, res: Response, next: NextFunction) => {
     try {
       const [races, traits, classes] = await Promise.all([
-        prisma.race.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }),
-        prisma.trait.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }),
+        prisma.race.findMany({ where: { isActive: true }, orderBy: [{ rarity: "asc" }, { name: "asc" }] }),
+        prisma.trait.findMany({ where: { isActive: true }, orderBy: [{ rarity: "asc" }, { name: "asc" }] }),
         prisma.gameClass.findMany({
           where: { isActive: true, isStarter: true },
           orderBy: { name: "asc" },
@@ -44,33 +67,40 @@ export function createCharacterModule(app: Express): void {
     }
   });
 
-  // Roll: sorteia uma raça + um trait (por sorte, sem escolha do player)
+  // Roll: sorteia UMA raça OU um trait (separado, como antes).
+  // Ponderado por raridade; consome o ticket correspondente.
   app.post("/api/characters/roll", authenticate, async (req: Request, res: Response, next: NextFunction) => {
     try {
+      const { type } = req.body ?? {};
+      if (!["race", "trait"].includes(type)) throw new AppError(400, "Type must be 'race' or 'trait'");
+
       const user = await prisma.user.findUnique({
         where: { id: req.user!.userId },
-        select: { raceRerolls: true },
+        select: { raceRerolls: true, traitRerolls: true },
       });
       if (!user) throw new AppError(404, "User not found");
 
-      if (user.raceRerolls <= 0) throw new AppError(400, "No roll tickets remaining");
-
-      const [races, traits] = await Promise.all([
-        prisma.race.findMany({ where: { isActive: true } }),
-        prisma.trait.findMany({ where: { isActive: true } }),
-      ]);
-      if (races.length === 0) throw new AppError(404, "No races available");
-      if (traits.length === 0) throw new AppError(404, "No traits available");
-
-      const race = races[Math.floor(Math.random() * races.length)];
-      const trait = traits[Math.floor(Math.random() * traits.length)];
-
-      await prisma.user.update({
-        where: { id: req.user!.userId },
-        data: { raceRerolls: { decrement: 1 } },
-      });
-
-      res.json({ race, trait, ticketsLeft: user.raceRerolls - 1 });
+      if (type === "race") {
+        if (user.raceRerolls <= 0) throw new AppError(400, "No race roll tickets remaining");
+        const races = await prisma.race.findMany({ where: { isActive: true } });
+        if (races.length === 0) throw new AppError(404, "No races available");
+        const race = weightedPick(races);
+        await prisma.user.update({
+          where: { id: req.user!.userId },
+          data: { raceRerolls: { decrement: 1 } },
+        });
+        res.json({ type: "race", result: race, ticketsLeft: user.raceRerolls - 1 });
+      } else {
+        if (user.traitRerolls <= 0) throw new AppError(400, "No trait roll tickets remaining");
+        const traits = await prisma.trait.findMany({ where: { isActive: true } });
+        if (traits.length === 0) throw new AppError(404, "No traits available");
+        const trait = weightedPick(traits);
+        await prisma.user.update({
+          where: { id: req.user!.userId },
+          data: { traitRerolls: { decrement: 1 } },
+        });
+        res.json({ type: "trait", result: trait, ticketsLeft: user.traitRerolls - 1 });
+      }
     } catch (err) {
       next(err);
     }
@@ -162,9 +192,50 @@ export function createCharacterModule(app: Express): void {
     try {
       const character = await prisma.character.findFirst({
         where: { userId: req.user!.userId },
-        include: { class: true, race: true, trait: true, combatStats: true },
+        include: {
+          class: true,
+          race: true,
+          trait: true,
+          combatStats: true,
+          classProgress: {
+            where: { isActive: true },
+            include: { gameClass: { select: { id: true, name: true, slug: true, icon: true } } },
+          },
+        },
       });
-      res.json(character);
+      if (!character) return res.json(null);
+      const xpToNext = character.level * 150;
+      res.json({ ...character, xpToNext: Number(xpToNext), experience: Number(character.experience) });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Rank up the active class using its class XP (rank max 10)
+  app.post("/api/characters/rank-up", authenticate, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const character = await prisma.character.findFirst({
+        where: { userId: req.user!.userId },
+        select: { id: true },
+      });
+      if (!character) throw new AppError(404, "Character not found");
+
+      const progress = await prisma.characterClass.findFirst({
+        where: { characterId: character.id, isActive: true },
+      });
+      if (!progress) throw new AppError(404, "Class progress not found");
+      if (progress.rank >= 10) throw new AppError(400, "Already at max rank (10)");
+
+      const xpNeeded = progress.rank * 150;
+      if (Number(progress.experience) < xpNeeded) {
+        throw new AppError(400, `Need ${xpNeeded} class XP to reach rank ${progress.rank + 1}`);
+      }
+
+      const updated = await prisma.characterClass.update({
+        where: { id: progress.id },
+        data: { rank: { increment: 1 }, experience: { decrement: BigInt(xpNeeded) } },
+      });
+      res.json({ rank: updated.rank, experience: Number(updated.experience), xpToNext: updated.rank * 150 });
     } catch (err) {
       next(err);
     }

@@ -35,10 +35,11 @@ export const authApi = {
 
 export const charactersApi = {
   index: () => api.get("/characters/index"),
-  roll: () => api.post("/characters/roll"),
+  roll: (type: "race" | "trait") => api.post("/characters/roll", { type }),
   create: (data: { name: string; classId: string; raceId?: string; traitId?: string }) =>
     api.post("/characters", data),
   my: () => api.get("/characters/my"),
+  rankUp: () => api.post("/characters/rank-up"),
   tickets: () => api.get("/characters/tickets"),
 };
 
@@ -51,6 +52,7 @@ export const classesApi = {
   get: (slug: string) => api.get(`/classes/${slug}`),
   getSkills: (slug: string) => api.get(`/classes/${slug}/skills`),
   getPassives: (slug: string) => api.get(`/classes/${slug}/passives`),
+  characterClass: (characterId: string) => api.get(`/characters/${characterId}/class`),
 };
 
 export const itemsApi = {
@@ -112,6 +114,8 @@ export const npcApi = {
   list: (params?: any) => api.get("/npcs", { params }),
   get: (id: string) => api.get(`/npcs/${id}`),
   shop: (id: string) => api.get(`/npcs/${id}/shop`),
+  buy: (id: string, data: { itemId: string; quantity?: number }) =>
+    api.post(`/npcs/${id}/buy`, data),
 };
 
 export const eventsApi = {

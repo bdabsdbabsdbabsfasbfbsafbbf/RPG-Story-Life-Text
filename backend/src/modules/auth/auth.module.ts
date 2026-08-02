@@ -144,6 +144,7 @@ export function createAuthModule(app: Express): void {
           characters: {
             select: {
               id: true, name: true, level: true, classId: true,
+              experience: true, currentHp: true, currentMana: true,
               class: { select: { name: true, slug: true, baseHp: true, baseMana: true } },
               race: { select: { name: true } },
               trait: { select: { name: true } },
@@ -152,7 +153,14 @@ export function createAuthModule(app: Express): void {
         },
       });
       if (!user) throw new AppError(404, "User not found");
-      res.json(user);
+      res.json({
+        ...user,
+        characters: user.characters.map((c: any) => ({
+          ...c,
+          experience: Number(c.experience),
+          experienceToNext: c.level * 150,
+        })),
+      });
     } catch (err) {
       next(err);
     }
@@ -178,6 +186,7 @@ export function createAuthModule(app: Express): void {
           characters: {
             select: {
               id: true, name: true, level: true, classId: true,
+              experience: true, currentHp: true, currentMana: true,
               class: { select: { name: true, slug: true, baseHp: true, baseMana: true } },
               race: { select: { name: true } },
               trait: { select: { name: true } },
@@ -185,7 +194,14 @@ export function createAuthModule(app: Express): void {
           },
         },
       });
-      res.json(user);
+      res.json({
+        ...user,
+        characters: user.characters.map((c: any) => ({
+          ...c,
+          experience: Number(c.experience),
+          experienceToNext: c.level * 150,
+        })),
+      });
     } catch (err) {
       next(err);
     }

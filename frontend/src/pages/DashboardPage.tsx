@@ -21,7 +21,6 @@ export function DashboardPage() {
     { label: "Level", value: user?.level || 1, icon: Star, color: "from-purple-500 to-purple-600" },
     { label: "Gold", value: (user?.gold ?? 0).toLocaleString(), icon: TrendingUp, color: "from-yellow-500 to-yellow-600" },
     { label: "Diamonds", value: user?.diamonds || 0, icon: Zap, color: "from-cyan-500 to-cyan-600" },
-    { label: "Characters", value: user?.characters?.length || 0, icon: Users, color: "from-blue-500 to-blue-600" },
   ];
 
   return (

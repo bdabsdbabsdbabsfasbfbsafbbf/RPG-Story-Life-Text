@@ -1,25 +1,38 @@
+import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import {
-  LayoutDashboard, Map, Sword, Backpack, Users, ShoppingCart,
-  ScrollText, Settings, Shield, MessageCircle, BookOpen,
+  LayoutDashboard, Map, Sword, Backpack, ScrollText,
+  Settings, Shield, MessageCircle, BookOpen,
 } from "lucide-react";
+import { questsApi } from "../../services/api";
 
 interface SidebarProps {
   isOpen: boolean;
 }
 
-const navItems = [
-  { to: "/", icon: LayoutDashboard, label: "Dashboard" },
-  { to: "/map", icon: Map, label: "Map" },
-  { to: "/classes", icon: Sword, label: "Classes" },
-  { to: "/inventory", icon: Backpack, label: "Inventory" },
-  { to: "/quests", icon: ScrollText, label: "Quests" },
-  { to: "/guild", icon: Users, label: "Guild" },
-  { to: "/market", icon: ShoppingCart, label: "Market" },
-];
-
 export function Sidebar({ isOpen }: SidebarProps) {
+  const [hasActiveQuest, setHasActiveQuest] = useState(false);
+
+  useEffect(() => {
+    questsApi
+      .progress()
+      .then(({ data }) => {
+        const active = Array.isArray(data)
+          ? data.some((p: any) => p.status === "active")
+          : false;
+        setHasActiveQuest(active);
+      })
+      .catch(() => setHasActiveQuest(false));
+  }, []);
+
   if (!isOpen) return null;
+
+  const navItems = [
+    { to: "/map", icon: Map, label: "Map" },
+    { to: "/classes", icon: Sword, label: "Classes" },
+    { to: "/inventory", icon: Backpack, label: "Inventory" },
+    ...(hasActiveQuest ? [{ to: "/quests", icon: ScrollText, label: "Quests" }] : []),
+  ];
 
   return (
     <nav className="w-56 bg-dark-900/80 backdrop-blur-md border-r border-dark-700 flex flex-col py-4 overflow-y-auto shrink-0">
@@ -34,6 +47,20 @@ export function Sidebar({ isOpen }: SidebarProps) {
       </div>
 
       <div className="space-y-1 px-2">
+        <NavLink
+          to="/"
+          end
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 ${
+              isActive
+                ? "bg-gradient-to-r from-purple-600/20 to-blue-600/10 text-purple-300 border border-purple-500/20"
+                : "text-gray-400 hover:text-gray-200 hover:bg-dark-800/50"
+            }`
+          }
+        >
+          <LayoutDashboard size={18} />
+          <span>Dashboard</span>
+        </NavLink>
         {navItems.map((item) => (
           <NavLink
             key={item.to}
