@@ -25,6 +25,10 @@ api.interceptors.response.use(
         window.location.href = new URL("./login", window.location.href).href;
       }
     }
+    const data = error.response?.data;
+    if (data?.error && !data.message) {
+      error.response.data = { ...data, message: data.error };
+    }
     return Promise.reject(error);
   }
 );

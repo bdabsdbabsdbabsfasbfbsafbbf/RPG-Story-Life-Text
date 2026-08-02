@@ -37,6 +37,22 @@ export function errorHandler(
     return;
   }
 
+  const prismaErr = err as any;
+  if (prismaErr?.code === "P2002") {
+    res.status(409).json({
+      error: "Já existe um registro com esse nome/slug",
+      details: prismaErr?.meta?.target,
+    });
+    return;
+  }
+
+  if (prismaErr?.code === "P2025") {
+    res.status(404).json({
+      error: "Registro não encontrado",
+    });
+    return;
+  }
+
   console.error("[Error]", err);
   res.status(500).json({
     error: "Internal server error",
