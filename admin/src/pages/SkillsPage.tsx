@@ -34,7 +34,7 @@ const defaultSkill = {
   debuffsApplied: [] as string[],
 };
 
-const typeOptions = ["active", "passive", "ultimate"];
+const typeOptions = ["auto", "active", "passive", "ultimate"];
 const subTypeOptions = ["melee", "ranged", "spell", "heal", "buff", "debuff", "dot", "aoe", "channel"];
 const targetTypeOptions = ["self", "enemy", "ally", "area", "all"];
 const damageTypeOptions = ["physical", "magic", "true"];
