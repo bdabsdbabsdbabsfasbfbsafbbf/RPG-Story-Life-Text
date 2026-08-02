@@ -1,20 +1,65 @@
 import { Express, Request, Response, NextFunction } from "express";
 import { prisma } from "../../core/database";
 import { authenticate } from "../../core/middleware/auth";
+import { computeStats } from "../../core/classEngine/stat-calculator";
+
+function parseJson(value: any, fallback: any = null): any {
+  if (value === null || value === undefined) return fallback;
+  if (typeof value !== "string") return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+}
+
+// Stats de exibição (nível 1) calculados a partir do StatModel da classe.
+function displayStats(gameClass: any): any {
+  const statModel = gameClass.statModel || {};
+  const stats = computeStats({
+    level: 1,
+    statModel: {
+      base: parseJson(statModel.base, {}),
+      perLevel: parseJson(statModel.perLevel, {}),
+      scaling: parseJson(statModel.scaling, {}),
+    },
+    resource: parseJson(gameClass.resource, {}),
+    passives: [],
+  });
+  return {
+    hp: stats.hp,
+    mana: stats.mana,
+    attack: stats.attack,
+    defense: stats.defense,
+    magic: stats.magic,
+    magicDefense: stats.magicDefense,
+    speed: stats.speed,
+    attackPower: stats.attackPower,
+    spellPower: stats.spellPower,
+    critChance: stats.critChance,
+    critDamage: stats.critDamage,
+    dodge: stats.dodge,
+    attackSpeedMs: stats.attackSpeedMs,
+    manaRegenPerTick: stats.manaRegenPerTick,
+    healthRegenPerTick: stats.healthRegenPerTick,
+  };
+}
+
+const CLASS_INCLUDE = {
+  skills: { where: { isActive: true }, orderBy: { sortOrder: "asc" as const } },
+  passives: { orderBy: { rankRequired: "asc" as const } },
+  statModel: true,
+};
 
 export function createClassesModule(app: Express): void {
   app.get("/api/classes", async (_req: Request, res: Response, next: NextFunction) => {
     try {
       const classes = await prisma.gameClass.findMany({
         where: { isActive: true },
-        include: {
-          skills: { where: { isActive: true }, orderBy: { sortOrder: "asc" } },
-          classPassives: { orderBy: { rankRequired: "asc" } },
-          masteryBonuses: { orderBy: { rank: "asc" } },
-        },
+        include: CLASS_INCLUDE,
         orderBy: { name: "asc" },
       });
-      res.json(classes);
+      res.json(classes.map((c: any) => ({ ...c, stats: displayStats(c) })));
     } catch (err) {
       next(err);
     }
@@ -24,18 +69,13 @@ export function createClassesModule(app: Express): void {
     try {
       const gameClass = await prisma.gameClass.findUnique({
         where: { slug: req.params.slug },
-        include: {
-          skills: { where: { isActive: true }, orderBy: { sortOrder: "asc" } },
-          classPassives: { orderBy: { rankRequired: "asc" } },
-          classUpgrades: { orderBy: { rankRequired: "asc" } },
-          masteryBonuses: { orderBy: { rank: "asc" } },
-        },
+        include: CLASS_INCLUDE,
       });
       if (!gameClass) {
         res.status(404).json({ error: "Class not found" });
         return;
       }
-      res.json(gameClass);
+      res.json({ ...gameClass, stats: displayStats(gameClass) });
     } catch (err) {
       next(err);
     }
@@ -69,7 +109,7 @@ export function createClassesModule(app: Express): void {
         res.status(404).json({ error: "Class not found" });
         return;
       }
-      const passives = await prisma.classPassive.findMany({
+      const passives = await prisma.passive.findMany({
         where: { classId: gameClass.id },
         orderBy: { rankRequired: "asc" },
       });
@@ -88,17 +128,15 @@ export function createClassesModule(app: Express): void {
           class: {
             include: {
               skills: { where: { isActive: true }, orderBy: { sortOrder: "asc" } },
-              classPassives: { orderBy: { rankRequired: "asc" } },
-              masteryBonuses: { orderBy: { rank: "asc" } },
+              passives: { orderBy: { rankRequired: "asc" } },
+              statModel: true,
             },
           },
           classProgress: {
             include: { gameClass: true },
             orderBy: { updatedAt: "desc" },
           },
-          combatStats: true,
-          activeBuffs: { include: { buff: true } },
-          stacks: true,
+          activeEffects: { include: { effect: true } },
         },
       });
       if (!character) {
@@ -109,7 +147,7 @@ export function createClassesModule(app: Express): void {
         res.status(403).json({ error: "Not your character" });
         return;
       }
-      res.json(character);
+      res.json({ ...character, class: character.class ? { ...character.class, stats: displayStats(character.class) } : null });
     } catch (err) {
       next(err);
     }
@@ -137,16 +175,20 @@ export function createClassesModule(app: Express): void {
           gameClass: {
             include: {
               skills: { where: { isActive: true }, orderBy: { sortOrder: "asc" } },
-              classPassives: { orderBy: { rankRequired: "asc" } },
-              classUpgrades: { orderBy: { rankRequired: "asc" } },
-              masteryBonuses: { orderBy: { rank: "asc" } },
+              passives: { orderBy: { rankRequired: "asc" } },
+              statModel: true,
             },
           },
         },
         orderBy: { updatedAt: "desc" },
       });
 
-      res.json(classProgress);
+      res.json(
+        classProgress.map((cp: any) => ({
+          ...cp,
+          gameClass: { ...cp.gameClass, stats: displayStats(cp.gameClass) },
+        }))
+      );
     } catch (err) {
       next(err);
     }
@@ -219,6 +261,12 @@ export function createClassesModule(app: Express): void {
         return;
       }
 
+      const gameClass = await prisma.gameClass.findUnique({
+        where: { id: character.classId },
+        select: { rankMax: true },
+      });
+      const maxRank = gameClass?.rankMax ?? 10;
+
       const progress = await prisma.characterClass.findUnique({
         where: { characterId_classId: { characterId: character.id, classId: character.classId } },
       });
@@ -230,7 +278,6 @@ export function createClassesModule(app: Express): void {
       const { classExpForRank } = require("../../core/utils/experience");
       let newXp = Number(progress.experience) + xpAmount;
       let newRank = progress.rank;
-      const maxRank = 10;
 
       while (newRank < maxRank) {
         const needed = classExpForRank(newRank);

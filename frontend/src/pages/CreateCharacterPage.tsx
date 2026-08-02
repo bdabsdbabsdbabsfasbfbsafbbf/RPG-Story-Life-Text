@@ -144,7 +144,7 @@ export function CreateCharacterPage() {
                   </div>
                   <p className="text-xs text-gray-400 line-clamp-2">{cls.description}</p>
                   <div className="text-xs text-gray-500 mt-2">
-                    HP {cls.baseHp} • Mana {cls.baseMana} • ATK {cls.baseAttack} • DEF {cls.baseDefense}
+                    HP {cls.stats?.hp ?? "-"} • Mana {cls.stats?.mana ?? "-"} • ATK {cls.stats?.attack ?? "-"} • DEF {cls.stats?.defense ?? "-"}
                   </div>
                 </button>
               ))}

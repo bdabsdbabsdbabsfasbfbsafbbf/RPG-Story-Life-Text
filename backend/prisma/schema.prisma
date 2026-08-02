@@ -65,10 +65,8 @@ model Character {
   race          Race?    @relation(fields: [raceId], references: [id])
   trait         Trait?   @relation(fields: [traitId], references: [id])
   equipment     Equipment? @relation()
-  combatStats   CombatStats? @relation()
-  activeBuffs   ActiveBuff[] @relation()
+  activeEffects ActiveEffect[] @relation()
   activeCooldowns ActiveCooldown[] @relation()
-  stacks        Stack[] @relation()
   classProgress CharacterClass[] @relation()
 
   @@index([userId])
@@ -133,225 +131,151 @@ model GameClass {
   name            String   @unique
   slug            String   @unique
   description     String
-  lore            String?
   icon            String?
-  element         String   // fire, water, earth, wind, light, dark, neutral
-  rarity          String   // common, uncommon, rare, epic, legendary, mythic
-  difficulty      String   // easy, medium, hard, expert
-  role            String   // tank, support, mage, dps, assassin, hybrid
-  statModel       String   @default("hybrid") // tank, hybrid, luckHybrid, powerCaster, physicalDPS, magicDPS, support, assassin, bruiser, battleMage
-
-  // Unlock
-  unlockMethod    String   @default("auto") // auto, quest, item, level, currency
-  unlockData      String?  // JSON: questId, itemId, requiredLevel, currencyCost
-  requiredLevel   Int      @default(1)
-  requiredQuests  String?
-
-  // Core Class Base
-  baseHp          Int      @default(100)
-  baseMana        Int      @default(50)
-  baseAttack      Int      @default(10)
-  baseDefense     Int      @default(10)
-  baseMagic       Int      @default(10)
-  baseMagicDefense Int     @default(10)
-  baseSpeed       Int      @default(10)
-  manaRecovery    Float    @default(5.0) // per tick
-
-  // Stat Scaling Config (JSON)
-  attackScaling   Float    @default(1.0)  // Attack -> Attack Power multiplier
-  magicScaling    Float    @default(1.0)  // Magic -> Spell Power multiplier
-  critScaling     Float    @default(0.05) // per point -> crit chance
-  critDamageBase  Float    @default(150.0)
-  dodgeScaling    Float    @default(0.02)
-  cooldownScaling Float    @default(0.0)  // per point -> CDR
-  manaEfficiency  Float    @default(1.0)  // mana cost multiplier
-
-  isActive        Boolean  @default(true)
+  role            String   @default("hybrid") // tank, dps, healer, support, hybrid
+  combatType      String   @default("melee") // melee, ranged, caster
+  rankMax         Int      @default(10)
+  statModelId     String?
+  resource        Json     @default("{}") // { manaRegenPerTick?, manaOnHit?, manaOnKill? }
   isStarter       Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  sortOrder       Int      @default(0)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
+  statModel       StatModel? @relation(fields: [statModelId], references: [id])
   characters      Character[]
   classProgress   CharacterClass[]
   skills          Skill[]
-  classPassives   ClassPassive[]
-  classUpgrades   ClassUpgrade[]
-  masteryBonuses  MasteryBonus[]
+  passives        Passive[]
 }
 
-model ClassUpgrade {
-  id            String   @id @default(uuid())
-  classId       String
-  rankRequired  Int
-  description   String
-  statBonuses   String
-  unlocksSkills Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  gameClass     GameClass @relation(fields: [classId], references: [id])
-  @@index([classId, rankRequired])
-}
-
-model MasteryBonus {
-  id            String   @id @default(uuid())
-  classId       String
-  rank          Int
-  bonusType     String
-  bonusValue    Float
-  description   String
-  createdAt     DateTime @default(now())
-  gameClass     GameClass @relation(fields: [classId], references: [id])
-  @@index([classId])
+// Stat model da classe: base (nível 1), crescimento por nível e derivados.
+// Cada atributo tem UMA única origem — nada de colunas espalhadas.
+model StatModel {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  slug        String   @unique
+  description String   @default("")
+  // base: { hp, mana, attack, defense, magic, magicDefense, speed } — valores no nível 1
+  base        Json     @default("{}")
+  // perLevel: mesmo shape de base — crescimento a cada nível
+  perLevel    Json     @default("{}")
+  // scaling: { attackPowerPerAttack, spellPowerPerMagic, critChancePerSpeed, critDamageBase,
+  //            dodgePerSpeed, attackSpeedMs, manaRegenPerTick, healthRegenPerTick,
+  //            threatPerAttack, aggroPerHit }
+  scaling     Json     @default("{}")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  classes     GameClass[]
 }
 
 model Skill {
-  id              String   @id @default(uuid())
-  classId         String
-  name            String
-  description     String
-  icon            String?
-  type            String   // active, passive, ultimate
-  subType         String?  // melee, ranged, spell, heal, buff, debuff, dot, aoe, channel
-  cooldown        Int      @default(0)    // ms
-  manaCost        Int      @default(0)
-  castTime        Int      @default(0)    // ms
-  range           Int      @default(5)
-  targetType      String   @default("enemy") // self, enemy, ally, area, all
-  rankRequired    Int      @default(1)
-  sortOrder       Int      @default(0)
-  isActive        Boolean  @default(true)
-  unlockCondition String?  // JSON: condition to unlock (before rankRequired)
-
-  // Damage
-  baseDamage      Int      @default(0)
-  damageType      String   @default("physical") // physical, magic, true
-  damageScaling   String?  // JSON: { "attack": 0.5, "magic": 0.3 } (scale with which stats)
-  damageStat      String?  // "attackPower", "spellPower", "both", "hp", "defense" etc.
-
-  // Healing
-  healingBase     Int      @default(0)
-  healingScaling  String?  // JSON
-
-  // Effects & Status
-  effects         String?  // JSON array of effect objects
-  buffsApplied    String?  // JSON array of buff IDs
-  debuffsApplied  String?  // JSON array of debuff IDs
-  stacksApplied   String?  // JSON: { "stackId": "bleeding", "amount": 1 }
-  stacksRequired  String?  // JSON: { "stackId": "bleeding", "amount": 5, "consume": true }
-  hitsMultiple    Boolean  @default(false)
-  maxTargets      Int      @default(1)
-
-  // Display
-  animationName   String?  // animation key
-  soundEffect     String?  // sound key
-  animationData   String?  // JSON: custom animation config
-
-  // Combo / Interaction
-  comboId         String?  // references a Combo if part of one
-  interactsWith   String?  // JSON: skill IDs this interacts with
-
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id            String   @id @default(uuid())
+  classId       String
+  name          String
+  slug          String
+  description   String
+  icon          String?
+  kind          String   @default("attack") // attack, heal, buff, debuff, summon, mobility, control, defense, channel
+  trigger       String   @default("active") // auto, active, ultimate
+  target        String   @default("enemy") // enemy, self
+  cooldown      Int      @default(0)    // ms
+  manaCost      Int      @default(0)
+  castTime      Int      @default(0)    // ms antes das ações (cast)
+  channelMs     Int      @default(0)    // ms de canalização (ações acontecem ao final)
+  rankRequired  Int      @default(1)
+  sortOrder     Int      @default(0)
+  isActive      Boolean  @default(true)
+  // scaling: [{ stat, factor }] — usado pelas ações damage/heal como base extra
+  scaling       Json     @default("[]")
+  // actions: [{ action, ...params }] — DSL executada pelo motor
+  actions       Json     @default("[]")
+  // conditions: [{ type, ...params }] — gate para usar a skill (combos)
+  conditions    Json     @default("[]")
+  // onConditionMet: actions executadas quando conditions passam (substitui actions)
+  onConditionMet Json    @default("[]")
+  // events: [{ event, conditions?, actions }] — comportamento reativo da skill
+  events        Json     @default("[]")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   gameClass       GameClass @relation(fields: [classId], references: [id])
-  combos          Combo[]   @relation("ComboSkill")
-  comboOrigin     Combo[]   @relation("ComboRequired")
   activeCooldowns ActiveCooldown[]
   @@index([classId])
   @@index([classId, rankRequired])
 }
 
-model ClassPassive {
-  id            String   @id @default(uuid())
-  classId       String
-  name          String
-  description   String
-  icon          String?
-  rankRequired  Int      @default(1)
-  statModifiers String?
-  effectType    String
-  effectData    String?
-  createdAt     DateTime @default(now())
-  gameClass     GameClass @relation(fields: [classId], references: [id])
+model Passive {
+  id             String   @id @default(uuid())
+  classId        String
+  name           String
+  slug           String
+  description    String
+  icon           String?
+  rankRequired   Int      @default(1)
+  sortOrder      Int      @default(0)
+  isActive       Boolean  @default(true)
+  // statModifiers: { flat: { stat: valor }, percent: { stat: pct } }
+  statModifiers  Json     @default("{}")
+  // skillModifiers: [{ skillSlug, damagePercent, cooldownPercent, manaPercent, healPercent }]
+  skillModifiers Json     @default("[]")
+  // effectModifiers: [{ effectSlug, durationPercent, tickPercent, damagePercent, healPercent, stacksBonus }]
+  effectModifiers Json    @default("[]")
+  // conditions: [{ type, ...params }] — passiva só ativa se satisfeita
+  conditions     Json     @default("[]")
+  // events: [{ event, conditions?, actions }] — reações a eventos de combate
+  events         Json     @default("[]")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  gameClass GameClass @relation(fields: [classId], references: [id])
   @@index([classId])
 }
 
-model Combo {
-  id                String   @id @default(uuid())
-  name              String
-  description       String
-  skillId           String
-  requiredBySkillId String?
-  requiredSkills    String
-  requiredStacks    String?
-  cooldown          Int      @default(0)
-  damageBonus       Float    @default(1.0)
-  createdAt         DateTime @default(now())
-  skill             Skill    @relation("ComboSkill", fields: [skillId], references: [id])
-  requiredBy        Skill?   @relation("ComboRequired", fields: [requiredBySkillId], references: [id])
-  @@index([skillId])
+// Buff/Debuff/HOT/DOT independente de skills — configurável e reutilizável
+model Effect {
+  id              String   @id @default(uuid())
+  name            String   @unique
+  slug            String   @unique
+  description     String
+  icon            String?
+  kind            String   @default("buff") // buff, debuff, hot, dot
+  category        String   @default("utility") // defense, offense, control, mobility, utility, recovery
+  maxStacks       Int      @default(1)
+  duration        Int      @default(0)    // ms; 0 = permanente
+  refreshBehavior String   @default("refresh") // refresh, extend, overwrite, stack
+  stackLoss       Json     @default("{}") // { intervalMs, amount }
+  priority        Int      @default(0)
+  tickInterval    Int      @default(0)    // ms; 0 = sem tick
+  tickDamage      Json     @default("{}") // { base, scaling: [{stat,factor}], damageType }
+  tickHealing     Json     @default("{}") // { base, scaling: [{stat,factor}] }
+  statModifiers   Json     @default("{}") // { flat: {...}, percent: {...} }
+  onMaxStacks     Json     @default("[]") // [actions]
+  onExpire        Json     @default("[]") // [actions]
+  onTick          Json     @default("[]") // [actions]
+  exclusiveGroup  String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  activeEffects   ActiveEffect[]
+  @@index([slug])
 }
 
-model Buff {
-  id            String   @id @default(uuid())
-  name          String
-  description   String
-  type          String
-  icon          String?
-  maxStacks     Int      @default(1)
-  duration      Int      @default(0)
-  tickInterval  Int      @default(0)
-  tickEffect    String?
-  statModifiers String?
-  specialEffect String?
-  stackBehavior String   @default("independent")
-  maxStackEffect String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  activeBuffs   ActiveBuff[]
-}
-
-model ActiveBuff {
-  id            String   @id @default(uuid())
-  characterId   String
-  buffId        String
-  stacks        Int      @default(1)
-  remainingDuration Int  @default(0)
-  sourceId      String?
-  appliedAt     DateTime @default(now())
-  expiresAt     DateTime?
-  character     Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
-  buff          Buff      @relation(fields: [buffId], references: [id])
+model ActiveEffect {
+  id          String   @id @default(uuid())
+  characterId String
+  effectId    String
+  stacks      Int      @default(1)
+  remainingMs Int      @default(0)
+  expiresAt   DateTime?
+  nextTickAt  DateTime?
+  createdAt   DateTime @default(now())
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  effect      Effect    @relation(fields: [effectId], references: [id])
+  @@unique([characterId, effectId])
   @@index([characterId])
-  @@index([characterId, buffId])
-}
-
-model Stack {
-  id            String   @id @default(uuid())
-  characterId   String
-  stackDefId    String
-  stackType     String
-  currentAmount Int      @default(0)
-  maxAmount     Int      @default(10)
-  duration      Int      @default(0)
-  createdAt     DateTime @default(now())
-  expiresAt     DateTime?
-  character     Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
-  @@unique([characterId, stackDefId])
-  @@index([characterId])
-}
-
-model StackDefinition {
-  id            String   @id @default(uuid())
-  name          String
-  description   String
-  icon          String?
-  type          String
-  maxAmount     Int      @default(10)
-  duration      Int      @default(0)
-  perStackEffect String?
-  maxEffect     String?
-  consumeEffect String?
-  createdAt     DateTime @default(now())
 }
 
 model ActiveCooldown {
@@ -365,83 +289,6 @@ model ActiveCooldown {
   skill         Skill     @relation(fields: [skillId], references: [id])
   @@index([characterId])
   @@index([characterId, skillId])
-}
-
-model CombatStats {
-  id              String   @id @default(uuid())
-  characterId     String   @unique
-  updatedAt       DateTime @updatedAt
-  character     Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
-  @@index([characterId])
-
-  // ===== CORE STATS =====
-  // Weapon / Equipment Base
-  weaponDamageMin  Int      @default(0)
-  weaponDamageMax  Int      @default(0)
-  classEnchant     String?  // JSON of class enchant
-  weaponEnchant    String?
-  helmetEnchant    String?
-  capeEnchant      String?
-
-  // Class Base
-  baseHp           Int      @default(100)
-  baseMana         Int      @default(50)
-  baseAttack       Int      @default(10)
-  baseDefense      Int      @default(10)
-  baseMagic        Int      @default(10)
-  baseMagicDefense Int      @default(10)
-  baseSpeed        Int      @default(10)
-
-  // ===== MODIFIER STATS =====
-  damageBoost      Float    @default(0)   // % all damage
-  damageResistance Float    @default(0)   // % all damage reduction
-  physicalBoost    Float    @default(0)
-  magicalBoost     Float    @default(0)
-  physicalResist   Float    @default(0)
-  magicalResist    Float    @default(0)
-  healingBoost     Float    @default(0)
-  healingReceived  Float    @default(0)
-  dotBoost         Float    @default(0)
-  dotResistance    Float    @default(0)
-  armorPenetration Float    @default(0)   // % armor ignored
-  magicPenetration Float    @default(0)   // % magic defense ignored
-  trueDamage       Float    @default(0)   // flat true damage
-  lifeSteal        Float    @default(0)   // % dmg -> hp
-  manaSteal        Float    @default(0)   // % dmg -> mana
-  cooldownReduction Float  @default(0)   // %
-  haste            Float    @default(0)   // attack speed %
-  manaCostReduction Float  @default(0)   // %
-
-  // ===== COMBAT STATS =====
-  attackPower      Int      @default(10)  // Total physical power
-  spellPower       Int      @default(10)  // Total magic power
-  criticalChance   Float    @default(5.0)
-  criticalMultiplier Float  @default(150.0)
-  hitChance        Float    @default(95.0)
-  dodgeChance      Float    @default(2.0)
-  attackSpeed      Int      @default(1000) // ms between attacks
-  cooldownReductionTotal Float @default(0) // %
-  manaRegen        Float    @default(5.0)  // per tick
-  healthRegen      Float    @default(0)
-  maxHp            Int      @default(100)
-  maxMana          Int      @default(50)
-  threat           Float    @default(100.0)
-  aggro            Float    @default(100.0)
-
-  // Damage type modifiers
-  pvpDamage        Float    @default(100.0) // %
-  pveDamage        Float    @default(100.0) // %
-  bossDamage       Float    @default(100.0) // %
-  eliteDamage      Float    @default(100.0) // %
-  elementalDamage  Float    @default(0)
-  resistance       Float    @default(0)
-
-  // Utility
-  luck             Float    @default(1.0)
-  dropRate         Float    @default(100.0)
-  goldBonus        Float    @default(100.0)
-  xpBonus          Float    @default(100.0)
-  speed            Int      @default(10)
 }
 
 model Equipment {

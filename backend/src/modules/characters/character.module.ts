@@ -3,6 +3,15 @@ import { prisma } from "../../core/database";
 import { authenticate } from "../../core/middleware/auth";
 import { AppError } from "../../core/middleware/errorHandler";
 import { getGameLimits } from "../../core/gameLimits";
+import { computeStats } from "../../core/classEngine/stat-calculator";
+
+function parseJson(value: any, fallback: any): any {
+  if (!value) return fallback;
+  if (typeof value === "string") {
+    try { return JSON.parse(value); } catch { return fallback; }
+  }
+  return value;
+}
 
 // Starter items granted per class (matched by item name)
 const STARTER_KITS: Record<string, { itemName: string; quantity: number }[]> = {
@@ -59,10 +68,45 @@ export function createCharacterModule(app: Express): void {
         prisma.trait.findMany({ where: { isActive: true }, orderBy: [{ rarity: "asc" }, { name: "asc" }] }),
         prisma.gameClass.findMany({
           where: { isActive: true, isStarter: true },
+          include: { statModel: true },
           orderBy: { name: "asc" },
         }),
       ]);
-      res.json({ races, traits, classes });
+      const classesWithStats = await Promise.all(
+        classes.map(async (c: any) => {
+          const stats = computeStats({
+            level: 1,
+            statModel: {
+              base: parseJson(c.statModel?.base, {}),
+              perLevel: parseJson(c.statModel?.perLevel, {}),
+              scaling: parseJson(c.statModel?.scaling, {}),
+            },
+            resource: parseJson(c.resource, {}),
+            passives: [],
+          });
+          return {
+            ...c,
+            stats: {
+              hp: stats.hp,
+              mana: stats.mana,
+              attack: stats.attack,
+              defense: stats.defense,
+              magic: stats.magic,
+              magicDefense: stats.magicDefense,
+              speed: stats.speed,
+              attackPower: stats.attackPower,
+              spellPower: stats.spellPower,
+              critChance: stats.critChance,
+              critDamage: stats.critDamage,
+              dodge: stats.dodge,
+              attackSpeedMs: stats.attackSpeedMs,
+              manaRegenPerTick: stats.manaRegenPerTick,
+              healthRegenPerTick: stats.healthRegenPerTick,
+            },
+          };
+        })
+      );
+      res.json({ races, traits, classes: classesWithStats });
     } catch (err) {
       next(err);
     }
@@ -135,6 +179,13 @@ export function createCharacterModule(app: Express): void {
       if (traitId && !trait) throw new AppError(404, "Trait not found");
 
       const character = await prisma.$transaction(async (tx) => {
+        const statModel = gameClass.statModelId ? await tx.statModel.findUnique({ where: { id: gameClass.statModelId } }) : null;
+        const stats = computeStats({
+          level: 1,
+          statModel: parseJson(statModel, {}),
+          resource: parseJson(gameClass.resource, {}),
+          passives: [],
+        });
         const created = await tx.character.create({
           data: {
             userId: req.user!.userId,
@@ -142,8 +193,8 @@ export function createCharacterModule(app: Express): void {
             classId: gameClass.id,
             raceId: race?.id ?? null,
             traitId: trait?.id ?? null,
-            currentHp: gameClass.baseHp,
-            currentMana: gameClass.baseMana,
+            currentHp: stats.maxHp,
+            currentMana: stats.maxMana,
           },
           include: {
             class: { select: { id: true, name: true, slug: true } },
@@ -197,7 +248,7 @@ export function createCharacterModule(app: Express): void {
           class: true,
           race: true,
           trait: true,
-          combatStats: true,
+          activeEffects: { include: { effect: true } },
           classProgress: {
             where: { isActive: true },
             include: { gameClass: { select: { id: true, name: true, slug: true, icon: true } } },
@@ -231,7 +282,14 @@ export function createCharacterModule(app: Express): void {
         where: { characterId: character.id, isActive: true },
       });
       if (!progress) throw new AppError(404, "Class progress not found");
-      if (progress.rank >= 10) throw new AppError(400, "Already at max rank (10)");
+
+      const gameClass = await prisma.gameClass.findUnique({
+        where: { id: progress.classId },
+        select: { rankMax: true },
+      });
+      const maxRank = gameClass?.rankMax ?? 10;
+
+      if (progress.rank >= maxRank) throw new AppError(400, `Already at max rank (${maxRank})`);
 
       const xpNeeded = progress.rank * 150;
       if (Number(progress.experience) < xpNeeded) {

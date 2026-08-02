@@ -22,7 +22,8 @@ interface Stats {
   totalMonsters?: number;
   totalMaps?: number;
   totalSkills?: number;
-  totalBuffs?: number;
+  totalEffects?: number;
+  totalStatModels?: number;
   totalRaces?: number;
   totalTraits?: number;
 }
@@ -103,7 +104,8 @@ export default function DashboardPage() {
             <StatCard label="Maps" value={stats.totalMaps} icon={Gamepad2} color="from-emerald-500 to-emerald-600" />
             <StatCard label="Quests" value={stats.totalQuests} icon={ScrollText} color="from-indigo-500 to-indigo-600" />
             <StatCard label="Skills" value={stats.totalSkills} icon={Sparkles} color="from-yellow-500 to-yellow-600" />
-            <StatCard label="Buffs" value={stats.totalBuffs} icon={Sparkles} color="from-pink-500 to-pink-600" />
+            <StatCard label="Effects" value={stats.totalEffects} icon={Sparkles} color="from-pink-500 to-pink-600" />
+            <StatCard label="Stat Models" value={stats.totalStatModels} icon={Shield} color="from-lime-500 to-lime-600" />
             <StatCard label="Races" value={stats.totalRaces} icon={Users} color="from-teal-500 to-teal-600" />
             <StatCard label="Traits" value={stats.totalTraits} icon={Sparkles} color="from-orange-500 to-orange-600" />
           </div>

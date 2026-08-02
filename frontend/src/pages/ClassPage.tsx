@@ -108,13 +108,31 @@ export function ClassPage() {
   const rank = progress?.rank ?? 1;
   const rankXp = progress?.experience ?? 0;
   const xpToNextRank = rank * 150;
-  const canRankUp = rank < 10 && rankXp >= xpToNextRank;
+  const maxRank = gameClass.rankMax ?? 10;
+  const canRankUp = rank < maxRank && rankXp >= xpToNextRank;
 
   const skills: Skill[] = gameClass.skills || [];
-  const passives: ClassPassive[] = gameClass.classPassives || [];
-  const autoSkill = skills.find((s) => s.type === "auto");
-  const actives = skills.filter((s) => s.type === "active");
-  const ultimate = skills.find((s) => s.type === "ultimate");
+  const passives: ClassPassive[] = gameClass.passives || [];
+  const autoSkill = skills.find((s) => s.trigger === "auto");
+  const actives = skills.filter((s) => s.trigger === "active");
+  const ultimate = skills.find((s) => s.trigger === "ultimate");
+  const stats: any = gameClass.stats || {};
+
+  const skillSummary = (skill: Skill) => {
+    let dmg = 0;
+    let heal = 0;
+    let effects = 0;
+    for (const a of skill.actions || []) {
+      if (a.action === "damage") dmg += a.amount ?? 0;
+      if (a.action === "heal") heal += a.amount ?? 0;
+      if (a.action === "applyEffect") effects++;
+    }
+    for (const a of skill.onConditionMet || []) {
+      if (a.action === "damage") dmg += a.amount ?? 0;
+      if (a.action === "heal") heal += a.amount ?? 0;
+    }
+    return { dmg, heal, effects };
+  };
 
   const handleRankUp = async () => {
     setRankingUp(true);
@@ -132,8 +150,9 @@ export function ClassPage() {
 
   const SkillCard = ({ skill }: { skill: Skill }) => {
     const locked = skill.rankRequired > rank;
-    const isUlt = skill.type === "ultimate";
-    const isAuto = skill.type === "auto";
+    const isUlt = skill.trigger === "ultimate";
+    const isAuto = skill.trigger === "auto";
+    const summary = skillSummary(skill);
     return (
       <button
         onClick={() => setSelectedSkill(skill)}
@@ -150,15 +169,14 @@ export function ClassPage() {
             {locked ? <Lock size={16} className="text-gray-300" />
               : isUlt ? <Zap size={18} className="text-white" />
               : isAuto ? <Swords size={16} className="text-white" />
-              : skill.healingBase > 0 ? <Heart size={18} className="text-white" />
+              : skill.kind === "heal" ? <Heart size={18} className="text-white" />
+              : skill.kind === "buff" ? <ShieldCheck size={18} className="text-white" />
               : <Sword size={18} className="text-white" />}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <p className="font-medium text-sm">{skill.name}</p>
-              {skill.subType && (
-                <span className="text-[10px] text-gray-500 bg-dark-700 px-1.5 py-0.5 rounded">{skill.subType}</span>
-              )}
+              <span className="text-[10px] text-gray-500 bg-dark-700 px-1.5 py-0.5 rounded">{skill.kind}</span>
               {isAuto && <span className="text-[10px] text-gray-400 bg-dark-700 px-1.5 py-0.5 rounded">Automática</span>}
               {isUlt && <span className="text-[10px] text-yellow-300 font-bold">ULTIMATE</span>}
             </div>
@@ -166,8 +184,9 @@ export function ClassPage() {
             <div className="flex items-center gap-3 mt-1.5 flex-wrap text-xs">
               <span className="text-gray-400 flex items-center gap-1"><Clock size={11} /> {formatMs(skill.cooldown)}</span>
               {skill.manaCost > 0 && <span className="text-blue-400">{skill.manaCost} MP</span>}
-              {skill.baseDamage > 0 && <span className="text-red-400">DMG {skill.baseDamage}</span>}
-              {skill.healingBase > 0 && <span className="text-green-400">CURA {skill.healingBase}</span>}
+              {summary.dmg > 0 && <span className="text-red-400">DMG {summary.dmg}</span>}
+              {summary.heal > 0 && <span className="text-green-400">CURA {summary.heal}</span>}
+              {summary.effects > 0 && <span className="text-purple-400">+{summary.effects} efeito{summary.effects > 1 ? "s" : ""}</span>}
             </div>
           </div>
           <ChevronRight size={15} className="text-gray-600 shrink-0 mt-1" />
@@ -206,8 +225,7 @@ export function ClassPage() {
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2 flex-wrap">
               <span className="text-xs px-2 py-1 bg-dark-700 rounded-md capitalize">{gameClass.role}</span>
-              <span className="text-xs px-2 py-1 bg-dark-700 rounded-md capitalize">{gameClass.element}</span>
-              <span className="text-xs px-2 py-1 bg-dark-700 rounded-md capitalize">{gameClass.difficulty}</span>
+              <span className="text-xs px-2 py-1 bg-dark-700 rounded-md capitalize">{gameClass.combatType}</span>
             </div>
             <h1 className="text-3xl font-display font-bold glow-text mb-2">{gameClass.name}</h1>
             <p className="text-gray-400 text-sm leading-relaxed">{gameClass.description}</p>
@@ -222,7 +240,7 @@ export function ClassPage() {
             <span className="text-2xl font-display font-bold text-purple-400">Rank {rank}</span>
             <span className="text-xs text-gray-400">{rankNames[rank]}</span>
             <div className="flex gap-1 mt-3">
-              {[1,2,3,4,5,6,7,8,9,10].map(r => (
+              {Array.from({ length: maxRank }, (_, i) => i + 1).map(r => (
                 <div key={r} className={`w-2 h-4 rounded-sm ${r <= rank ? "bg-purple-500" : "bg-dark-600"}`} />
               ))}
             </div>
@@ -241,9 +259,9 @@ export function ClassPage() {
               className={`btn-primary text-xs px-4 py-2 mt-3 flex items-center gap-1.5 ${!canRankUp ? "opacity-50 cursor-not-allowed" : ""}`}
             >
               <ArrowUp size={13} />
-              {rank >= 10 ? "Rank Máximo" : rankingUp ? "Subindo..." : `Subir de Rank (${xpToNextRank} XP)`}
+              {rank >= maxRank ? "Rank Máximo" : rankingUp ? "Subindo..." : `Subir de Rank (${xpToNextRank} XP)`}
             </button>
-            {!canRankUp && rank < 10 && (
+            {!canRankUp && rank < maxRank && (
               <p className="text-[10px] text-gray-500 mt-1.5">Ganhe XP de classe em combates para subir.</p>
             )}
           </div>
@@ -281,14 +299,14 @@ export function ClassPage() {
       {/* Stats resumo */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: "HP Base", value: gameClass.baseHp, icon: Heart, color: "text-red-400" },
-          { label: "Mana Base", value: gameClass.baseMana, icon: Droplets, color: "text-blue-400" },
-          { label: "Ataque", value: gameClass.baseAttack, icon: Swords, color: "text-orange-400" },
-          { label: "Defesa", value: gameClass.baseDefense, icon: ShieldCheck, color: "text-yellow-400" },
-          { label: "Magia", value: gameClass.baseMagic, icon: Sparkles, color: "text-purple-400" },
-          { label: "Res. Mágica", value: gameClass.baseMagicDefense, icon: Shield, color: "text-cyan-400" },
-          { label: "Velocidade", value: gameClass.baseSpeed, icon: Zap, color: "text-green-400" },
-          { label: "Mana Regen", value: gameClass.manaRecovery?.toFixed(1), icon: Droplets, color: "text-blue-300" },
+          { label: "HP", value: stats.hp, icon: Heart, color: "text-red-400" },
+          { label: "Mana", value: stats.mana, icon: Droplets, color: "text-blue-400" },
+          { label: "Ataque", value: stats.attack, icon: Swords, color: "text-orange-400" },
+          { label: "Defesa", value: stats.defense, icon: ShieldCheck, color: "text-yellow-400" },
+          { label: "Magia", value: stats.magic, icon: Sparkles, color: "text-purple-400" },
+          { label: "Res. Mágica", value: stats.magicDefense, icon: Shield, color: "text-cyan-400" },
+          { label: "Velocidade", value: stats.speed, icon: Zap, color: "text-green-400" },
+          { label: "Mana Regen", value: stats.manaRegenPerTick, icon: Droplets, color: "text-blue-300" },
         ].map((stat) => (
           <div key={stat.label} className="panel p-3 flex items-center gap-3">
             <stat.icon size={16} className={stat.color} />
@@ -325,17 +343,17 @@ export function ClassPage() {
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
             <div className="bg-dark-800/50 rounded-lg p-3">
               <p className="text-[10px] text-gray-500 uppercase tracking-wider">Weapon Damage</p>
-              <p className="font-mono text-sm font-bold text-orange-400">{gameClass.baseAttack * 2} - {gameClass.baseAttack * 4}</p>
+              <p className="font-mono text-sm font-bold text-orange-400">{stats.attack * 2} - {stats.attack * 4}</p>
             </div>
             {[
-              { label: "Base HP", value: gameClass.baseHp, icon: Heart, color: "text-red-400" },
-              { label: "Base Mana", value: gameClass.baseMana, icon: Droplets, color: "text-blue-400" },
-              { label: "Attack", value: gameClass.baseAttack, icon: Swords, color: "text-orange-400" },
-              { label: "Defense", value: gameClass.baseDefense, icon: ShieldCheck, color: "text-yellow-400" },
-              { label: "Magic", value: gameClass.baseMagic, icon: Star, color: "text-purple-400" },
-              { label: "Magic Def", value: gameClass.baseMagicDefense, icon: ShieldHalf, color: "text-cyan-400" },
-              { label: "Speed", value: gameClass.baseSpeed, icon: Footprints, color: "text-green-400" },
-              { label: "Mana Recovery", value: gameClass.manaRecovery?.toFixed(1), icon: Droplets, color: "text-blue-400" },
+              { label: "Base HP", value: stats.hp, icon: Heart, color: "text-red-400" },
+              { label: "Base Mana", value: stats.mana, icon: Droplets, color: "text-blue-400" },
+              { label: "Attack", value: stats.attack, icon: Swords, color: "text-orange-400" },
+              { label: "Defense", value: stats.defense, icon: ShieldCheck, color: "text-yellow-400" },
+              { label: "Magic", value: stats.magic, icon: Star, color: "text-purple-400" },
+              { label: "Magic Def", value: stats.magicDefense, icon: ShieldHalf, color: "text-cyan-400" },
+              { label: "Speed", value: stats.speed, icon: Footprints, color: "text-green-400" },
+              { label: "Mana Recovery", value: stats.manaRegenPerTick, icon: Droplets, color: "text-blue-400" },
             ].map((stat) => (
               <div key={stat.label} className="bg-dark-800/50 rounded-lg p-3 flex items-center gap-2">
                 <stat.icon size={14} className={stat.color} />
@@ -408,10 +426,10 @@ export function ClassPage() {
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
             <p className="col-span-full text-[10px] text-gray-500 uppercase tracking-wider">Offense</p>
             {[
-              { label: "Attack Power", value: Math.floor(gameClass.baseAttack * (gameClass.attackScaling ?? 1)), icon: Swords, color: "text-orange-400" },
-              { label: "Spell Power", value: Math.floor(gameClass.baseMagic * (gameClass.magicScaling ?? 1)), icon: Star, color: "text-purple-400" },
-              { label: "Crit Chance", value: `${(gameClass.baseSpeed * (gameClass.critScaling ?? 0)).toFixed(1)}%`, icon: Target, color: "text-yellow-400" },
-              { label: "Crit Multiplier", value: `${gameClass.critDamageBase ?? 150}%`, icon: Crosshair, color: "text-red-400" },
+              { label: "Attack Power", value: stats.attackPower, icon: Swords, color: "text-orange-400" },
+              { label: "Spell Power", value: stats.spellPower, icon: Star, color: "text-purple-400" },
+              { label: "Crit Chance", value: `${(stats.critChance ?? 0).toFixed(1)}%`, icon: Target, color: "text-yellow-400" },
+              { label: "Crit Multiplier", value: `${stats.critDamage ?? 150}%`, icon: Crosshair, color: "text-red-400" },
               { label: "Hit Chance", value: "95%", icon: Scan, color: "text-green-400" },
             ].map((stat) => (
               <div key={stat.label} className="bg-dark-800/50 rounded-lg p-3 flex items-center gap-2">
@@ -424,9 +442,9 @@ export function ClassPage() {
             ))}
             <p className="col-span-full text-[10px] text-gray-500 uppercase tracking-wider mt-2">Defense</p>
             {[
-              { label: "Dodge", value: `${(gameClass.baseSpeed * (gameClass.dodgeScaling ?? 0)).toFixed(1)}%`, icon: Wind, color: "text-green-400" },
-              { label: "Max HP", value: gameClass.baseHp, icon: Heart, color: "text-red-400" },
-              { label: "Max Mana", value: gameClass.baseMana, icon: Droplets, color: "text-blue-400" },
+              { label: "Dodge", value: `${(stats.dodge ?? 0).toFixed(1)}%`, icon: Wind, color: "text-green-400" },
+              { label: "Max HP", value: stats.hp, icon: Heart, color: "text-red-400" },
+              { label: "Max Mana", value: stats.mana, icon: Droplets, color: "text-blue-400" },
             ].map((stat) => (
               <div key={stat.label} className="bg-dark-800/50 rounded-lg p-3 flex items-center gap-2">
                 <stat.icon size={13} className={stat.color} />
@@ -438,9 +456,9 @@ export function ClassPage() {
             ))}
             <p className="col-span-full text-[10px] text-gray-500 uppercase tracking-wider mt-2">Special</p>
             {[
-              { label: "Attack Speed", value: "1000ms", icon: Gauge, color: "text-yellow-400" },
-              { label: "CDR Total", value: `${((gameClass.cooldownScaling ?? 0) * gameClass.baseSpeed).toFixed(0)}%`, icon: Clock, color: "text-yellow-400" },
-              { label: "Mana Regen", value: `${gameClass.manaRecovery}/tick`, icon: Droplets, color: "text-blue-400" },
+              { label: "Attack Speed", value: `${stats.attackSpeedMs ?? 2000}ms`, icon: Gauge, color: "text-yellow-400" },
+              { label: "Mana Regen", value: `${stats.manaRegenPerTick ?? 0}/tick`, icon: Droplets, color: "text-blue-400" },
+              { label: "HP Regen", value: `${stats.healthRegenPerTick ?? 0}/tick`, icon: HeartPulse, color: "text-green-400" },
               { label: "Threat", value: "100%", icon: Siren, color: "text-red-400" },
             ].map((stat) => (
               <div key={stat.label} className="bg-dark-800/50 rounded-lg p-3 flex items-center gap-2">
@@ -503,9 +521,7 @@ export function ClassPage() {
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-display font-bold">{selectedSkill.name}</h3>
-                {selectedSkill.subType && (
-                  <span className="text-[10px] text-gray-500 bg-dark-700 px-2 py-0.5 rounded uppercase">{selectedSkill.subType}</span>
-                )}
+                <span className="text-[10px] text-gray-500 bg-dark-700 px-2 py-0.5 rounded uppercase">{selectedSkill.kind}</span>
               </div>
               <p className="text-sm text-gray-400 mt-1">{selectedSkill.description}</p>
             </div>
@@ -516,7 +532,7 @@ export function ClassPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
             <div className="bg-dark-800/50 rounded-lg p-3">
               <p className="text-xs text-gray-500 mb-1">Tipo</p>
-              <p className="font-mono font-bold">{selectedSkill.type}</p>
+              <p className="font-mono font-bold">{selectedSkill.trigger}</p>
             </div>
             <div className="bg-dark-800/50 rounded-lg p-3">
               <p className="text-xs text-gray-500 mb-1">Cooldown</p>
@@ -528,22 +544,37 @@ export function ClassPage() {
                 <p className="font-mono font-bold text-blue-400">{selectedSkill.manaCost}</p>
               </div>
             )}
-            {selectedSkill.baseDamage > 0 && (
+            {selectedSkill.castTime > 0 && (
               <div className="bg-dark-800/50 rounded-lg p-3">
-                <p className="text-xs text-gray-500 mb-1">Dano Base</p>
-                <p className="font-mono font-bold text-red-400">{selectedSkill.baseDamage} ({selectedSkill.damageType})</p>
+                <p className="text-xs text-gray-500 mb-1">Cast</p>
+                <p className="font-mono font-bold text-orange-400">{formatMs(selectedSkill.castTime)}</p>
               </div>
             )}
-            {selectedSkill.healingBase > 0 && (
+            {selectedSkill.channelMs > 0 && (
               <div className="bg-dark-800/50 rounded-lg p-3">
-                <p className="text-xs text-gray-500 mb-1">Cura Base</p>
-                <p className="font-mono font-bold text-green-400">{selectedSkill.healingBase}</p>
+                <p className="text-xs text-gray-500 mb-1">Canalização</p>
+                <p className="font-mono font-bold text-orange-400">{formatMs(selectedSkill.channelMs)}</p>
               </div>
             )}
-            {selectedSkill.damageScaling && (
+            {selectedSkill.scaling && selectedSkill.scaling.length > 0 && (
               <div className="bg-dark-800/50 rounded-lg p-3 col-span-2">
                 <p className="text-xs text-gray-500 mb-1">Scaling</p>
-                <p className="font-mono font-bold text-purple-300">{selectedSkill.damageScaling}</p>
+                <p className="font-mono font-bold text-purple-300">
+                  {selectedSkill.scaling.map((s) => `${s.stat} ×${s.factor}`).join(", ")}
+                </p>
+              </div>
+            )}
+            {selectedSkill.conditions && selectedSkill.conditions.length > 0 && (
+              <div className="bg-dark-800/50 rounded-lg p-3 col-span-2">
+                <p className="text-xs text-gray-500 mb-1">Condições</p>
+                <p className="font-mono font-bold text-yellow-400">
+                  {selectedSkill.conditions.map((c: any) => {
+                    if (c.type === "stacksAtLeast") return `Requer ${c.stacks}× ${c.effect}`;
+                    if (c.type === "hasEffect") return `Requer efeito ${c.effect}`;
+                    if (c.type === "hpPercentBelow") return `Vida < ${c.percent}%`;
+                    return c.type;
+                  }).join(", ")}
+                </p>
               </div>
             )}
             <div className="bg-dark-800/50 rounded-lg p-3">

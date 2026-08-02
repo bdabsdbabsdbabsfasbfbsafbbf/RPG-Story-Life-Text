@@ -86,14 +86,20 @@ export const adminApi = {
   passives: {
     list: (classId: string) => api.get(`/admin/classes/${classId}/passives`),
     create: (classId: string, data: any) => api.post(`/admin/classes/${classId}/passives`, data),
-    update: (id: string, data: any) => api.put(`/admin/class-passives/${id}`, data),
-    delete: (id: string) => api.delete(`/admin/class-passives/${id}`),
+    update: (id: string, data: any) => api.put(`/admin/passives/${id}`, data),
+    delete: (id: string) => api.delete(`/admin/passives/${id}`),
   },
-  buffs: {
-    list: () => api.get("/admin/buffs"),
-    create: (data: any) => api.post("/admin/buffs", data),
-    update: (id: string, data: any) => api.put(`/admin/buffs/${id}`, data),
-    delete: (id: string) => api.delete(`/admin/buffs/${id}`),
+  statModels: {
+    list: () => api.get("/admin/statmodels"),
+    create: (data: any) => api.post("/admin/statmodels", data),
+    update: (id: string, data: any) => api.put(`/admin/statmodels/${id}`, data),
+    delete: (id: string) => api.delete(`/admin/statmodels/${id}`),
+  },
+  effects: {
+    list: () => api.get("/admin/effects"),
+    create: (data: any) => api.post("/admin/effects", data),
+    update: (id: string, data: any) => api.put(`/admin/effects/${id}`, data),
+    delete: (id: string) => api.delete(`/admin/effects/${id}`),
   },
   races: {
     list: () => api.get("/admin/races"),

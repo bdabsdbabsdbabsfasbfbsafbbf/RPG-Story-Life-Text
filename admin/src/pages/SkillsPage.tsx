@@ -4,18 +4,21 @@ import toast from "react-hot-toast";
 import { adminApi } from "../api";
 import JsonField from "../components/JsonField";
 import {
-  ALL_GROUPS,
-  FLAT_GROUP,
-  PERCENT_GROUP,
-  OFFENSIVE_GROUP,
-  DEFENSIVE_GROUP,
-  CRIT_GROUP,
-  HEALING_GROUP,
-  MANA_GROUP,
-  VAMP_GROUP,
-  UTILITY_GROUP,
-  StatGroup,
-} from "../statFields";
+  actionFields,
+  conditionFields,
+  skillModifierFields,
+  effectModifierFields,
+  scalingFields,
+  kindOptions,
+  triggerOptions,
+  targetOptions,
+  passiveFlatGroups,
+  passivePercentGroups,
+  emptyStatModifiers,
+  parseJsonArray,
+  parseStatModifiers,
+  JsonArrayEditor,
+} from "../dslFields";
 
 interface GameClassLite {
   id: string;
@@ -27,63 +30,39 @@ const inputClass =
 
 const defaultSkill = {
   name: "",
+  slug: "",
   description: "",
   icon: "",
-  type: "active",
-  subType: "melee",
+  kind: "attack",
+  trigger: "active",
+  target: "enemy",
   cooldown: 0,
   manaCost: 0,
   castTime: 0,
-  range: 5,
-  targetType: "enemy",
+  channelMs: 0,
   rankRequired: 1,
-  baseDamage: 0,
-  damageType: "physical",
-  healingBase: 0,
   sortOrder: 0,
   isActive: true,
-  effects: [] as any[],
-  buffsApplied: [] as string[],
-  debuffsApplied: [] as string[],
+  scaling: [] as any[],
+  actions: [] as any[],
+  conditions: [] as any[],
+  onConditionMet: [] as any[],
+  events: [] as any[],
 };
-
-const typeOptions = ["auto", "active", "passive", "ultimate"];
-const subTypeOptions = ["melee", "ranged", "spell", "heal", "buff", "debuff", "dot", "aoe", "channel"];
-const targetTypeOptions = ["self", "enemy", "ally", "area", "all"];
-const damageTypeOptions = ["physical", "magic", "true"];
-
-const effectTypeOptions = [
-  "stat", "stat_bonus", "stat_boost", "damage_increase", "damage_reduction",
-  "critical_chance", "critical_damage", "cooldown_reduction", "life_steal",
-  "mana_regen", "health_regen", "resistance", "reflect", "absorb", "chance_proc",
-];
 
 const defaultPassive = {
   name: "",
+  slug: "",
   description: "",
   icon: "",
   rankRequired: 1,
-  effectType: "stat",
-  statModifiers: {} as Record<string, number>,
-  effectData: {} as Record<string, any>,
-};
-
-const passiveGroupsByType: Record<string, StatGroup[]> = {
-  stat: ALL_GROUPS,
-  stat_bonus: ALL_GROUPS,
-  stat_boost: [FLAT_GROUP, PERCENT_GROUP, VAMP_GROUP],
-  damage_increase: [OFFENSIVE_GROUP, CRIT_GROUP],
-  damage_reduction: [DEFENSIVE_GROUP],
-  critical_chance: [CRIT_GROUP, OFFENSIVE_GROUP],
-  critical_damage: [CRIT_GROUP, OFFENSIVE_GROUP],
-  cooldown_reduction: [MANA_GROUP],
-  life_steal: [VAMP_GROUP, OFFENSIVE_GROUP],
-  mana_regen: [MANA_GROUP, FLAT_GROUP],
-  health_regen: [HEALING_GROUP, FLAT_GROUP],
-  resistance: [DEFENSIVE_GROUP],
-  reflect: [DEFENSIVE_GROUP, UTILITY_GROUP],
-  absorb: [DEFENSIVE_GROUP],
-  chance_proc: [UTILITY_GROUP, CRIT_GROUP],
+  sortOrder: 0,
+  isActive: true,
+  statModifiers: emptyStatModifiers(),
+  skillModifiers: [] as any[],
+  effectModifiers: [] as any[],
+  conditions: [] as any[],
+  events: [] as any[],
 };
 
 export default function SkillsPage() {
@@ -155,41 +134,28 @@ export default function SkillsPage() {
     setModalOpen(true);
   };
 
-  const parseJsonArray = (raw: any): any[] => {
-    if (Array.isArray(raw)) return raw;
-    if (typeof raw === "string" && raw.trim()) {
-      try {
-        const parsed = JSON.parse(raw);
-        return Array.isArray(parsed) ? parsed : [];
-      } catch {
-        return [];
-      }
-    }
-    return [];
-  };
-
   const openEdit = (skill: any) => {
     setEditing(skill);
     setForm({
       name: skill.name ?? "",
+      slug: skill.slug ?? "",
       description: skill.description ?? "",
       icon: skill.icon ?? "",
-      type: skill.type ?? "active",
-      subType: skill.subType ?? "melee",
+      kind: skill.kind ?? "attack",
+      trigger: skill.trigger ?? "active",
+      target: skill.target ?? "enemy",
       cooldown: skill.cooldown ?? 0,
       manaCost: skill.manaCost ?? 0,
       castTime: skill.castTime ?? 0,
-      range: skill.range ?? 5,
-      targetType: skill.targetType ?? "enemy",
+      channelMs: skill.channelMs ?? 0,
       rankRequired: skill.rankRequired ?? 1,
-      baseDamage: skill.baseDamage ?? 0,
-      damageType: skill.damageType ?? "physical",
-      healingBase: skill.healingBase ?? 0,
       sortOrder: skill.sortOrder ?? 0,
       isActive: skill.isActive ?? true,
-      effects: parseJsonArray(skill.effects),
-      buffsApplied: parseJsonArray(skill.buffsApplied),
-      debuffsApplied: parseJsonArray(skill.debuffsApplied),
+      scaling: parseJsonArray(skill.scaling),
+      actions: parseJsonArray(skill.actions),
+      conditions: parseJsonArray(skill.conditions),
+      onConditionMet: parseJsonArray(skill.onConditionMet),
+      events: parseJsonArray(skill.events),
     });
     setModalOpen(true);
   };
@@ -197,25 +163,22 @@ export default function SkillsPage() {
   const buildPayload = () => {
     const payload: Record<string, any> = {
       name: form.name,
+      slug: form.slug || null,
       description: form.description,
       icon: form.icon || null,
-      type: form.type,
-      subType: form.subType || null,
+      kind: form.kind,
+      trigger: form.trigger,
+      target: form.target,
       cooldown: Number(form.cooldown) || 0,
       manaCost: Number(form.manaCost) || 0,
       castTime: Number(form.castTime) || 0,
-      range: Number(form.range) || 5,
-      targetType: form.targetType,
+      channelMs: Number(form.channelMs) || 0,
       rankRequired: Number(form.rankRequired) || 1,
-      baseDamage: Number(form.baseDamage) || 0,
-      damageType: form.damageType,
-      healingBase: Number(form.healingBase) || 0,
       sortOrder: Number(form.sortOrder) || 0,
       isActive: !!form.isActive,
     };
-    for (const key of ["effects", "buffsApplied", "debuffsApplied"] as const) {
-      const raw = form[key];
-      payload[key] = Array.isArray(raw) && raw.length > 0 ? JSON.stringify(raw) : null;
+    for (const key of ["scaling", "actions", "conditions", "onConditionMet", "events"] as const) {
+      payload[key] = Array.isArray(form[key]) && form[key].length > 0 ? JSON.stringify(form[key]) : "[]";
     }
     return payload;
   };
@@ -261,18 +224,19 @@ export default function SkillsPage() {
 
   const openEditPassive = (p: any) => {
     setPassiveEditing(p);
-    let statModifiers: Record<string, number> = {};
-    let effectData: Record<string, any> = {};
-    try { statModifiers = p.statModifiers ? JSON.parse(p.statModifiers) : {}; } catch { statModifiers = {}; }
-    try { effectData = p.effectData ? JSON.parse(p.effectData) : {}; } catch { effectData = {}; }
     setPassiveForm({
       name: p.name ?? "",
+      slug: p.slug ?? "",
       description: p.description ?? "",
       icon: p.icon ?? "",
       rankRequired: p.rankRequired ?? 1,
-      effectType: p.effectType ?? "stat",
-      statModifiers: typeof statModifiers === "object" ? statModifiers : {},
-      effectData: typeof effectData === "object" ? effectData : {},
+      sortOrder: p.sortOrder ?? 0,
+      isActive: p.isActive ?? true,
+      statModifiers: parseStatModifiers(p.statModifiers),
+      skillModifiers: parseJsonArray(p.skillModifiers),
+      effectModifiers: parseJsonArray(p.effectModifiers),
+      conditions: parseJsonArray(p.conditions),
+      events: parseJsonArray(p.events),
     });
     setPassiveModalOpen(true);
   };
@@ -283,12 +247,17 @@ export default function SkillsPage() {
     try {
       const payload: Record<string, any> = {
         name: passiveForm.name,
+        slug: passiveForm.slug || null,
         description: passiveForm.description,
         icon: passiveForm.icon || null,
         rankRequired: Number(passiveForm.rankRequired) || 1,
-        effectType: passiveForm.effectType,
-        statModifiers: passiveForm.statModifiers && Object.keys(passiveForm.statModifiers).length ? JSON.stringify(passiveForm.statModifiers) : null,
-        effectData: passiveForm.effectData && Object.keys(passiveForm.effectData).length ? JSON.stringify(passiveForm.effectData) : null,
+        sortOrder: Number(passiveForm.sortOrder) || 0,
+        isActive: !!passiveForm.isActive,
+        statModifiers: JSON.stringify(passiveForm.statModifiers),
+        skillModifiers: JSON.stringify(passiveForm.skillModifiers || []),
+        effectModifiers: JSON.stringify(passiveForm.effectModifiers || []),
+        conditions: JSON.stringify(passiveForm.conditions || []),
+        events: JSON.stringify(passiveForm.events || []),
       };
       if (passiveEditing?.id) {
         await adminApi.passives.update(passiveEditing.id, payload);
@@ -374,6 +343,9 @@ export default function SkillsPage() {
     </div>
   );
 
+  const triggerBadge = (trigger: string) =>
+    trigger === "ultimate" ? "bg-purple-500/20 text-purple-400" : trigger === "auto" ? "bg-gray-600/20 text-gray-400" : "bg-accent-500/20 text-accent-400";
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -422,8 +394,9 @@ export default function SkillsPage() {
                   <th className="text-left py-3 px-4 text-gray-400 font-medium">ID</th>
                   <th className="text-left py-3 px-4 text-gray-400 font-medium">Name</th>
                   <th className="text-left py-3 px-4 text-gray-400 font-medium">Rank</th>
-                  <th className="text-left py-3 px-4 text-gray-400 font-medium">Effect Type</th>
                   <th className="text-left py-3 px-4 text-gray-400 font-medium">Stat Modifiers</th>
+                  <th className="text-left py-3 px-4 text-gray-400 font-medium">Skill / Effect Mods</th>
+                  <th className="text-left py-3 px-4 text-gray-400 font-medium">Active</th>
                   <th className="text-right py-3 px-4 text-gray-400 font-medium">Actions</th>
                 </tr>
               </thead>
@@ -440,13 +413,26 @@ export default function SkillsPage() {
                     <td className="py-2.5 px-4">
                       <span className="font-mono text-xs text-gray-400">Rank {p.rankRequired}</span>
                     </td>
-                    <td className="py-2.5 px-4">
-                      <span className="px-2 py-0.5 rounded-full text-xs bg-gray-600/20 text-gray-400">{p.effectType}</span>
+                    <td className="py-2.5 px-4 font-mono text-xs text-gray-400">
+                      {(() => {
+                        const sm = parseStatModifiers(p.statModifiers);
+                        const flatCount = Object.keys(sm.flat || {}).length;
+                        const pctCount = Object.keys(sm.percent || {}).length;
+                        if (!flatCount && !pctCount) return "-";
+                        return [flatCount ? `flat: ${flatCount}` : "", pctCount ? `%: ${pctCount}` : ""].filter(Boolean).join(", ");
+                      })()}
                     </td>
                     <td className="py-2.5 px-4 font-mono text-xs text-gray-400">
                       {(() => {
-                        try { return Object.entries(JSON.parse(p.statModifiers || "{}")).map(([k, v]) => `${k}: ${v}`).join(", ") || "-"; } catch { return "-"; }
+                        const s = parseJsonArray(p.skillModifiers).length;
+                        const e = parseJsonArray(p.effectModifiers).length;
+                        return [s ? `skills: ${s}` : "", e ? `effects: ${e}` : ""].filter(Boolean).join(", ") || "-";
                       })()}
+                    </td>
+                    <td className="py-2.5 px-4">
+                      <span className={`px-2 py-0.5 rounded-full text-xs ${p.isActive ? "bg-emerald-500/20 text-emerald-400" : "bg-gray-600/20 text-gray-400"}`}>
+                        {p.isActive ? "on" : "off"}
+                      </span>
                     </td>
                     <td className="py-2.5 px-4 text-right whitespace-nowrap">
                       <button onClick={() => openEditPassive(p)} className="text-blue-400 hover:text-blue-300 mr-3">
@@ -467,66 +453,64 @@ export default function SkillsPage() {
         </div>
       ) : (
         <div className="bg-dark-800 border border-dark-600 rounded-xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-dark-600">
-                <th className="text-left py-3 px-4 text-gray-400 font-medium">ID</th>
-                <th className="text-left py-3 px-4 text-gray-400 font-medium">Name</th>
-                <th className="text-left py-3 px-4 text-gray-400 font-medium">Type</th>
-                <th className="text-left py-3 px-4 text-gray-400 font-medium">Subtype</th>
-                <th className="text-left py-3 px-4 text-gray-400 font-medium">Cooldown</th>
-                <th className="text-left py-3 px-4 text-gray-400 font-medium">Mana</th>
-                <th className="text-left py-3 px-4 text-gray-400 font-medium">Damage</th>
-                <th className="text-left py-3 px-4 text-gray-400 font-medium">Rank</th>
-                <th className="text-right py-3 px-4 text-gray-400 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {skills.map((s) => (
-                <tr key={s.id} className="border-b border-dark-700 hover:bg-dark-800/50">
-                  <td className="py-2.5 px-4">
-                    <span className="font-mono text-[11px] text-gray-500" title={s.id}>{String(s.id ?? "").slice(0, 8)}</span>
-                  </td>
-                  <td className="py-2.5 px-4">
-                    <span className="font-medium text-white">{s.name}</span>
-                    <p className="text-xs text-gray-500 max-w-xs truncate">{s.description}</p>
-                  </td>
-                  <td className="py-2.5 px-4">
-                    <span className={`px-2 py-0.5 rounded-full text-xs ${
-                      s.type === "ultimate" ? "bg-purple-500/20 text-purple-400" : s.type === "passive" ? "bg-gray-600/20 text-gray-400" : "bg-accent-500/20 text-accent-400"
-                    }`}>
-                      {s.type}
-                    </span>
-                  </td>
-                  <td className="py-2.5 px-4 text-gray-400">{s.subType || "-"}</td>
-                  <td className="py-2.5 px-4 font-mono text-xs">{s.cooldown}</td>
-                  <td className="py-2.5 px-4 font-mono text-xs">{s.manaCost}</td>
-                  <td className="py-2.5 px-4 font-mono text-xs">{s.baseDamage || s.healingBase || 0}</td>
-                  <td className="py-2.5 px-4">{s.rankRequired}</td>
-                  <td className="py-2.5 px-4 text-right whitespace-nowrap">
-                    <button onClick={() => openEdit(s)} className="text-blue-400 hover:text-blue-300 mr-3">
-                      Edit
-                    </button>
-                    <button onClick={() => handleDelete(s)} className="text-red-400 hover:text-red-300">
-                      Delete
-                    </button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-dark-600">
+                  <th className="text-left py-3 px-4 text-gray-400 font-medium">ID</th>
+                  <th className="text-left py-3 px-4 text-gray-400 font-medium">Name</th>
+                  <th className="text-left py-3 px-4 text-gray-400 font-medium">Trigger</th>
+                  <th className="text-left py-3 px-4 text-gray-400 font-medium">Kind</th>
+                  <th className="text-left py-3 px-4 text-gray-400 font-medium">Target</th>
+                  <th className="text-left py-3 px-4 text-gray-400 font-medium">Cooldown</th>
+                  <th className="text-left py-3 px-4 text-gray-400 font-medium">Mana</th>
+                  <th className="text-left py-3 px-4 text-gray-400 font-medium">Rank</th>
+                  <th className="text-right py-3 px-4 text-gray-400 font-medium">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-          {!loading && skills.length === 0 && (
-            <p className="text-center text-gray-500 py-8">No skills for this class — click "New" to add one</p>
-          )}
+              </thead>
+              <tbody>
+                {skills.map((s) => (
+                  <tr key={s.id} className="border-b border-dark-700 hover:bg-dark-800/50">
+                    <td className="py-2.5 px-4">
+                      <span className="font-mono text-[11px] text-gray-500" title={s.id}>{String(s.id ?? "").slice(0, 8)}</span>
+                    </td>
+                    <td className="py-2.5 px-4">
+                      <span className="font-medium text-white">{s.name}</span>
+                      <p className="text-xs text-gray-500 max-w-xs truncate">{s.description}</p>
+                    </td>
+                    <td className="py-2.5 px-4">
+                      <span className={`px-2 py-0.5 rounded-full text-xs ${triggerBadge(s.trigger)}`}>
+                        {s.trigger}
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-4 text-gray-400">{s.kind || "-"}</td>
+                    <td className="py-2.5 px-4 text-gray-400">{s.target || "-"}</td>
+                    <td className="py-2.5 px-4 font-mono text-xs">{s.cooldown}</td>
+                    <td className="py-2.5 px-4 font-mono text-xs">{s.manaCost}</td>
+                    <td className="py-2.5 px-4">{s.rankRequired}</td>
+                    <td className="py-2.5 px-4 text-right whitespace-nowrap">
+                      <button onClick={() => openEdit(s)} className="text-blue-400 hover:text-blue-300 mr-3">
+                        Edit
+                      </button>
+                      <button onClick={() => handleDelete(s)} className="text-red-400 hover:text-red-300">
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {!loading && skills.length === 0 && (
+              <p className="text-center text-gray-500 py-8">No skills for this class — click "New" to add one</p>
+            )}
+          </div>
         </div>
-      </div>
       )}
 
       {passiveModalOpen && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => { setPassiveModalOpen(false); setPassiveEditing(null); }}>
           <div
-            className="bg-dark-800 border border-dark-600 rounded-xl p-6 max-w-3xl w-full max-h-[85vh] overflow-y-auto"
+            className="bg-dark-800 border border-dark-600 rounded-xl p-6 max-w-4xl w-full max-h-[85vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-5">
@@ -542,6 +526,10 @@ export default function SkillsPage() {
                   <input type="text" value={passiveForm.name} onChange={(e) => setPassiveForm({ ...passiveForm, name: e.target.value })} className={inputClass} required />
                 </div>
                 <div>
+                  <label className="block text-sm text-gray-400 mb-1.5">Slug</label>
+                  <input type="text" value={passiveForm.slug} onChange={(e) => setPassiveForm({ ...passiveForm, slug: e.target.value })} className={inputClass} placeholder="ex.: cav-muralha" />
+                </div>
+                <div>
                   <label className="block text-sm text-gray-400 mb-1.5">Icon</label>
                   <input type="text" value={passiveForm.icon} onChange={(e) => setPassiveForm({ ...passiveForm, icon: e.target.value })} className={inputClass} placeholder="e.g. 'Shield'" />
                 </div>
@@ -551,31 +539,72 @@ export default function SkillsPage() {
                 </div>
                 <div>
                   <label className="block text-sm text-gray-400 mb-1.5">Rank Required</label>
-                  <input type="number" min={1} max={10} value={passiveForm.rankRequired} onChange={(e) => setPassiveForm({ ...passiveForm, rankRequired: Number(e.target.value) })} className={inputClass} />
+                  <input type="number" min={1} value={passiveForm.rankRequired} onChange={(e) => setPassiveForm({ ...passiveForm, rankRequired: Number(e.target.value) })} className={inputClass} />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1.5">Effect Type</label>
-                  <select value={passiveForm.effectType} onChange={(e) => setPassiveForm({ ...passiveForm, effectType: e.target.value })} className={inputClass}>
-                    {effectTypeOptions.map((opt) => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                  </select>
+                  <label className="block text-sm text-gray-400 mb-1.5">Sort Order</label>
+                  <input type="number" value={passiveForm.sortOrder} onChange={(e) => setPassiveForm({ ...passiveForm, sortOrder: Number(e.target.value) })} className={inputClass} />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1.5">Active</label>
+                  <div className="flex items-center gap-2 pt-1">
+                    <input
+                      type="checkbox"
+                      checked={!!passiveForm.isActive}
+                      onChange={(e) => setPassiveForm({ ...passiveForm, isActive: e.target.checked })}
+                      className="w-4 h-4 accent-accent-500"
+                    />
+                    <span className="text-sm text-gray-400">{passiveForm.isActive ? "Yes" : "No"}</span>
+                  </div>
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block text-sm text-gray-400 mb-1.5">Stat Modifiers (só valores — muda conforme o Effect Type)</label>
+                  <label className="block text-sm text-gray-400 mb-1.5">Stat Modifiers — Plano</label>
                   <JsonField
-                    schema={{ mode: "fixed-record", groups: passiveGroupsByType[passiveForm.effectType] || ALL_GROUPS }}
-                    value={passiveForm.statModifiers}
-                    onChange={(v) => setPassiveForm({ ...passiveForm, statModifiers: v })}
+                    schema={{ mode: "fixed-record", groups: passiveFlatGroups }}
+                    value={passiveForm.statModifiers.flat}
+                    onChange={(v) => setPassiveForm({ ...passiveForm, statModifiers: { ...passiveForm.statModifiers, flat: v } })}
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block text-sm text-gray-400 mb-1.5">Effect Data (JSON)</label>
+                  <label className="block text-sm text-gray-400 mb-1.5">Stat Modifiers — Percentual</label>
                   <JsonField
-                    schema={{ mode: "record", valueType: "string", addLabel: "Adicionar dado", keyPlaceholder: "chave", valuePlaceholder: "valor" }}
-                    value={passiveForm.effectData}
-                    onChange={(v) => setPassiveForm({ ...passiveForm, effectData: v })}
+                    schema={{ mode: "fixed-record", groups: passivePercentGroups }}
+                    value={passiveForm.statModifiers.percent}
+                    onChange={(v) => setPassiveForm({ ...passiveForm, statModifiers: { ...passiveForm.statModifiers, percent: v } })}
                   />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-sm text-gray-400 mb-1.5">Skill Modifiers</label>
+                  <JsonField
+                    schema={{ mode: "object-array", addLabel: "Adicionar modificador de skill", fields: skillModifierFields }}
+                    value={passiveForm.skillModifiers}
+                    onChange={(v) => setPassiveForm({ ...passiveForm, skillModifiers: v })}
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-sm text-gray-400 mb-1.5">Effect Modifiers</label>
+                  <JsonField
+                    schema={{ mode: "object-array", addLabel: "Adicionar modificador de efeito", fields: effectModifierFields }}
+                    value={passiveForm.effectModifiers}
+                    onChange={(v) => setPassiveForm({ ...passiveForm, effectModifiers: v })}
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-sm text-gray-400 mb-1.5">Conditions (gate de ativação)</label>
+                  <JsonField
+                    schema={{ mode: "object-array", addLabel: "Adicionar condição", fields: conditionFields }}
+                    value={passiveForm.conditions}
+                    onChange={(v) => setPassiveForm({ ...passiveForm, conditions: v })}
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-sm text-gray-400 mb-1.5">Events (reação a eventos de combate)</label>
+                  <JsonArrayEditor
+                    key={`${passiveEditing?.id ?? "new"}-passive-events`}
+                    value={passiveForm.events}
+                    onChange={(v) => setPassiveForm({ ...passiveForm, events: v })}
+                  />
+                  <p className="text-[11px] text-gray-600 mt-1">[{'{ event: "onHit", conditions?: [...], actions: [...] }'}] — ex.: onCast, onHit, onCrit, onKill, onReceiveHit, onBattleStart, onTick, onEffectApplied</p>
                 </div>
               </div>
               <div className="flex justify-end gap-3 pt-2">
@@ -594,7 +623,7 @@ export default function SkillsPage() {
       {modalOpen && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => { setModalOpen(false); setEditing(null); }}>
           <div
-            className="bg-dark-800 border border-dark-600 rounded-xl p-6 max-w-3xl w-full max-h-[85vh] overflow-y-auto"
+            className="bg-dark-800 border border-dark-600 rounded-xl p-6 max-w-4xl w-full max-h-[85vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-5">
@@ -610,6 +639,10 @@ export default function SkillsPage() {
                   <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={inputClass} required />
                 </div>
                 <div>
+                  <label className="block text-sm text-gray-400 mb-1.5">Slug</label>
+                  <input type="text" value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} className={inputClass} placeholder="ex.: cav-golpe-pesado" />
+                </div>
+                <div>
                   <label className="block text-sm text-gray-400 mb-1.5">Icon</label>
                   <input type="text" value={form.icon} onChange={(e) => setForm({ ...form, icon: e.target.value })} className={inputClass} placeholder="e.g. 'Flame'" />
                 </div>
@@ -617,16 +650,13 @@ export default function SkillsPage() {
                   <label className="block text-sm text-gray-400 mb-1.5">Description *</label>
                   <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className={`${inputClass} resize-y`} rows={2} required />
                 </div>
-                {row({ name: "type", label: "Type", type: "select", options: typeOptions })}
-                {row({ name: "subType", label: "Subtype", type: "select", options: subTypeOptions })}
-                {row({ name: "targetType", label: "Target", type: "select", options: targetTypeOptions })}
-                {row({ name: "damageType", label: "Damage Type", type: "select", options: damageTypeOptions })}
+                {row({ name: "kind", label: "Kind", type: "select", options: kindOptions })}
+                {row({ name: "trigger", label: "Trigger", type: "select", options: triggerOptions })}
+                {row({ name: "target", label: "Target", type: "select", options: targetOptions })}
                 {row({ name: "cooldown", label: "Cooldown (ms)" })}
                 {row({ name: "manaCost", label: "Mana Cost" })}
                 {row({ name: "castTime", label: "Cast Time (ms)" })}
-                {row({ name: "range", label: "Range" })}
-                {row({ name: "baseDamage", label: "Base Damage" })}
-                {row({ name: "healingBase", label: "Base Healing" })}
+                {row({ name: "channelMs", label: "Channel (ms)" })}
                 {row({ name: "rankRequired", label: "Rank Required" })}
                 {row({ name: "sortOrder", label: "Sort Order" })}
                 <div>
@@ -634,37 +664,45 @@ export default function SkillsPage() {
                   {renderField({ name: "isActive", label: "Active", type: "boolean" })}
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block text-sm text-gray-400 mb-1.5">Effects</label>
+                  <label className="block text-sm text-gray-400 mb-1.5">Scaling (base extra para dano/cura)</label>
                   <JsonField
-                    schema={{
-                      mode: "object-array",
-                      addLabel: "Adicionar efeito",
-                      fields: [
-                        { name: "type", label: "Tipo", type: "select", options: ["damage", "heal", "stun", "silence", "slow", "root", "knockback", "shield", "cleanse", "buff", "taunt", "fear", "charm", "teleport", "revive"] },
-                        { name: "value", label: "Valor", type: "number" },
-                        { name: "duration", label: "Duração (ms)", type: "number" },
-                        { name: "chance", label: "Chance (%)", type: "number" },
-                      ],
-                    }}
-                    value={form.effects}
-                    onChange={(v) => setForm({ ...form, effects: v })}
+                    schema={{ mode: "object-array", addLabel: "Adicionar scaling", fields: scalingFields }}
+                    value={form.scaling}
+                    onChange={(v) => setForm({ ...form, scaling: v })}
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block text-sm text-gray-400 mb-1.5">Buffs Aplicados</label>
+                  <label className="block text-sm text-gray-400 mb-1.5">Actions (DSL executada pelo motor)</label>
                   <JsonField
-                    schema={{ mode: "string-array", placeholder: "nome/ID do buff" }}
-                    value={form.buffsApplied}
-                    onChange={(v) => setForm({ ...form, buffsApplied: v })}
+                    schema={{ mode: "object-array", addLabel: "Adicionar ação", fields: actionFields }}
+                    value={form.actions}
+                    onChange={(v) => setForm({ ...form, actions: v })}
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block text-sm text-gray-400 mb-1.5">Debuffs Aplicados</label>
+                  <label className="block text-sm text-gray-400 mb-1.5">Conditions (gate para usar a skill — combos)</label>
                   <JsonField
-                    schema={{ mode: "string-array", placeholder: "nome/ID do debuff" }}
-                    value={form.debuffsApplied}
-                    onChange={(v) => setForm({ ...form, debuffsApplied: v })}
+                    schema={{ mode: "object-array", addLabel: "Adicionar condição", fields: conditionFields }}
+                    value={form.conditions}
+                    onChange={(v) => setForm({ ...form, conditions: v })}
                   />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-sm text-gray-400 mb-1.5">On Condition Met (ações executadas quando as conditions passam — substitui actions)</label>
+                  <JsonField
+                    schema={{ mode: "object-array", addLabel: "Adicionar ação", fields: actionFields }}
+                    value={form.onConditionMet}
+                    onChange={(v) => setForm({ ...form, onConditionMet: v })}
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-sm text-gray-400 mb-1.5">Events (reação a eventos de combate)</label>
+                  <JsonArrayEditor
+                    key={`${editing?.id ?? "new"}-skill-events`}
+                    value={form.events}
+                    onChange={(v) => setForm({ ...form, events: v })}
+                  />
+                  <p className="text-[11px] text-gray-600 mt-1">[{'{ event: "onHit", conditions?: [...], actions: [...] }'}] — ex.: onCast, onHit, onCrit, onKill, onReceiveHit, onBattleStart, onTick, onEffectApplied</p>
                 </div>
               </div>
               <div className="flex justify-end gap-3 pt-2">

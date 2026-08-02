@@ -58,25 +58,17 @@ export function CodexPage() {
                 <h3 className="font-display font-bold text-lg">{cls.name}</h3>
                 <div className="flex gap-1">
                   <span className="text-[11px] px-2 py-0.5 rounded-full bg-purple-600/20 text-purple-300 capitalize">{cls.role}</span>
-                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-600/20 text-blue-300 capitalize">{cls.element}</span>
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-600/20 text-blue-300 capitalize">{cls.combatType}</span>
                 </div>
               </div>
               <p className="text-sm text-gray-400">{cls.description}</p>
-              {cls.lore && (
-                <button onClick={() => setExpanded(expanded === cls.id ? null : cls.id)} className="text-xs text-purple-400 hover:text-purple-300 mt-2">
-                  {expanded === cls.id ? "Esconder lore" : "Ver lore"}
-                </button>
-              )}
-              {expanded === cls.id && cls.lore && (
-                <p className="text-sm text-gray-300 bg-dark-800 border border-dark-600 rounded-lg p-3 mt-2">{cls.lore}</p>
-              )}
               <div className="grid grid-cols-4 gap-2 text-center mt-3">
                 {[
-                  ["HP", cls.baseHp], ["Mana", cls.baseMana], ["ATK", cls.baseAttack], ["DEF", cls.baseDefense],
+                  ["HP", cls.stats?.hp], ["Mana", cls.stats?.mana], ["ATK", cls.stats?.attack], ["DEF", cls.stats?.defense],
                 ].map(([label, value]) => (
                   <div key={String(label)} className="bg-dark-800 border border-dark-600 rounded-lg py-2">
                     <p className="text-[11px] text-gray-500">{label}</p>
-                    <p className="text-sm font-mono">{value}</p>
+                    <p className="text-sm font-mono">{value ?? "-"}</p>
                   </div>
                 ))}
               </div>

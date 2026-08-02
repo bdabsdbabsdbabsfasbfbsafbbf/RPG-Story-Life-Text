@@ -89,42 +89,52 @@ export interface CombatStatsPanel {
 }
 
 // ====== Game Class ======
+export interface ClassStats {
+  hp: number;
+  mana: number;
+  attack: number;
+  defense: number;
+  magic: number;
+  magicDefense: number;
+  speed: number;
+  attackPower: number;
+  spellPower: number;
+  critChance: number;
+  critDamage: number;
+  dodge: number;
+  attackSpeedMs: number;
+  manaRegenPerTick: number;
+  healthRegenPerTick: number;
+}
+
+export interface StatModel {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  base: Record<string, number>;
+  perLevel: Record<string, number>;
+  scaling: Record<string, number>;
+  isActive: boolean;
+}
+
 export interface GameClass {
   id: string;
   name: string;
   slug: string;
   description: string;
-  lore: string | null;
   icon: string | null;
-  element: string;
-  rarity: string;
-  difficulty: string;
   role: string;
-  statModel: string;
-  unlockMethod: string;
-  unlockData: string | null;
-  requiredLevel: number;
-  requiredQuests: string | null;
-  baseHp: number;
-  baseMana: number;
-  baseAttack: number;
-  baseDefense: number;
-  baseMagic: number;
-  baseMagicDefense: number;
-  baseSpeed: number;
-  manaRecovery: number;
-  attackScaling: number;
-  magicScaling: number;
-  critScaling: number;
-  critDamageBase: number;
-  dodgeScaling: number;
-  cooldownScaling: number;
-  manaEfficiency: number;
+  combatType: string;
+  rankMax: number;
+  resource: Record<string, any>;
+  isStarter: boolean;
   isActive: boolean;
+  sortOrder: number;
+  statModel: StatModel | null;
+  stats?: ClassStats;
   skills: Skill[];
-  classPassives: ClassPassive[];
-  classUpgrades: ClassUpgrade[];
-  masteryBonuses: MasteryBonus[];
+  passives: ClassPassive[];
 }
 
 export interface CharacterClass {
@@ -137,76 +147,60 @@ export interface CharacterClass {
   gameClass: GameClass;
 }
 
-export interface ClassUpgrade {
-  id: string;
-  classId: string;
-  rankRequired: number;
-  description: string;
-  statBonuses: string;
-  unlocksSkills: boolean;
-}
-
-export interface MasteryBonus {
-  id: string;
-  classId: string;
-  rank: number;
-  bonusType: string;
-  bonusValue: number;
-  description: string;
-}
-
 export interface ClassPassive {
   id: string;
   classId: string;
   name: string;
+  slug: string;
   description: string;
   icon: string | null;
   rankRequired: number;
-  statModifiers: string | null;
-  effectType: string;
-  effectValue: number;
-  targetStat: string | null;
-  duration: number;
-  cooldown: number;
-  isPassive: boolean;
   sortOrder: number;
+  statModifiers: Record<string, any>;
+  skillModifiers: Array<Record<string, any>>;
+  effectModifiers: Array<Record<string, any>>;
+  conditions: Array<Record<string, any>>;
+  events: Array<Record<string, any>>;
+  isActive: boolean;
+}
+
+export interface SkillAction {
+  action: string;
+  amount?: number;
+  scaling?: Array<{ stat: string; factor: number }>;
+  damageType?: string;
+  percentOfMax?: number;
+  effect?: string;
+  stacks?: number;
+  target?: string;
+  name?: string;
+  percent?: number;
 }
 
 export interface Skill {
   id: string;
   classId: string;
   name: string;
+  slug: string;
   description: string;
   icon: string | null;
-  type: 'active' | 'passive' | 'ultimate' | 'auto';
-  subType: string | null;
+  kind: string;
+  trigger: 'auto' | 'active' | 'ultimate';
+  target: string;
   cooldown: number;
   manaCost: number;
   castTime: number;
-  range: number;
-  targetType: string;
+  channelMs: number;
   rankRequired: number;
   sortOrder: number;
   isActive: boolean;
-  unlockCondition: string | null;
-  baseDamage: number;
-  damageType: string;
-  damageScaling: string | null;
-  damageStat: string | null;
-  healingBase: number;
-  healingScaling: string | null;
-  effects: string | null;
-  buffsApplied: string | null;
-  debuffsApplied: string | null;
-  stacksApplied: string | null;
-  stacksRequired: string | null;
-  hitsMultiple: boolean;
-  maxTargets: number;
-  animationName: string | null;
-  soundEffect: string | null;
-  animationData: string | null;
-  comboId: string | null;
-  interactsWith: string | null;
+  scaling: Array<{ stat: string; factor: number }>;
+  actions: SkillAction[];
+  conditions: Array<Record<string, any>>;
+  onConditionMet: SkillAction[];
+  events: Array<Record<string, any>>;
+  damageModifier?: number;
+  healModifier?: number;
 }
 
 export interface Enemy {
@@ -526,7 +520,7 @@ export interface Character {
   level: number;
   classId?: string | null;
   className?: string;
-  class?: { name: string; slug: string; baseHp?: number; baseMana?: number } | null;
+  class?: { name: string; slug: string; icon?: string | null } | null;
   raceId?: string | null;
   traitId?: string | null;
   experience?: number;
@@ -594,17 +588,33 @@ export interface Map {
   connections?: { id: string; toMap: { slug: string; name: string }; requiredLevel: number }[];
 }
 
+export interface CombatEffect {
+  slug: string;
+  name: string;
+  kind: string;
+  stacks: number;
+  remainingMs: number;
+}
+
 export interface CombatSkill {
   id: string;
   name: string;
+  slug: string;
   description: string;
-  type: string;
+  icon: string | null;
+  kind: string;
+  trigger: 'auto' | 'active' | 'ultimate';
   cooldown: number;
   manaCost: number;
-  baseDamage: number;
-  healingBase: number;
-  buffsApplied: string | null;
-  rankRequired?: number;
+  castTime: number;
+  channelMs: number;
+  rankRequired: number;
+  scaling: Array<{ stat: string; factor: number }>;
+  actions: SkillAction[];
+  conditions: Array<Record<string, any>>;
+  onConditionMet: SkillAction[];
+  damageModifier?: number;
+  healModifier?: number;
 }
 
 export interface CombatUpdate {
@@ -623,18 +633,24 @@ export interface CombatUpdate {
   characterLevel?: number;
   monsterLevel?: number;
   skills?: CombatSkill[];
+  stats?: Partial<ClassStats>;
   damage?: number;
   playerDamage?: number;
   playerSkillName?: string;
   healed?: number;
   manaRestored?: number;
   appliedBuffs?: string[];
+  appliedEffects?: string[];
+  consumedStacks?: number;
   isCritical?: boolean;
   isDodged?: boolean;
   attacker?: string;
   action?: string;
   fled?: boolean;
   itemName?: string;
+  messages?: string[];
+  playerEffects?: CombatEffect[];
+  monsterEffects?: CombatEffect[];
   rewards?: { xpGain?: number; goldGain?: number; levelUps?: number; classXpGain?: number } | null;
 }
 

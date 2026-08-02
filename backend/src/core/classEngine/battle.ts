@@ -1,0 +1,640 @@
+import { v4 as uuidv4 } from "uuid";
+import {
+  Action,
+  ActiveEffectRuntime,
+  BattleEntity,
+  BattleLogLine,
+  BattleSnapshot,
+  Condition,
+  DerivedStats,
+  EffectDef,
+  PassiveDef,
+  SkillDef,
+  SkillEvent,
+  SummonRuntime,
+} from "./types";
+import { computeStats, computeMonsterStats, applyStatModifiers, StatsInput } from "./stat-calculator";
+import { processEffectStep, serializeEffects, EffectModifiers } from "./effect-manager";
+import { executeActions, ActionResult, evaluateConditions, describeConditions, emptyResult } from "./action-executor";
+
+export const TICK_MS = 1000;
+
+export interface BattleOptions {
+  characterId: string;
+  characterName: string;
+  characterLevel: number;
+  statsInput: StatsInput;
+  rank: number;
+  skills: SkillDef[];
+  passives: PassiveDef[];
+  effects: EffectDef[];
+  monster: any;
+  classResource: Record<string, any>;
+  onEnd: (state: "won" | "lost") => void;
+  syncPlayerEffects: (effects: ActiveEffectRuntime[]) => Promise<void>;
+}
+
+export interface SkillUseResult {
+  ok: boolean;
+  error?: string;
+  damage: number;
+  healed: number;
+  isCritical: boolean;
+  isDodged: boolean;
+  appliedEffects: string[];
+  removedEffects: string[];
+  consumedStacks: number;
+  messages: string[];
+  channeling: boolean;
+  channelMs: number;
+  requirements: string[];
+  cooldownMs: number;
+}
+
+interface EventHandler {
+  event: string;
+  conditions?: Condition[];
+  actions: Action[];
+  skillId?: string;
+  passiveId?: string;
+}
+
+export class Battle {
+  id: string;
+  characterId: string;
+  monsterId: string;
+  state: "active" | "won" | "lost" = "active";
+  startedAt: number;
+  lastTick: number;
+  round = 0;
+
+  player: BattleEntity;
+  monster: BattleEntity;
+  rank: number;
+
+  private skills: SkillDef[];
+  private passives: PassiveDef[];
+  private effects: EffectDef[];
+  private skillModifiers: Map<string, { damagePercent?: number; healPercent?: number; cooldownPercent?: number; manaPercent?: number }> = new Map();
+  private effectModifiers: Map<string, EffectModifiers> = new Map();
+  private cooldowns: Map<string, number> = new Map();
+  private channeling: { skill: SkillDef; until: number } | null = null;
+  private summons: SummonRuntime[] = [];
+  private passiveHandlers: EventHandler[] = [];
+  private skillHandlers: EventHandler[] = [];
+  private messages: BattleLogLine[] = [];
+  private effectsDirty = false;
+
+  private opts: BattleOptions;
+
+  constructor(opts: BattleOptions) {
+    this.opts = opts;
+    this.id = uuidv4();
+    this.characterId = opts.characterId;
+    this.monsterId = opts.monster?.id;
+    this.startedAt = Date.now();
+    this.lastTick = Date.now();
+    this.rank = opts.rank;
+    this.skills = opts.skills;
+    this.passives = opts.passives;
+    this.effects = opts.effects;
+
+    const baseStats = computeStats(opts.statsInput);
+    this.player = {
+      id: opts.characterId,
+      name: opts.characterName,
+      level: opts.characterLevel,
+      stats: baseStats,
+      hp: opts.statsInput.hp ?? baseStats.hp,
+      mana: opts.statsInput.mana ?? baseStats.mana,
+      maxHp: baseStats.hp,
+      maxMana: baseStats.mana,
+      effects: [],
+      lastAttackAt: Date.now(),
+      isPlayer: true,
+    };
+
+    const monsterBase = computeMonsterStats(opts.monster);
+    this.monster = {
+      id: opts.monster?.id,
+      name: opts.monster?.name || "Monstro",
+      level: opts.monster?.level ?? 1,
+      stats: monsterBase,
+      hp: monsterBase.hp,
+      mana: monsterBase.mana,
+      maxHp: monsterBase.hp,
+      maxMana: monsterBase.mana,
+      effects: [],
+      lastAttackAt: Date.now(),
+      isPlayer: false,
+    };
+
+    this.rebuildModifiers();
+    this.registerHandlers();
+    this.fire("onCombatStart", { actor: this.player, target: this.monster });
+  }
+
+  // ============ Modificadores de passivas ============
+  private unlockedPassives(): PassiveDef[] {
+    const out: PassiveDef[] = [];
+    for (const p of this.passives) {
+      if (p.rankRequired > this.rank) continue;
+      if (p.conditions && p.conditions.length > 0) {
+        if (!evaluateConditions(p.conditions, { player: this.player, monster: this.monster, round: this.round })) continue;
+      }
+      out.push(p);
+    }
+    return out;
+  }
+
+  private rebuildModifiers(): void {
+    const passives = this.unlockedPassives();
+    this.skillModifiers.clear();
+    this.effectModifiers.clear();
+    for (const p of passives) {
+      for (const m of p.skillModifiers || []) {
+        const current = this.skillModifiers.get(m.skillSlug) || {};
+        this.skillModifiers.set(m.skillSlug, {
+          damagePercent: (current.damagePercent || 0) + (m.damagePercent || 0),
+          healPercent: (current.healPercent || 0) + (m.healPercent || 0),
+          cooldownPercent: (current.cooldownPercent || 0) + (m.cooldownPercent || 0),
+          manaPercent: (current.manaPercent || 0) + (m.manaPercent || 0),
+        });
+      }
+      for (const m of p.effectModifiers || []) {
+        const current = this.effectModifiers.get(m.effectSlug) || {};
+        this.effectModifiers.set(m.effectSlug, {
+          durationPercent: (current.durationPercent || 0) + (m.durationPercent || 0),
+          tickPercent: (current.tickPercent || 0) + (m.tickPercent || 0),
+          damagePercent: (current.damagePercent || 0) + (m.damagePercent || 0),
+          healPercent: (current.healPercent || 0) + (m.healPercent || 0),
+          stacksBonus: (current.stacksBonus || 0) + (m.stacksBonus || 0),
+        });
+      }
+    }
+  }
+
+  private registerHandlers(): void {
+    this.passiveHandlers = [];
+    for (const p of this.unlockedPassives()) {
+      for (const e of p.events || []) {
+        this.passiveHandlers.push({ event: e.event, conditions: e.conditions, actions: e.actions, passiveId: p.id });
+      }
+    }
+  }
+
+  private allHandlers(): EventHandler[] {
+    return [...this.passiveHandlers, ...this.skillHandlers];
+  }
+
+  // ============ Stats efetivas (com buffs/debuffs) ============
+  private effectivePlayerStats(): DerivedStats {
+    const flat: Record<string, number> = {};
+    const percent: Record<string, number> = {};
+    for (const e of this.player.effects) {
+      const f = e.effect.statModifiers?.flat;
+      const p = e.effect.statModifiers?.percent;
+      if (f) for (const [k, v] of Object.entries(f)) flat[k] = (flat[k] || 0) + Number(v) || 0;
+      if (p) for (const [k, v] of Object.entries(p)) percent[k] = (percent[k] || 0) + Number(v) || 0;
+    }
+    return applyStatModifiers(this.player.stats, { flat, percent });
+  }
+
+  private effectiveMonsterStats(): DerivedStats {
+    const flat: Record<string, number> = {};
+    const percent: Record<string, number> = {};
+    for (const e of this.monster.effects) {
+      const f = e.effect.statModifiers?.flat;
+      const p = e.effect.statModifiers?.percent;
+      if (f) for (const [k, v] of Object.entries(f)) flat[k] = (flat[k] || 0) + Number(v) || 0;
+      if (p) for (const [k, v] of Object.entries(p)) percent[k] = (percent[k] || 0) + Number(v) || 0;
+    }
+    return applyStatModifiers(this.monster.stats, { flat, percent });
+  }
+
+  // ============ Eventos ============
+  fire(event: string, ctx: { actor: BattleEntity; target: BattleEntity; skillId?: string }): void {
+    for (const handler of this.allHandlers()) {
+      if (handler.event !== event) continue;
+      if (handler.skillId && handler.skillId !== ctx.skillId) continue;
+      if (handler.conditions && handler.conditions.length > 0) {
+        if (!evaluateConditions(handler.conditions, { player: this.player, monster: this.monster, round: this.round })) continue;
+      }
+      const result = emptyResult();
+      const battleCtx = this.buildActionContext(ctx.actor, ctx.target, result, ctx.skillId || "");
+      executeActions(handler.actions, battleCtx, result);
+      this.collectResult(result, `[Passiva]`);
+    }
+  }
+
+  private buildActionContext(actor: BattleEntity, target: BattleEntity, result: ActionResult, skillSlug: string): any {
+    const playerStats = this.effectivePlayerStats();
+    const monsterStats = this.effectiveMonsterStats();
+    const actorStats = actor.isPlayer ? playerStats : monsterStats;
+    const targetStats = target.isPlayer ? playerStats : monsterStats;
+    return {
+      actor,
+      target,
+      actorStats,
+      targetStats,
+      messages: result.messages,
+      resolveEffect: (slug: string) => this.effects.find((e) => e.slug === slug),
+      effectModifiers: (slug: string) => this.effectModifiers.get(slug) || this.effectModifiers.get("*") || null,
+      getSkillModifiers: () => this.skillModifiers.get(skillSlug) || this.skillModifiers.get("*") || null,
+      onSummon: (name: string, attack: number, hp: number, duration: number) => {
+        this.summons.push({ name, attack, hp, maxHp: hp, expiresAt: Date.now() + duration });
+      },
+      onKill: () => {
+        if (target.hp <= 0 && target.isPlayer === false && this.state === "active") {
+          this.state = "won";
+        }
+      },
+    };
+  }
+
+  private collectResult(result: ActionResult, prefix = ""): void {
+    for (const msg of result.messages) {
+      this.pushMessage(msg, prefix);
+    }
+  }
+
+  private pushMessage(text: string, type = ""): void {
+    this.messages.push({ text, type });
+    if (this.messages.length > 60) this.messages.splice(0, this.messages.length - 60);
+  }
+
+  takeMessages(): BattleLogLine[] {
+    const out = this.messages;
+    this.messages = [];
+    return out;
+  }
+
+  // ============ Ações de skill ============
+  getSkillModifiersFor(slug: string): { damagePercent?: number; healPercent?: number } | null {
+    return this.skillModifiers.get(slug) || this.skillModifiers.get("*") || null;
+  }
+
+  getCooldown(skillId: string): number {
+    const readyAt = this.cooldowns.get(skillId);
+    if (!readyAt) return 0;
+    return Math.max(0, readyAt - Date.now());
+  }
+
+  private actualCooldown(skill: SkillDef): number {
+    const mods = this.skillModifiers.get(skill.slug) || this.skillModifiers.get("*");
+    const cdr = (mods?.cooldownPercent || 0) + this.player.stats.cooldownReduction;
+    return Math.max(500, Math.floor(skill.cooldown * (1 - Math.min(80, cdr) / 100)));
+  }
+
+  private actualManaCost(skill: SkillDef): number {
+    const mods = this.skillModifiers.get(skill.slug) || this.skillModifiers.get("*");
+    const reduction = Math.min(80, (mods?.manaPercent || 0) + this.player.stats.manaCostReduction);
+    return Math.max(0, Math.floor(skill.manaCost * (1 - reduction / 100)));
+  }
+
+  canUseSkill(skill: SkillDef): { ok: boolean; reason?: string; requirements: string[] } {
+    if (this.state !== "active") return { ok: false, reason: "Combate encerrado", requirements: [] };
+    if (skill.rankRequired > this.rank) return { ok: false, reason: `Requer rank ${skill.rankRequired}`, requirements: [] };
+    if (this.getCooldown(skill.id) > 0) return { ok: false, reason: "Skill em cooldown", requirements: [] };
+    if (skill.manaCost > 0 && this.player.mana < this.actualManaCost(skill)) return { ok: false, reason: "Mana insuficiente", requirements: [] };
+    const requirements = describeConditions(skill.conditions);
+    if (requirements.length > 0 && !evaluateConditions(skill.conditions, { player: this.player, monster: this.monster, round: this.round })) {
+      return { ok: false, reason: `Condição não atendida: ${requirements.join(", ")}`, requirements };
+    }
+    if (this.channeling) return { ok: false, reason: "Canalizando", requirements: [] };
+    return { ok: true, requirements };
+  }
+
+  useSkill(skill: SkillDef): SkillUseResult {
+    const check = this.canUseSkill(skill);
+    if (!check.ok) {
+      if (check.reason === "Mana insuficiente") {
+        this.fire("onOutOfMana", { actor: this.player, target: this.monster });
+      }
+      return {
+        ok: false,
+        error: check.reason,
+        damage: 0,
+        healed: 0,
+        isCritical: false,
+        isDodged: false,
+        appliedEffects: [],
+        removedEffects: [],
+        consumedStacks: 0,
+        messages: [],
+        channeling: false,
+        channelMs: 0,
+        requirements: check.requirements,
+        cooldownMs: 0,
+      };
+    }
+
+    const manaCost = this.actualManaCost(skill);
+    if (manaCost > 0) this.player.mana -= manaCost;
+    const cd = this.actualCooldown(skill);
+    this.cooldowns.set(skill.id, Date.now() + cd);
+
+    const channelMs = skill.channelMs || skill.castTime || 0;
+    if (channelMs > 0) {
+      this.channeling = { skill, until: Date.now() + channelMs };
+      this.pushMessage(`Canalizando ${skill.name}...`);
+      return {
+        ok: true,
+        error: undefined,
+        damage: 0,
+        healed: 0,
+        isCritical: false,
+        isDodged: false,
+        appliedEffects: [],
+        removedEffects: [],
+        consumedStacks: 0,
+        messages: [`Canalizando ${skill.name}...`],
+        channeling: true,
+        channelMs,
+        requirements: [],
+        cooldownMs: cd,
+      };
+    }
+
+    return this.executeSkill(skill);
+  }
+
+  private executeSkill(skill: SkillDef): SkillUseResult {
+    const result = emptyResult();
+    const actions: Action[] = skill.conditions && skill.conditions.length > 0 ? skill.onConditionMet : skill.actions;
+    const ctx = this.buildActionContext(this.player, this.monster, result, skill.slug);
+    executeActions(actions && actions.length > 0 ? actions : skill.actions, ctx, result);
+    this.collectResult(result, "");
+
+    // Eventos reativos da própria skill
+    for (const e of skill.events || []) {
+      this.skillHandlers.push({ event: e.event, conditions: e.conditions, actions: e.actions, skillId: skill.id });
+    }
+    this.fire("onSkillUsed", { actor: this.player, target: this.monster, skillId: skill.id });
+    if (result.hit) this.fire("onHit", { actor: this.player, target: this.monster, skillId: skill.id });
+    if (result.isCritical) this.fire("onCrit", { actor: this.player, target: this.monster, skillId: skill.id });
+    if (result.damage > 0) {
+      const manaOnHit = Number(this.opts.classResource?.manaOnHit) || 0;
+      if (manaOnHit > 0) this.player.mana = Math.min(this.player.maxMana, this.player.mana + manaOnHit);
+    }
+
+    this.effectsDirty = true;
+    return {
+      ok: true,
+      error: undefined,
+      damage: result.damage,
+      healed: result.healed,
+      isCritical: result.isCritical,
+      isDodged: result.isDodged,
+      appliedEffects: result.appliedEffects,
+      removedEffects: result.removedEffects,
+      consumedStacks: result.consumedStacks,
+      messages: result.messages,
+      channeling: false,
+      channelMs: 0,
+      requirements: [],
+      cooldownMs: this.getCooldown(skill.id),
+    };
+  }
+
+  // ============ Auto-ataque ============
+  private autoAttack(): void {
+    const autoSkill = this.skills.find((s) => s.trigger === "auto");
+    if (!autoSkill) return;
+    const result = emptyResult();
+    const ctx = this.buildActionContext(this.player, this.monster, result, autoSkill.slug);
+    executeActions(autoSkill.actions, ctx, result);
+    if (result.messages.length > 0) {
+      this.pushMessage(`[${autoSkill.name}] ${result.messages.join(" • ")}`);
+    }
+    this.fire("onAutoAttack", { actor: this.player, target: this.monster, skillId: autoSkill.id });
+    if (result.hit) this.fire("onHit", { actor: this.player, target: this.monster, skillId: autoSkill.id });
+    if (result.isCritical) this.fire("onCrit", { actor: this.player, target: this.monster, skillId: autoSkill.id });
+    const manaOnHit = Number(this.opts.classResource?.manaOnHit) || 0;
+    if (manaOnHit > 0 && result.hit) {
+      this.player.mana = Math.min(this.player.maxMana, this.player.mana + manaOnHit);
+    }
+    this.effectsDirty = true;
+  }
+
+  // ============ Ataque do monstro ============
+  monsterAttack(): void {
+    const pStats = this.effectivePlayerStats();
+    const mStats = this.effectiveMonsterStats();
+    const reduction = Math.min(0.8, pStats.defense / (pStats.defense + 100));
+    let damage = Math.max(1, Math.floor(mStats.attack * (1 - reduction)));
+
+    const crit = Math.random() * 100 < mStats.critChance;
+    if (crit) damage = Math.floor(damage * (mStats.critDamage / 100));
+
+    if (Math.random() * 100 < Math.min(60, pStats.dodge)) {
+      this.pushMessage(`Você esquivou do ataque do ${this.monster.name}!`);
+      this.fire("onDodge", { actor: this.player, target: this.monster });
+      return;
+    }
+
+    this.player.hp = Math.max(0, this.player.hp - damage);
+    this.pushMessage(`${this.monster.name} causou ${damage} de dano em você${crit ? " (crítico)" : ""}`);
+    this.fire("onDamageTaken", { actor: this.player, target: this.monster });
+    if (this.player.hp <= 0) {
+      this.player.hp = 0;
+      this.state = "lost";
+    }
+  }
+
+  // ============ Tick principal ============
+  tick(): void {
+    if (this.state !== "active") return;
+    const now = Date.now();
+    this.lastTick = now;
+    this.round++;
+
+    // Stats com buffs para o round atual
+    const pStats = this.effectivePlayerStats();
+    const mStats = this.effectiveMonsterStats();
+
+    // Canalização
+    if (this.channeling) {
+      if (now >= this.channeling.until) {
+        const skill = this.channeling.skill;
+        this.channeling = null;
+        const result = this.executeSkill(skill);
+        for (const m of result.messages) this.pushMessage(m);
+        this.effectsDirty = true;
+      }
+    }
+
+    // Regenerações
+    if (pStats.manaRegenPerTick > 0) {
+      this.player.mana = Math.min(this.player.maxMana, this.player.mana + pStats.manaRegenPerTick);
+    }
+    if (pStats.healthRegenPerTick > 0) {
+      this.player.hp = Math.min(this.player.maxHp, this.player.hp + pStats.healthRegenPerTick);
+    }
+
+    // Auto-ataque do jogador
+    if (this.state === "active" && now - this.player.lastAttackAt >= pStats.attackSpeedMs) {
+      this.player.lastAttackAt = now;
+      this.autoAttack();
+    }
+
+    // Summons
+    if (this.state === "active") {
+      this.summons = this.summons.filter((s) => s.expiresAt > now);
+      for (const s of this.summons) {
+        const reduction = Math.min(0.8, mStats.defense / (mStats.defense + 100));
+        const dmg = Math.max(1, Math.floor(s.attack * (1 - reduction)));
+        this.monster.hp = Math.max(0, this.monster.hp - dmg);
+        this.pushMessage(`${s.name} causou ${dmg} de dano`);
+        if (this.monster.hp <= 0) {
+          this.monster.hp = 0;
+          this.state = "won";
+          break;
+        }
+      }
+    }
+
+    // Ataque do monstro
+    if (this.state === "active" && now - this.monster.lastAttackAt >= mStats.attackSpeedMs) {
+      this.monster.lastAttackAt = now;
+      this.monsterAttack();
+    }
+
+    // Efeitos: ticks + expiração + perda de stacks
+    if (this.state === "active" || this.player.hp > 0) {
+      this.processEffects(now);
+    }
+
+    // Eventos de round (passivas onTick/onHpBelow)
+    this.rebuildModifiers();
+    this.registerHandlers();
+    this.fire("onTurnEnd", { actor: this.player, target: this.monster });
+    this.fire("onHpBelow", { actor: this.player, target: this.monster });
+
+    if (this.player.hp <= 0 && this.state === "active") {
+      this.player.hp = 0;
+      this.state = "lost";
+    }
+    if (this.monster.hp <= 0 && this.state === "active") {
+      this.monster.hp = 0;
+      this.state = "won";
+    }
+
+    this.effectsDirty = true;
+  }
+
+  private processEffects(now: number): void {
+    // Efeitos do jogador
+    const playerStep = processEffectStep(this.player.effects, TICK_MS, now);
+    this.player.effects = playerStep.effects;
+    for (const ev of playerStep.events.ticked) {
+      const pStats = this.effectivePlayerStats();
+      if (ev.effect.kind === "hot" && ev.effect.tickHealing) {
+        const mods = this.effectModifiers.get(ev.effect.slug) || this.effectModifiers.get("*");
+        const raw = (ev.effect.tickHealing.base || 0) + (ev.effect.tickHealing.scaling || []).reduce((acc, s) => acc + (pStats[s.stat] || 0) * s.factor, 0);
+        const boosted = raw * (1 + (pStats.healingPercent + (mods?.healPercent || 0)) / 100) * (1 + (mods?.tickPercent || 0) / 100);
+        const cap = Math.floor(this.player.maxHp * (1 + pStats.overhealPercent / 100));
+        const amount = Math.min(cap, Math.floor(this.player.hp + boosted)) - this.player.hp;
+        if (amount > 0) {
+          this.player.hp += amount;
+          this.pushMessage(`${ev.effect.name} curou ${amount} de vida`);
+        }
+      }
+      // onTick actions
+      if (ev.effect.onTick && ev.effect.onTick.length > 0) {
+        const result = emptyResult();
+        const ctx = this.buildActionContext(this.player, this.monster, result, "");
+        executeActions(ev.effect.onTick, ctx, result);
+        this.collectResult(result, `[${ev.effect.name}]`);
+      }
+    }
+    for (const ev of playerStep.events.expired) {
+      this.pushMessage(`${ev.effect.name} expirou`);
+      this.fire("onEffectExpired", { actor: this.player, target: this.monster });
+      if (ev.effect.onExpire && ev.effect.onExpire.length > 0) {
+        const result = emptyResult();
+        const ctx = this.buildActionContext(this.player, this.monster, result, "");
+        executeActions(ev.effect.onExpire, ctx, result);
+        this.collectResult(result, `[${ev.effect.name}]`);
+      }
+    }
+
+    // Efeitos do monstro
+    const monsterStep = processEffectStep(this.monster.effects, TICK_MS, now);
+    this.monster.effects = monsterStep.effects;
+    const pStats = this.effectivePlayerStats();
+    for (const ev of monsterStep.events.ticked) {
+      if (ev.effect.kind === "dot" && ev.effect.tickDamage) {
+        const mods = this.effectModifiers.get(ev.effect.slug) || this.effectModifiers.get("*");
+        const raw = (ev.effect.tickDamage.base || 0) + (ev.effect.tickDamage.scaling || []).reduce((acc, s) => acc + (pStats[s.stat] || 0) * s.factor, 0);
+        const boosted = raw * (1 + (pStats.dotPercent + (mods?.damagePercent || 0)) / 100) * (1 + (mods?.tickPercent || 0) / 100);
+        const dmg = Math.max(1, Math.floor(boosted)) * ev.stacks;
+        this.monster.hp = Math.max(0, this.monster.hp - dmg);
+        this.pushMessage(`${ev.effect.name} causou ${dmg} de dano (${ev.stacks} stack${ev.stacks > 1 ? "s" : ""})`);
+        if (this.monster.hp <= 0) {
+          this.monster.hp = 0;
+          this.state = "won";
+        }
+      }
+      if (ev.effect.onTick && ev.effect.onTick.length > 0) {
+        const result = emptyResult();
+        const ctx = this.buildActionContext(this.player, this.monster, result, "");
+        executeActions(ev.effect.onTick, ctx, result);
+        this.collectResult(result, `[${ev.effect.name}]`);
+      }
+    }
+    for (const ev of monsterStep.events.expired) {
+      this.pushMessage(`${ev.effect.name} expirou no inimigo`);
+      if (ev.effect.onExpire && ev.effect.onExpire.length > 0) {
+        const result = emptyResult();
+        const ctx = this.buildActionContext(this.player, this.monster, result, "");
+        executeActions(ev.effect.onExpire, ctx, result);
+        this.collectResult(result, `[${ev.effect.name}]`);
+      }
+    }
+  }
+
+  // ============ Itens / Fuga ============
+  useItem(heal: number, manaRestore: number): void {
+    if (this.state !== "active") return;
+    this.player.hp = Math.min(this.player.maxHp, this.player.hp + Math.max(0, heal));
+    this.player.mana = Math.min(this.player.maxMana, this.player.mana + Math.max(0, manaRestore));
+  }
+
+  // ============ Persistência ============
+  async syncEffects(): Promise<void> {
+    await this.opts.syncPlayerEffects(this.player.effects);
+  }
+
+  async finish(): Promise<void> {
+    await this.syncEffects();
+  }
+
+  getEffectsDirty(): boolean {
+    return this.effectsDirty;
+  }
+
+  // ============ Snapshot ============
+  snapshot(): BattleSnapshot {
+    return {
+      characterHp: Math.max(0, this.player.hp),
+      characterMana: Math.max(0, this.player.mana),
+      maxHp: this.effectivePlayerStats().hp,
+      maxMana: this.effectivePlayerStats().mana,
+      monsterHp: Math.max(0, this.monster.hp),
+      monsterMaxHp: this.monster.maxHp,
+      playerEffects: serializeEffects(this.player.effects),
+      monsterEffects: serializeEffects(this.monster.effects),
+      messages: this.takeMessages().map((m) => m.text),
+    };
+  }
+
+  cooldownInfo(): Array<{ skillId: string; remaining: number }> {
+    const now = Date.now();
+    const out: Array<{ skillId: string; remaining: number }> = [];
+    for (const [id, readyAt] of this.cooldowns) {
+      out.push({ skillId: id, remaining: Math.max(0, readyAt - now) });
+    }
+    return out;
+  }
+}

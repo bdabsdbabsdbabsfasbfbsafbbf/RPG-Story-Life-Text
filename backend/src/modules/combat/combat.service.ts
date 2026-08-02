@@ -1,35 +1,134 @@
 import { PrismaClient } from "@prisma/client";
 import Redis from "ioredis";
-import { v4 as uuidv4 } from "uuid";
 import { CooldownManager } from "./cooldown.manager";
 import { getGameLimits } from "../../core/gameLimits";
+import { Battle, TICK_MS } from "../../core/classEngine/battle";
+import { SkillDef, PassiveDef, EffectDef, ActiveEffectRuntime } from "../../core/classEngine/types";
+import { StatsInput } from "../../core/classEngine/stat-calculator";
 
-interface CombatInstance {
-  id: string;
+function parseJson(value: any, fallback: any = null): any {
+  if (value === null || value === undefined) return fallback;
+  if (typeof value !== "string") return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+}
+
+function asActionArray(value: any): any[] {
+  const arr = parseJson(value, []);
+  return Array.isArray(arr) ? arr : [];
+}
+
+function parseSkill(s: any): SkillDef {
+  return {
+    id: s.id,
+    name: s.name,
+    slug: s.slug || s.id,
+    description: s.description || "",
+    icon: s.icon || null,
+    kind: s.kind || "attack",
+    trigger: s.trigger || "active",
+    target: s.target || "enemy",
+    cooldown: Number(s.cooldown) || 0,
+    manaCost: Number(s.manaCost) || 0,
+    castTime: Number(s.castTime) || 0,
+    channelMs: Number(s.channelMs) || 0,
+    rankRequired: Number(s.rankRequired) || 1,
+    scaling: asActionArray(s.scaling),
+    actions: asActionArray(s.actions),
+    conditions: asActionArray(s.conditions),
+    onConditionMet: asActionArray(s.onConditionMet),
+    events: asActionArray(s.events),
+  };
+}
+
+function parsePassive(p: any): PassiveDef {
+  return {
+    id: p.id,
+    name: p.name,
+    slug: p.slug || p.id,
+    description: p.description || "",
+    rankRequired: Number(p.rankRequired) || 1,
+    statModifiers: parseJson(p.statModifiers, {}),
+    skillModifiers: asActionArray(p.skillModifiers),
+    effectModifiers: asActionArray(p.effectModifiers),
+    conditions: asActionArray(p.conditions),
+    events: asActionArray(p.events),
+  };
+}
+
+function parseEffect(e: any): EffectDef {
+  return {
+    id: e.id,
+    name: e.name,
+    slug: e.slug,
+    description: e.description || "",
+    icon: e.icon || null,
+    kind: e.kind || "buff",
+    category: e.category || "utility",
+    maxStacks: Number(e.maxStacks) || 1,
+    duration: Number(e.duration) || 0,
+    refreshBehavior: e.refreshBehavior || "refresh",
+    stackLoss: parseJson(e.stackLoss, {}),
+    priority: Number(e.priority) || 0,
+    tickInterval: Number(e.tickInterval) || 0,
+    tickDamage: parseJson(e.tickDamage, {}),
+    tickHealing: parseJson(e.tickHealing, {}),
+    statModifiers: parseJson(e.statModifiers, {}),
+    onMaxStacks: asActionArray(e.onMaxStacks),
+    onExpire: asActionArray(e.onExpire),
+    onTick: asActionArray(e.onTick),
+    exclusiveGroup: e.exclusiveGroup || null,
+  };
+}
+
+function serializeSkillForClient(s: SkillDef, mods: { damagePercent?: number; healPercent?: number } | null): any {
+  return {
+    id: s.id,
+    name: s.name,
+    slug: s.slug,
+    description: s.description,
+    icon: s.icon,
+    kind: s.kind,
+    trigger: s.trigger,
+    type: s.trigger,
+    target: s.target,
+    cooldown: s.cooldown,
+    manaCost: s.manaCost,
+    castTime: s.castTime,
+    channelMs: s.channelMs,
+    rankRequired: s.rankRequired,
+    sortOrder: 0,
+    scaling: s.scaling,
+    actions: s.actions,
+    conditions: s.conditions,
+    requirements: s.conditions && s.conditions.length > 0 ? s.conditions.map((c: any) => c.type) : [],
+    healingBase: s.actions.some((a: any) => a.action === "heal") ? 1 : 0,
+    damageModifier: mods?.damagePercent || 0,
+    healModifier: mods?.healPercent || 0,
+  };
+}
+
+interface ActiveCombat {
+  battle: Battle;
   characterId: string;
-  monsterId: string;
-  monster: any;
   characterName: string;
   characterLevel: number;
-  attack: number;
-  magic: number;
-  monsterName: string;
-  monsterLevel: number;
-  monsterMaxHp: number;
-  skills: any[];
+  monsterId: string;
+  monster: any;
+  skills: SkillDef[];
   state: "active" | "won" | "lost" | "fled";
   characterHp: number;
   characterMana: number;
-  maxHp: number;
-  maxMana: number;
   monsterHp: number;
   startTime: number;
-  lastTick: number;
+  tickInterval: NodeJS.Timeout;
 }
 
 export class CombatService {
-  private activeCombats: Map<string, CombatInstance> = new Map();
-  private tickIntervals: Map<string, NodeJS.Timeout> = new Map();
+  private activeCombats: Map<string, ActiveCombat> = new Map();
   private onTickListener: ((payload: any) => void) | null = null;
 
   constructor(
@@ -41,19 +140,26 @@ export class CombatService {
     this.onTickListener = listener;
   }
 
-  async startCombat(characterId: string, monsterId: string): Promise<CombatInstance> {
+  async startCombat(characterId: string, monsterId: string): Promise<any> {
     const existing = Array.from(this.activeCombats.values()).find(
       (c) => c.characterId === characterId && c.state === "active"
     );
     if (existing) {
-      throw new Error("Already in combat");
+      throw new Error("Você já está em combate!");
     }
 
     const character = await this.prisma.character.findUnique({
       where: { id: characterId },
       include: {
-        class: { include: { skills: { where: { isActive: true }, orderBy: { sortOrder: "asc" } } } },
-        combatStats: true,
+        class: {
+          include: {
+            statModel: true,
+            skills: { where: { isActive: true }, orderBy: { sortOrder: "asc" } },
+            passives: { where: { isActive: true }, orderBy: { rankRequired: "asc" } },
+          },
+        },
+        race: true,
+        trait: true,
         equipment: {
           include: {
             weapon: true,
@@ -71,282 +177,331 @@ export class CombatService {
             pet: true,
           },
         },
+        classProgress: { where: { isActive: true } },
       },
     });
 
-    if (!character) throw new Error("Character not found");
+    if (!character) throw new Error("Personagem não encontrado");
+    const gameClass = character.class;
+    if (!gameClass) throw new Error("Personagem sem classe");
 
     const monster = await this.prisma.monster.findUnique({
       where: { id: monsterId },
     });
-    if (!monster) throw new Error("Monster not found");
+    if (!monster) throw new Error("Monstro não encontrado");
 
-    const combat: CombatInstance = {
-      id: uuidv4(),
-      characterId,
-      monsterId,
-      monster,
+    const rank = character.classProgress?.[0]?.rank ?? 1;
+
+    // Catálogo de efeitos (para skills que aplicam por slug)
+    const effectRows = await this.prisma.effect.findMany({ where: { isActive: true } });
+    const effects: EffectDef[] = effectRows.map(parseEffect);
+
+    const skills: SkillDef[] = (gameClass.skills || []).map(parseSkill);
+    const passives: PassiveDef[] = (gameClass.passives || [])
+      .filter((p: any) => (p.rankRequired ?? 1) <= rank)
+      .map(parsePassive);
+
+    // Stats de equipamento (item.stats JSON)
+    const equipmentStats: Array<Record<string, any>> = [];
+    if (character.equipment) {
+      const slots = [
+        "weapon", "helmet", "chestplate", "pants", "boots", "gloves",
+        "shield", "amulet", "ring1", "ring2", "cape", "relic", "pet",
+      ];
+      for (const slot of slots) {
+        const item = (character.equipment as any)[slot];
+        if (item?.stats) {
+          const parsed = parseJson(item.stats, null);
+          if (parsed && typeof parsed === "object") equipmentStats.push(parsed);
+        }
+      }
+    }
+
+    const statsInput: StatsInput = {
+      level: character.level,
+      statModel: {
+        base: parseJson(gameClass.statModel?.base, {}),
+        perLevel: parseJson(gameClass.statModel?.perLevel, {}),
+        scaling: parseJson(gameClass.statModel?.scaling, {}),
+      },
+      resource: parseJson(gameClass.resource, {}),
+      passives,
+      raceTraits: parseJson(character.race?.traits, null),
+      traitModifiers: parseJson(character.trait?.modifiers, null),
+      equipmentStats,
+    };
+
+    const battle = new Battle({
+      characterId: character.id,
       characterName: character.name,
       characterLevel: character.level,
-      attack: character.class.baseAttack,
-      magic: character.class.baseMagic,
+      statsInput,
+      rank,
+      skills,
+      passives,
+      effects,
+      monster,
+      classResource: parseJson(gameClass.resource, {}),
+      onEnd: (state) => {
+        const entry = this.activeCombats.get(battle.id);
+        if (entry) entry.state = state;
+      },
+      syncPlayerEffects: async (runtimeEffects: ActiveEffectRuntime[]) => {
+        await this.syncPlayerEffects(character.id, runtimeEffects);
+      },
+    });
+
+    const entry: ActiveCombat = {
+      battle,
+      characterId: character.id,
+      characterName: character.name,
+      characterLevel: character.level,
+      monsterId: monster.id,
+      monster,
+      skills,
+      state: "active",
+      characterHp: battle.player.hp,
+      characterMana: battle.player.mana,
+      monsterHp: monster.hp,
+      startTime: Date.now(),
+      tickInterval: setInterval(() => this.tick(battle.id), TICK_MS),
+    };
+    this.activeCombats.set(battle.id, entry);
+
+    const snap = battle.snapshot();
+    const stats = battle.player.stats;
+
+    return {
+      combatId: battle.id,
+      characterId: character.id,
+      characterName: character.name,
+      characterLevel: character.level,
+      monsterId: monster.id,
       monsterName: monster.name,
       monsterLevel: monster.level ?? 1,
       monsterMaxHp: monster.hp,
-      skills: character.class.skills || [],
+      skills: skills.map((s) => serializeSkillForClient(s, battle.getSkillModifiersFor(s.slug))),
+      stats: {
+        hp: stats.hp,
+        mana: stats.mana,
+        attack: stats.attack,
+        defense: stats.defense,
+        magic: stats.magic,
+        magicDefense: stats.magicDefense,
+        speed: stats.speed,
+        attackPower: stats.attackPower,
+        spellPower: stats.spellPower,
+        critChance: stats.critChance,
+        critDamage: stats.critDamage,
+        dodge: stats.dodge,
+        attackSpeedMs: stats.attackSpeedMs,
+        manaRegenPerTick: stats.manaRegenPerTick,
+      },
       state: "active",
-      characterHp: character.currentHp,
-      characterMana: character.currentMana,
-      maxHp: character.class.baseHp,
-      maxMana: character.class.baseMana,
-      monsterHp: monster.hp,
-      startTime: Date.now(),
-      lastTick: Date.now(),
+      characterHp: snap.characterHp,
+      characterMana: snap.characterMana,
+      maxHp: snap.maxHp,
+      maxMana: snap.maxMana,
+      monsterHp: snap.monsterHp,
+      playerEffects: snap.playerEffects,
+      monsterEffects: snap.monsterEffects,
+    };
+  }
+
+  private async syncPlayerEffects(characterId: string, runtimeEffects: ActiveEffectRuntime[]): Promise<void> {
+    await this.prisma.$transaction([
+      this.prisma.activeEffect.deleteMany({ where: { characterId } }),
+      ...runtimeEffects.map((e) =>
+        this.prisma.activeEffect.create({
+          data: {
+            characterId,
+            effectId: e.effect.id,
+            stacks: e.stacks,
+            remainingMs: e.remainingMs,
+            expiresAt: e.effect.duration > 0 ? new Date(Date.now() + e.remainingMs) : null,
+            nextTickAt: e.nextTickAt ? new Date(e.nextTickAt) : null,
+          },
+        })
+      ),
+    ]);
+  }
+
+  private tick(combatId: string): void {
+    const entry = this.activeCombats.get(combatId);
+    if (!entry) return;
+
+    entry.battle.tick();
+
+    if (entry.state === "active" && entry.battle.state !== "active") {
+      entry.state = entry.battle.state;
+    }
+
+    const snap = entry.battle.snapshot();
+    entry.characterHp = snap.characterHp;
+    entry.characterMana = snap.characterMana;
+    entry.monsterHp = snap.monsterHp;
+
+    const payload: any = {
+      combatId,
+      characterId: entry.characterId,
+      characterHp: snap.characterHp,
+      characterMana: snap.characterMana,
+      maxHp: snap.maxHp,
+      maxMana: snap.maxMana,
+      monsterHp: snap.monsterHp,
+      monsterName: entry.monster.name,
+      monsterMaxHp: snap.monsterMaxHp,
+      monsterEffects: snap.monsterEffects,
+      playerEffects: snap.playerEffects,
+      messages: snap.messages,
+      state: entry.state,
     };
 
-    this.activeCombats.set(combat.id, combat);
-    this.startCombatTick(combat);
-
-    return { ...combat, combatId: combat.id } as CombatInstance & { combatId: string };
-  }
-
-  private computeSkillDamage(skill: any, attack: number, magic: number): number {
-    let damage = skill.baseDamage ?? 0;
-    if (skill.damageScaling) {
-      try {
-        const scaling = JSON.parse(skill.damageScaling);
-        damage += Math.floor(
-          (Number(scaling.attack) || 0) * attack + (Number(scaling.magic) || 0) * magic
-        );
-      } catch {
-        // ignore malformed scaling
-      }
-    }
-    return Math.max(0, damage);
-  }
-
-  private startCombatTick(combat: CombatInstance): void {
-    const interval = setInterval(async () => {
-      const current = this.activeCombats.get(combat.id);
-      if (!current || current.state !== "active") {
-        clearInterval(interval);
+    const ended = entry.state !== "active";
+    if (ended) {
+      clearInterval(entry.tickInterval);
+      this.activeCombats.delete(combatId);
+      if (entry.state === "won") {
+        entry.battle.finish().catch(() => {});
+        this.grantRewards(entry.characterId, entry.monster, entry.battle.player.maxHp, entry.battle.player.maxMana).then((rewards) => {
+          payload.rewards = rewards;
+          if (this.onTickListener) this.onTickListener(payload);
+        });
         return;
       }
-
-      current.lastTick = Date.now();
-
-      // Monster auto-attacks character
-      const monsterDamage = Math.max(1, current.monster.attack - 5);
-      current.characterHp -= monsterDamage;
-
-      // Player auto-attacks with the class "auto" skill
-      const autoSkill = (current.skills || []).find((s: any) => s.type === "auto");
-      let playerDamage = 0;
-      let playerSkillName = autoSkill?.name ?? "Ataque";
-      if (autoSkill) {
-        playerDamage = this.computeSkillDamage(autoSkill, current.attack, current.magic);
-        const isDodged = Math.random() * 100 < 5;
-        if (isDodged) playerDamage = 0;
-        current.monsterHp -= playerDamage;
+      if (entry.state === "lost") {
+        entry.battle.finish().catch(() => {});
+        this.prisma.character
+          .update({ where: { id: entry.characterId }, data: { currentHp: 0 } })
+          .catch(() => {});
       }
+    }
 
-      const payload: any = {
-        combatId: current.id,
-        characterId: current.characterId,
-        damage: monsterDamage,
-        playerDamage,
-        playerSkillName,
-        characterHp: Math.max(0, current.characterHp),
-        characterMana: current.characterMana,
-        maxHp: current.maxHp,
-        maxMana: current.maxMana,
-        monsterHp: Math.max(0, current.monsterHp),
-        monsterName: current.monsterName,
-        monsterMaxHp: current.monsterMaxHp,
-        state: current.state,
-        attacker: "monster",
-      };
-
-      if (current.characterHp <= 0) {
-        current.characterHp = 0;
-        current.state = "lost";
-        payload.state = "lost";
-        clearInterval(interval);
-        this.tickIntervals.delete(combat.id);
-      } else if (current.monsterHp <= 0) {
-        current.monsterHp = 0;
-        current.state = "won";
-        payload.state = "won";
-        payload.rewards = await this.grantRewards(current.characterId, current.monster);
-        clearInterval(interval);
-        this.tickIntervals.delete(combat.id);
-      }
-
-      if (this.onTickListener) {
-        this.onTickListener(payload);
-      }
-    }, 2000);
-
-    this.tickIntervals.set(combat.id, interval);
+    if (this.onTickListener) {
+      this.onTickListener(payload);
+    }
   }
 
   async useSkill(characterId: string, combatId: string, skillId: string): Promise<any> {
-    const combat = this.activeCombats.get(combatId);
-    if (!combat || combat.characterId !== characterId) {
-      throw new Error("Combat not found");
+    const entry = this.activeCombats.get(combatId);
+    if (!entry || entry.characterId !== characterId) {
+      throw new Error("Combate não encontrado");
     }
-    if (combat.state !== "active") {
-      throw new Error("Combat is over");
-    }
-
-    const skill = await this.prisma.skill.findUnique({
-      where: { id: skillId },
-    });
-    if (!skill) throw new Error("Skill not found");
-
-    if (combat.characterMana < skill.manaCost) {
-      throw new Error("Not enough mana");
+    if (entry.state !== "active") {
+      throw new Error("O combate já terminou");
     }
 
-    combat.characterMana -= skill.manaCost;
+    const skill = entry.skills.find((s) => s.id === skillId);
+    if (!skill) throw new Error("Skill não encontrada");
 
-    const attack = combat.attack;
-    const magic = combat.magic;
-
-    let damage = this.computeSkillDamage(skill, attack, magic);
-
-    const isCritical = Math.random() * 100 < 10;
-    if (isCritical) {
-      damage = Math.floor(damage * 1.5);
+    const result = entry.battle.useSkill(skill);
+    if (!result.ok) {
+      throw new Error(result.error || "Não foi possível usar a skill");
     }
 
-    const isDodged = Math.random() * 100 < 5;
-    if (isDodged) {
-      damage = 0;
+    if (entry.battle.getEffectsDirty()) {
+      entry.battle.syncEffects().catch(() => {});
     }
 
-    let healed = 0;
-    if (skill.healingBase > 0) {
-      healed = Math.floor(skill.healingBase);
-      if (skill.damageScaling) {
-        try {
-          const scaling = JSON.parse(skill.damageScaling);
-          healed += Math.floor(
-            (Number(scaling.magic) || 0) * magic + (Number(scaling.attack) || 0) * attack
-          );
-        } catch {
-          // ignore malformed scaling
-        }
-      }
-      combat.characterHp = Math.min(combat.maxHp, combat.characterHp + healed);
-    }
-
-    const appliedBuffs: string[] = [];
-    if (skill.buffsApplied) {
-      let buffIds: any[] = [];
-      try {
-        buffIds = JSON.parse(skill.buffsApplied);
-      } catch {
-        buffIds = [];
-      }
-      if (Array.isArray(buffIds) && buffIds.length > 0) {
-        const buffs = await this.prisma.buff.findMany({
-          where: { id: { in: buffIds.map(String) } },
-        });
-        for (const buff of buffs) {
-          await this.prisma.activeBuff.create({
-            data: {
-              characterId,
-              buffId: buff.id,
-              stacks: 1,
-              remainingDuration: buff.duration,
-              expiresAt: new Date(Date.now() + buff.duration),
-            },
-          });
-          appliedBuffs.push(buff.name);
-        }
-      }
-    }
-
-    combat.monsterHp -= damage;
-
-    let rewards: any = null;
-    if (combat.monsterHp <= 0) {
-      combat.monsterHp = 0;
-      combat.state = "won";
-      const interval = this.tickIntervals.get(combat.id);
-      if (interval) clearInterval(interval);
-      this.tickIntervals.delete(combat.id);
-
-      // Reward player
-      rewards = await this.grantRewards(characterId, combat.monster);
-    }
-
-    return {
-      combatId: combat.id,
+    const snap = entry.battle.snapshot();
+    const payload: any = {
+      combatId,
       skillId: skill.id,
       skillName: skill.name,
-      damage,
-      healed,
-      appliedBuffs,
-      isCritical,
-      isDodged,
-      characterHp: combat.characterHp,
-      characterMana: combat.characterMana,
-      maxHp: combat.maxHp,
-      maxMana: combat.maxMana,
-      monsterHp: combat.monsterHp,
-      monsterName: combat.monsterName,
-      monsterMaxHp: combat.monsterMaxHp,
-      skills: combat.skills,
-      state: combat.state,
-      rewards,
+      damage: result.damage,
+      healed: result.healed,
+      isCritical: result.isCritical,
+      isDodged: result.isDodged,
+      appliedBuffs: result.appliedEffects,
+      appliedEffects: result.appliedEffects,
+      removedEffects: result.removedEffects,
+      consumedStacks: result.consumedStacks,
+      messages: [...result.messages, ...snap.messages],
+      channeling: result.channeling,
+      channelMs: result.channelMs,
+      cooldowns: entry.battle.cooldownInfo(),
+      characterHp: snap.characterHp,
+      characterMana: snap.characterMana,
+      maxHp: snap.maxHp,
+      maxMana: snap.maxMana,
+      monsterHp: snap.monsterHp,
+      monsterName: entry.monster.name,
+      monsterMaxHp: snap.monsterMaxHp,
+      monsterEffects: snap.monsterEffects,
+      playerEffects: snap.playerEffects,
+      state: entry.state,
     };
+
+    if (entry.battle.state === "won") {
+      entry.state = "won";
+      clearInterval(entry.tickInterval);
+      this.activeCombats.delete(combatId);
+      entry.battle.finish().catch(() => {});
+      payload.rewards = await this.grantRewards(entry.characterId, entry.monster, entry.battle.player.maxHp, entry.battle.player.maxMana);
+      payload.state = "won";
+    }
+
+    return payload;
   }
 
   async flee(characterId: string, combatId: string): Promise<any> {
-    const combat = this.activeCombats.get(combatId);
-    if (!combat || combat.characterId !== characterId) {
-      throw new Error("Combat not found");
+    const entry = this.activeCombats.get(combatId);
+    if (!entry || entry.characterId !== characterId) {
+      throw new Error("Combate não encontrado");
     }
-    if (combat.state !== "active") {
-      throw new Error("Combat is over");
+    if (entry.state !== "active") {
+      throw new Error("O combate já terminou");
     }
 
     const escaped = Math.random() < 0.7;
 
+    const snap = entry.battle.snapshot();
     const payload: any = {
-      combatId: combat.id,
-      characterId: combat.characterId,
-      state: combat.state,
-      characterHp: Math.max(0, combat.characterHp),
-      characterMana: combat.characterMana,
-      maxHp: combat.maxHp,
-      maxMana: combat.maxMana,
-      monsterHp: Math.max(0, combat.monsterHp),
-      monsterName: combat.monsterName,
-      monsterMaxHp: combat.monsterMaxHp,
+      combatId,
+      characterId: entry.characterId,
+      state: entry.state,
+      characterHp: snap.characterHp,
+      characterMana: snap.characterMana,
+      maxHp: snap.maxHp,
+      maxMana: snap.maxMana,
+      monsterHp: snap.monsterHp,
+      monsterName: entry.monster.name,
+      monsterMaxHp: snap.monsterMaxHp,
       fled: escaped,
+      messages: [],
     };
 
     if (escaped) {
-      combat.state = "fled";
+      entry.state = "fled";
       payload.state = "fled";
-      const interval = this.tickIntervals.get(combat.id);
-      if (interval) clearInterval(interval);
-      this.tickIntervals.delete(combat.id);
+      clearInterval(entry.tickInterval);
+      this.activeCombats.delete(combatId);
+      entry.battle.finish().catch(() => {});
+      this.prisma.character
+        .update({
+          where: { id: characterId },
+          data: { currentHp: snap.characterHp, currentMana: snap.characterMana },
+        })
+        .catch(() => {});
     } else {
-      const monsterDamage = Math.max(1, combat.monster.attack - 5);
-      combat.characterHp -= monsterDamage;
-      payload.damage = monsterDamage;
+      // A fuga falhou: o monstro ataca
+      const oldHp = entry.battle.player.hp;
+      entry.battle.monsterAttack();
+      payload.damage = Math.max(0, oldHp - entry.battle.player.hp);
       payload.attacker = "monster";
-      if (combat.characterHp <= 0) {
-        combat.characterHp = 0;
-        combat.state = "lost";
+      const s2 = entry.battle.snapshot();
+      payload.characterHp = s2.characterHp;
+      payload.monsterHp = s2.monsterHp;
+      payload.messages = s2.messages;
+      if (entry.battle.state === "lost") {
+        entry.state = "lost";
         payload.state = "lost";
-        const interval = this.tickIntervals.get(combat.id);
-        if (interval) clearInterval(interval);
-        this.tickIntervals.delete(combat.id);
+        clearInterval(entry.tickInterval);
+        this.activeCombats.delete(combatId);
+        entry.battle.finish().catch(() => {});
+        this.prisma.character
+          .update({ where: { id: characterId }, data: { currentHp: 0 } })
+          .catch(() => {});
       }
     }
 
@@ -354,58 +509,53 @@ export class CombatService {
   }
 
   async useItem(characterId: string, combatId: string, inventoryId: string): Promise<any> {
-    const combat = this.activeCombats.get(combatId);
-    if (!combat || combat.characterId !== characterId) {
-      throw new Error("Combat not found");
+    const entry = this.activeCombats.get(combatId);
+    if (!entry || entry.characterId !== characterId) {
+      throw new Error("Combate não encontrado");
     }
-    if (combat.state !== "active") {
-      throw new Error("Combat is over");
+    if (entry.state !== "active") {
+      throw new Error("O combate já terminou");
     }
 
     const character = await this.prisma.character.findUnique({
       where: { id: characterId },
       select: { userId: true },
     });
-    if (!character) throw new Error("Character not found");
+    if (!character) throw new Error("Personagem não encontrado");
 
     const inv = await this.prisma.inventory.findFirst({
       where: { id: inventoryId, userId: character.userId },
       include: { item: true },
     });
-    if (!inv || inv.quantity <= 0) throw new Error("Item not found");
+    if (!inv || inv.quantity <= 0) throw new Error("Item não encontrado");
 
     const item = inv.item;
     if (item.type !== "consumable" && item.type !== "potion") {
-      throw new Error("This item cannot be used in combat");
+      throw new Error("Este item não pode ser usado em combate");
     }
 
     let heal = 0;
     let manaRestore = 0;
-    if (item.effects) {
-      try {
-        const effects = JSON.parse(item.effects);
-        if (Array.isArray(effects)) {
-          for (const e of effects) {
-            if (e?.type === "heal") heal += Number(e.value) || 0;
-            else if (e?.type === "manaRestore") manaRestore += Number(e.value) || 0;
-          }
-        } else {
-          heal = Number(effects.heal) || 0;
-          manaRestore = Number(effects.manaRestore) || 0;
-        }
-      } catch {
-        // ignore malformed effects
+    const effectsRaw = parseJson(item.effects, null);
+    if (Array.isArray(effectsRaw)) {
+      for (const e of effectsRaw) {
+        if (e?.type === "heal") heal += Number(e.value) || 0;
+        else if (e?.type === "manaRestore") manaRestore += Number(e.value) || 0;
       }
+    } else if (effectsRaw && typeof effectsRaw === "object") {
+      heal = Number(effectsRaw.heal) || 0;
+      manaRestore = Number(effectsRaw.manaRestore) || 0;
     }
 
     if (heal <= 0 && manaRestore <= 0) {
-      throw new Error("This item cannot be used in combat");
+      throw new Error("Este item não pode ser usado em combate");
     }
 
-    const actualHeal = Math.min(combat.maxHp - combat.characterHp, heal);
-    const actualMana = Math.min(combat.maxMana - combat.characterMana, manaRestore);
-    combat.characterHp += actualHeal;
-    combat.characterMana += actualMana;
+    const hpBefore = entry.battle.player.hp;
+    const manaBefore = entry.battle.player.mana;
+    entry.battle.useItem(heal, manaRestore);
+    const actualHeal = entry.battle.player.hp - hpBefore;
+    const actualMana = entry.battle.player.mana - manaBefore;
 
     if (inv.quantity > 1) {
       await this.prisma.inventory.update({
@@ -416,25 +566,28 @@ export class CombatService {
       await this.prisma.inventory.delete({ where: { id: inv.id } });
     }
 
+    const snap = entry.battle.snapshot();
     return {
-      combatId: combat.id,
-      characterId: combat.characterId,
+      combatId,
+      characterId: entry.characterId,
       inventoryId: inv.id,
       itemName: item.name,
       healed: actualHeal,
       manaRestored: actualMana,
-      characterHp: combat.characterHp,
-      characterMana: combat.characterMana,
-      maxHp: combat.maxHp,
-      maxMana: combat.maxMana,
-      monsterHp: Math.max(0, combat.monsterHp),
-      monsterName: combat.monsterName,
-      monsterMaxHp: combat.monsterMaxHp,
-      state: combat.state,
+      characterHp: snap.characterHp,
+      characterMana: snap.characterMana,
+      maxHp: snap.maxHp,
+      maxMana: snap.maxMana,
+      monsterHp: snap.monsterHp,
+      monsterName: entry.monster.name,
+      monsterMaxHp: snap.monsterMaxHp,
+      playerEffects: snap.playerEffects,
+      monsterEffects: snap.monsterEffects,
+      state: entry.state,
     };
   }
 
-  private async grantRewards(characterId: string, monster: any): Promise<any> {
+  private async grantRewards(characterId: string, monster: any, restoreHp: number, restoreMana: number): Promise<any> {
     const [character, limits] = await Promise.all([
       this.prisma.character.findUnique({
         where: { id: characterId },
@@ -470,7 +623,7 @@ export class CombatService {
 
     await this.prisma.character.update({
       where: { id: characterId },
-      data: { currentHp: character.class.baseHp, currentMana: character.class.baseMana },
+      data: { currentHp: restoreHp, currentMana: restoreMana },
     });
 
     let classXpGain = 0;
@@ -561,11 +714,11 @@ export class CombatService {
     }
   }
 
-  getCombat(combatId: string): CombatInstance | undefined {
+  getCombat(combatId: string): ActiveCombat | undefined {
     return this.activeCombats.get(combatId);
   }
 
-  getCharacterCombat(characterId: string): CombatInstance | undefined {
+  getCharacterCombat(characterId: string): ActiveCombat | undefined {
     return Array.from(this.activeCombats.values()).find(
       (c) => c.characterId === characterId && c.state === "active"
     );

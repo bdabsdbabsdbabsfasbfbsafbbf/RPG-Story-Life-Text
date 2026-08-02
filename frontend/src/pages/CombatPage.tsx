@@ -66,17 +66,17 @@ export function CombatPage() {
 
   const socket = getSocket();
 
-  const maxHp = combat?.maxHp ?? selectedCharacter?.class?.baseHp ?? 100;
-  const maxMana = combat?.maxMana ?? selectedCharacter?.class?.baseMana ?? 50;
+  const maxHp = combat?.maxHp ?? selectedCharacter?.maxHp ?? 100;
+  const maxMana = combat?.maxMana ?? selectedCharacter?.maxMana ?? 50;
   const monsterMaxHp = combat?.monsterMaxHp ?? 100;
 
   const characterHpPercent = Math.min(100, ((combat?.characterHp ?? maxHp) / maxHp) * 100);
   const characterManaPercent = Math.min(100, ((combat?.characterMana ?? maxMana) / maxMana) * 100);
   const monsterHpPercent = Math.min(100, ((combat?.monsterHp ?? monsterMaxHp) / monsterMaxHp) * 100);
 
-  const skills = useMemo(() => (combat?.skills ?? []).filter((s) => s.type !== "passive"), [combat?.skills]);
-  const autoSkill = skills.find((s) => s.type === "auto");
-  const usableSkills = skills.filter((s) => s.type !== "auto");
+  const skills = useMemo(() => combat?.skills ?? [], [combat?.skills]);
+  const autoSkill = skills.find((s) => s.trigger === "auto");
+  const usableSkills = skills.filter((s) => s.trigger !== "auto");
 
   useEffect(() => {
     charactersApi.my().then(({ data }) => {
@@ -177,18 +177,15 @@ export function CombatPage() {
         if (!prev) return data as any;
         return { ...prev, ...data };
       });
-      const log: string[] = [];
-      if ((data.playerDamage ?? 0) > 0) {
-        log.push(`Seu ${data.playerSkillName || "ataque automático"} causou ${data.playerDamage} de dano`);
+      if (data.messages && data.messages.length > 0) {
+        const msgs = data.messages;
+        setCombatLog(prev => [...prev.slice(-19), ...msgs]);
       }
-      if ((data.damage ?? 0) > 0) {
-        log.push(`${data.monsterName || "Monstro"} causou ${data.damage} de dano em você`);
-      }
-      if (data.state === "won" && data.rewards) {
-        log.push(`Vitória! +${data.rewards.xpGain ?? 0} XP, +${data.rewards.goldGain ?? 0} gold${data.rewards.levelUps ? `, LEVEL UP x${data.rewards.levelUps}!` : ""}`);
+      if (data.state === "won") {
+        const r = data.rewards;
+        setCombatLog(prev => [...prev.slice(-19), `Vitória! +${r?.xpGain ?? 0} XP, +${r?.goldGain ?? 0} gold${r?.levelUps ? `, LEVEL UP x${r.levelUps}!` : ""}`]);
         refreshUser();
       }
-      if (log.length) setCombatLog(prev => [...prev.slice(-19), ...log]);
     });
 
     socket.on("combat:error", (data: any) => {
@@ -314,6 +311,18 @@ export function CombatPage() {
               </div>
             </div>
           </div>
+
+          {combat?.playerEffects && combat.playerEffects.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {combat.playerEffects.map((e) => (
+                <span key={e.slug} title={`${e.name}${e.stacks > 1 ? ` ×${e.stacks}` : ""} · ${e.remainingMs > 0 ? `${(e.remainingMs / 1000).toFixed(0)}s` : "permanente"}`} className={`text-[10px] px-2 py-0.5 rounded-full border ${
+                  e.kind === "dot" || e.kind === "debuff" ? "bg-red-500/10 text-red-300 border-red-500/30" : e.kind === "hot" ? "bg-green-500/10 text-green-300 border-green-500/30" : "bg-blue-500/10 text-blue-300 border-blue-500/30"
+                }`}>
+                  {e.name}{e.stacks > 1 ? ` ×${e.stacks}` : ""}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Monster */}
@@ -344,6 +353,18 @@ export function CombatPage() {
               </div>
             </div>
           </div>
+
+          {combat?.monsterEffects && combat.monsterEffects.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {combat.monsterEffects.map((e) => (
+                <span key={e.slug} title={`${e.name}${e.stacks > 1 ? ` ×${e.stacks}` : ""} · ${e.remainingMs > 0 ? `${(e.remainingMs / 1000).toFixed(0)}s` : "permanente"}`} className={`text-[10px] px-2 py-0.5 rounded-full border ${
+                  e.kind === "dot" || e.kind === "debuff" ? "bg-red-500/10 text-red-300 border-red-500/30" : "bg-orange-500/10 text-orange-300 border-orange-500/30"
+                }`}>
+                  {e.name}{e.stacks > 1 ? ` ×${e.stacks}` : ""}
+                </span>
+              ))}
+            </div>
+          )}
 
           {combat && combat.state === "active" && (
             <button
@@ -435,7 +456,7 @@ export function CombatPage() {
                     disabled={disabled}
                     className={`w-20 card-hover py-3 text-center relative ${
                       disabled ? "opacity-40 cursor-not-allowed" : ""
-                    } ${skill.type === "ultimate" ? "border-yellow-500/40" : ""}`}
+                    } ${skill.trigger === "ultimate" ? "border-yellow-500/40" : ""}`}
                     title={locked ? `Requer Rank ${skill.rankRequired}` : skill.description}
                   >
                     {cd && (
@@ -447,9 +468,9 @@ export function CombatPage() {
                     )}
                     {locked ? (
                       <Lock size={16} className="mx-auto mb-1 text-gray-500" />
-                    ) : skill.type === "ultimate" ? (
+                    ) : skill.trigger === "ultimate" ? (
                       <Zap size={18} className="mx-auto mb-1 text-yellow-400" />
-                    ) : skill.healingBase > 0 ? (
+                    ) : skill.kind === "heal" ? (
                       <Heart size={18} className="mx-auto mb-1 text-green-400" />
                     ) : (
                       <Sword size={18} className="mx-auto mb-1 text-purple-400" />
