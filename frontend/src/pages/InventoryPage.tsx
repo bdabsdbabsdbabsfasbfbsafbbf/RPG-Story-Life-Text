@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
-import { inventoryApi } from "../services/api";
+import { inventoryApi, classesApi, authApi } from "../services/api";
 import { InventoryItem } from "../types";
-import { Backpack, Search, Filter, ArrowUpDown, Star } from "lucide-react";
+import { Backpack, Search, Filter, ArrowUpDown, Star, Swords, Check } from "lucide-react";
+import { useGameStore } from "../store/gameStore";
+import { useAuthStore } from "../store/authStore";
+import toast from "react-hot-toast";
 
 const rarityOrder: Record<string, number> = {
   common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4, mythic: 5, artifact: 6,
@@ -16,12 +19,23 @@ const rarityColors: Record<string, string> = {
   mythic: "text-red-400 border-red-500/30",
 };
 
+interface UnlockedClass {
+  id: string;
+  rank: number;
+  isActive: boolean;
+  gameClass: { id: string; name: string; slug: string; role: string };
+}
+
 export function InventoryPage() {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
+  const [classes, setClasses] = useState<UnlockedClass[]>([]);
+  const [switching, setSwitching] = useState(false);
+  const { selectedCharacter } = useGameStore();
+  const { setUser } = useAuthStore();
 
   useEffect(() => {
     inventoryApi.list()
@@ -29,6 +43,33 @@ export function InventoryPage() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  const loadClasses = () => {
+    if (!selectedCharacter?.id) return;
+    classesApi.listClasses(selectedCharacter.id)
+      .then(({ data }) => setClasses(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    loadClasses();
+  }, [selectedCharacter?.id]);
+
+  const handleEquipClass = async (classId: string) => {
+    if (!selectedCharacter) return;
+    setSwitching(true);
+    try {
+      await classesApi.switchClass(selectedCharacter.id, classId);
+      toast.success("Classe equipada!");
+      loadClasses();
+      const { data } = await authApi.me();
+      if (data) setUser(data);
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Falha ao equipar classe");
+    } finally {
+      setSwitching(false);
+    }
+  };
 
   const filtered = items
     .filter(i => filterType === "all" || i.item.type === filterType)
@@ -47,6 +88,42 @@ export function InventoryPage() {
           <span className="text-sm text-gray-500 font-normal">({items.length} items)</span>
         </h1>
       </div>
+
+      {classes.length > 0 && (
+        <div className="panel p-4">
+          <h2 className="font-display font-semibold mb-3 flex items-center gap-2">
+            <Swords size={16} className="text-blue-400" /> Classes
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {classes.map((p) => {
+              const equipped = !!p.isActive;
+              return (
+                <div key={p.id} className={`card-hover p-3 flex items-center justify-between gap-3 ${equipped ? "border-purple-500/40" : ""}`}>
+                  <div className="min-w-0">
+                    <p className="font-medium text-sm truncate">{p.gameClass?.name}</p>
+                    <p className="text-[11px] text-gray-500 capitalize">
+                      {p.gameClass?.role} • Rank {p.rank}
+                    </p>
+                  </div>
+                  {equipped ? (
+                    <span className="flex items-center gap-1 text-xs text-purple-400 px-2 py-1 shrink-0">
+                      <Check size={13} /> Equipada
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => handleEquipClass(p.gameClass?.id)}
+                      disabled={switching}
+                      className="btn-primary text-xs px-3 py-1.5 shrink-0 disabled:opacity-50"
+                    >
+                      {switching ? "Equipando..." : "Equipar"}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 max-w-xs">

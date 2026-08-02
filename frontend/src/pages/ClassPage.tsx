@@ -35,14 +35,10 @@ export function ClassPage() {
   const navigate = useNavigate();
   const { selectedCharacter } = useGameStore();
   const [data, setData] = useState<Character | null>(null);
-  const [unlocked, setUnlocked] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
   const [rankingUp, setRankingUp] = useState(false);
-  const [switching, setSwitching] = useState(false);
   const [statPanel, setStatPanel] = useState<"core" | "modifiers" | "combat">("core");
-
-  const equippedSlug = selectedCharacter?.class?.slug;
 
   useEffect(() => {
     if (!slug && selectedCharacter?.class?.slug) {
@@ -59,27 +55,6 @@ export function ClassPage() {
       .catch(() => toast.error("Falha ao carregar a classe"))
       .finally(() => setLoading(false));
   }, [slug, selectedCharacter?.id]);
-
-  useEffect(() => {
-    if (!selectedCharacter) return;
-    classesApi.listClasses(selectedCharacter.id)
-      .then(({ data }) => setUnlocked(Array.isArray(data) ? data : []))
-      .catch(() => setUnlocked([]));
-  }, [selectedCharacter?.id]);
-
-  const handleSwitchClass = async (classId: string, classSlug: string) => {
-    if (!selectedCharacter) return;
-    setSwitching(true);
-    try {
-      await classesApi.switchClass(selectedCharacter.id, classId);
-      toast.success("Classe equipada!");
-      navigate(`/class/${classSlug}`, { replace: true });
-    } catch (err: any) {
-      toast.error(err.response?.data?.error || "Falha ao equipar classe");
-    } finally {
-      setSwitching(false);
-    }
-  };
 
   if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" /></div>;
 
@@ -235,6 +210,9 @@ export function ClassPage() {
                 {character.trait?.name ? ` • Trait: ${character.trait.name}` : ""}
               </p>
             )}
+            <p className="text-[11px] text-gray-600 mt-1">
+              Troque de classe pelo Inventário.
+            </p>
           </div>
           <div className="flex flex-col items-center justify-center p-4 bg-dark-800/50 rounded-xl border border-dark-600 min-w-[200px]">
             <span className="text-2xl font-display font-bold text-purple-400">Rank {rank}</span>
@@ -267,34 +245,6 @@ export function ClassPage() {
           </div>
         </div>
       </div>
-
-      {/* Classes desbloqueadas */}
-      {unlocked.filter((p) => !p.isActive).length > 0 && (
-        <div className="panel p-4">
-          <h3 className="font-display font-semibold mb-3 flex items-center gap-2">
-            <Sparkles size={16} className="text-blue-400" /> Classes desbloqueadas
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {unlocked.filter((p) => !p.isActive).map((p) => (
-              <div key={p.id} className="card-hover p-3 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-medium text-sm">{p.gameClass?.name}</p>
-                  <p className="text-[11px] text-gray-500 capitalize">
-                    {p.gameClass?.role} • Rank {p.rank}
-                  </p>
-                </div>
-                <button
-                  onClick={() => handleSwitchClass(p.gameClass?.id, p.gameClass?.slug)}
-                  disabled={switching}
-                  className="btn-primary text-xs px-3 py-1.5 shrink-0 disabled:opacity-50"
-                >
-                  Equipar
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Stats resumo */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

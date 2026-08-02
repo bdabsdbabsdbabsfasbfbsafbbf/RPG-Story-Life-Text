@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CORE_GROUP, FLAT_GROUP, PERCENT_GROUP, OFFENSIVE_GROUP, DEFENSIVE_GROUP, CRIT_GROUP, HEALING_GROUP, MANA_GROUP, VAMP_GROUP, UTILITY_GROUP, StatGroup } from "./statFields";
+import { MOD_FLAT_GROUP, MOD_PERCENT_GROUP, StatGroup } from "./statFields";
 
 export const kindOptions = ["attack", "heal", "buff", "debuff", "summon", "mobility", "control", "defense", "channel"];
 export const triggerOptions = ["auto", "active", "ultimate"];
@@ -74,28 +74,9 @@ export const scalingFields = [
   { name: "factor", label: "Fator", type: "number" as const },
 ];
 
-export const passiveFlatGroups: StatGroup[] = [
-  CORE_GROUP,
-  FLAT_GROUP,
-  OFFENSIVE_GROUP,
-  DEFENSIVE_GROUP,
-  CRIT_GROUP,
-  HEALING_GROUP,
-  MANA_GROUP,
-  VAMP_GROUP,
-  UTILITY_GROUP,
-];
+export const passiveFlatGroups: StatGroup[] = [MOD_FLAT_GROUP];
 
-export const passivePercentGroups: StatGroup[] = [
-  PERCENT_GROUP,
-  OFFENSIVE_GROUP,
-  DEFENSIVE_GROUP,
-  CRIT_GROUP,
-  HEALING_GROUP,
-  MANA_GROUP,
-  VAMP_GROUP,
-  UTILITY_GROUP,
-];
+export const passivePercentGroups: StatGroup[] = [MOD_PERCENT_GROUP];
 
 export const emptyStatModifiers = () => ({ flat: {} as Record<string, number>, percent: {} as Record<string, number> });
 

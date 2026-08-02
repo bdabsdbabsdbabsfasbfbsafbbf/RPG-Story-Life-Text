@@ -176,6 +176,61 @@ export const ALL_FIELDS: StatField[] = ALL_GROUPS.flatMap((g) => g.fields);
 
 export const allKeysSet = new Set(ALL_FIELDS.map((f) => f.key));
 
+// Grupos usados pelo editor de modificadores de passivas/efeitos.
+// Espelham exatamente as chaves que o motor (DerivedStats) lê em statModifiers.
+export const MOD_FLAT_GROUP: StatGroup = {
+  label: "Modificadores (plano)",
+  fields: [
+    { key: "hp", label: "HP" },
+    { key: "mana", label: "Mana" },
+    { key: "maxHp", label: "HP Máx" },
+    { key: "maxMana", label: "Mana Máx" },
+    { key: "attack", label: "Ataque" },
+    { key: "defense", label: "Defesa" },
+    { key: "magic", label: "Magia" },
+    { key: "magicDefense", label: "Res. Mágica" },
+    { key: "speed", label: "Velocidade" },
+    { key: "attackPower", label: "Poder de Ataque" },
+    { key: "spellPower", label: "Poder Mágico" },
+    { key: "critChance", label: "Chance Crítica" },
+    { key: "critDamage", label: "Dano Crítico" },
+    { key: "dodge", label: "Esquiva" },
+    { key: "attackSpeedMs", label: "Vel. de Ataque (ms)" },
+    { key: "manaRegenPerTick", label: "Regen de Mana/Tick" },
+    { key: "healthRegenPerTick", label: "Regen de Vida/Tick" },
+    { key: "threatPerAttack", label: "Ameaça/Ataque" },
+    { key: "aggroPerHit", label: "Aggro/Golpe" },
+  ],
+};
+
+export const MOD_PERCENT_GROUP: StatGroup = {
+  label: "Modificadores (%)",
+  fields: [
+    { key: "hpPercent", label: "Vida %" },
+    { key: "manaPercent", label: "Mana %" },
+    { key: "maxHpPercent", label: "HP Máx %" },
+    { key: "maxManaPercent", label: "Mana Máx %" },
+    { key: "attackPercent", label: "Ataque %" },
+    { key: "defensePercent", label: "Defesa %" },
+    { key: "magicPercent", label: "Magia %" },
+    { key: "magicDefensePercent", label: "Res. Mágica %" },
+    { key: "speedPercent", label: "Velocidade %" },
+    { key: "damagePercent", label: "Dano %" },
+    { key: "magicDamagePercent", label: "Dano Mágico %" },
+    { key: "healingPercent", label: "Cura %" },
+    { key: "dotPercent", label: "Dano de DOT %" },
+    { key: "overhealPercent", label: "Overheal %" },
+    { key: "manaCostReduction", label: "Redução de Mana %" },
+    { key: "cooldownReduction", label: "Redução de CD %" },
+    { key: "attackSpeedBonus", label: "Vel. de Ataque %" },
+    { key: "lifeSteal", label: "Roubo de Vida %" },
+    { key: "xpBonus", label: "XP %" },
+    { key: "goldBonus", label: "Gold %" },
+    { key: "luckBonus", label: "Sorte" },
+    { key: "dropRate", label: "Taxa de Drop %" },
+  ],
+};
+
 export const EQUIP_GROUPS: StatGroup[] = [
   FLAT_GROUP,
   PERCENT_GROUP,
