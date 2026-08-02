@@ -110,7 +110,13 @@ export function createAuthModule(app: Express): void {
 
       const characters = await prisma.character.findMany({
         where: { userId: user.id },
-        select: { id: true, name: true, level: true, classId: true },
+        select: {
+          id: true, name: true, level: true, classId: true,
+          experience: true, currentHp: true, currentMana: true,
+          class: { select: { name: true, slug: true, baseHp: true, baseMana: true } },
+          race: { select: { name: true } },
+          trait: { select: { name: true } },
+        },
       });
 
       res.json({
@@ -119,7 +125,11 @@ export function createAuthModule(app: Express): void {
           username: user.username,
           displayName: user.displayName,
           role: user.role,
-          characters,
+          characters: characters.map((c: any) => ({
+            ...c,
+            experience: Number(c.experience),
+            experienceToNext: c.level * 150,
+          })),
         },
         token,
       });

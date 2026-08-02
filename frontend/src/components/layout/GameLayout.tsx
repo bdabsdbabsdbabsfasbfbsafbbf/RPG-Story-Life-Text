@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
+import { authApi } from "../../services/api";
 import { connectSocket, disconnectSocket, getSocket } from "../../services/socket";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
@@ -9,7 +10,7 @@ import { CombatHUD } from "../Combat/CombatHUD";
 import { useGameStore } from "../../store/gameStore";
 
 export function GameLayout() {
-  const { user, logout, accessToken } = useAuthStore();
+  const { user, logout, accessToken, setUser } = useAuthStore();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [chatOpen, setChatOpen] = useState(true);
   const combat = useGameStore((s) => s.combat);
@@ -20,6 +21,17 @@ export function GameLayout() {
     connectSocket(accessToken);
     return () => disconnectSocket();
   }, [accessToken]);
+
+  // Sync user data with the server on boot (persisted store may be stale)
+  useEffect(() => {
+    if (!accessToken) return;
+    authApi
+      .me()
+      .then(({ data }) => {
+        if (data) setUser(data);
+      })
+      .catch(() => {});
+  }, [accessToken, setUser]);
 
   useEffect(() => {
     const first = user?.characters?.[0];
