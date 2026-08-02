@@ -70,7 +70,7 @@ export function DashboardPage() {
                 {character.trait?.name && <> • Trait: {character.trait.name}</>}
               </p>
               {(character.experience !== undefined || character.experienceToNext) &&
-                (character.level >= 999 ? (
+                (character.atMaxLevel ? (
                   <div className="mt-2 max-w-xs">
                     <p className="text-[10px] text-purple-400 font-semibold uppercase tracking-wider">Nível máximo alcançado</p>
                   </div>

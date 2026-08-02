@@ -532,6 +532,7 @@ export interface Character {
   experience?: number;
   xpToNext?: number;
   experienceToNext?: number;
+  atMaxLevel?: boolean;
   currentHp?: number;
   maxHp?: number;
   currentMana?: number;
@@ -569,6 +570,13 @@ export interface CharacterIndex {
   races: Race[];
   traits: Trait[];
   classes: GameClass[];
+}
+
+export interface GameLimits {
+  maxLevel: number;
+  maxGold: number;
+  maxDiamonds: number;
+  xpPerLevel: number;
 }
 
 export interface Map {

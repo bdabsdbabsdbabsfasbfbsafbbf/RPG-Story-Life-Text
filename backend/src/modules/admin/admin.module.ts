@@ -5,6 +5,7 @@ import { prisma } from "../../core/database";
 import { config } from "../../core/config";
 import { authenticate, requireRole, AuthPayload } from "../../core/middleware/auth";
 import { AppError } from "../../core/middleware/errorHandler";
+import { DEFAULT_GAME_LIMITS, invalidateGameLimits } from "../../core/gameLimits";
 
 function requireAdmin(req: Request, res: Response, next: NextFunction) {
   authenticate(req, res, () => {
@@ -95,6 +96,41 @@ export function createAdminModule(app: Express): void {
         create: { key: "guild", value },
       });
       res.json(config.value);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Game economy limits (level, gold, diamonds, XP curve)
+  app.get("/api/admin/settings/limits", requireAdmin, async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const row = await prisma.systemConfig.findUnique({ where: { key: "limits" } });
+      res.json({ ...DEFAULT_GAME_LIMITS, ...(row?.value as object | undefined) });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.put("/api/admin/settings/limits", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { maxLevel, maxGold, maxDiamonds, xpPerLevel } = req.body;
+      const value = {
+        maxLevel:
+          typeof maxLevel === "number" && maxLevel > 0 ? Math.floor(maxLevel) : DEFAULT_GAME_LIMITS.maxLevel,
+        maxGold:
+          typeof maxGold === "number" && maxGold >= 0 ? Math.floor(maxGold) : DEFAULT_GAME_LIMITS.maxGold,
+        maxDiamonds:
+          typeof maxDiamonds === "number" && maxDiamonds >= 0 ? Math.floor(maxDiamonds) : DEFAULT_GAME_LIMITS.maxDiamonds,
+        xpPerLevel:
+          typeof xpPerLevel === "number" && xpPerLevel > 0 ? Math.floor(xpPerLevel) : DEFAULT_GAME_LIMITS.xpPerLevel,
+      };
+      await prisma.systemConfig.upsert({
+        where: { key: "limits" },
+        update: { value },
+        create: { key: "limits", value },
+      });
+      invalidateGameLimits();
+      res.json(value);
     } catch (err) {
       next(err);
     }

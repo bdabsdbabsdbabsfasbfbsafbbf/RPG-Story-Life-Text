@@ -2,6 +2,7 @@ import { Express, Request, Response, NextFunction } from "express";
 import { prisma } from "../../core/database";
 import { authenticate } from "../../core/middleware/auth";
 import { AppError } from "../../core/middleware/errorHandler";
+import { getGameLimits } from "../../core/gameLimits";
 
 // Starter items granted per class (matched by item name)
 const STARTER_KITS: Record<string, { itemName: string; quantity: number }[]> = {
@@ -204,8 +205,14 @@ export function createCharacterModule(app: Express): void {
         },
       });
       if (!character) return res.json(null);
-      const xpToNext = character.level * 150;
-      res.json({ ...character, xpToNext: Number(xpToNext), experience: Number(character.experience) });
+      const limits = await getGameLimits();
+      const xpToNext = character.level * limits.xpPerLevel;
+      res.json({
+        ...character,
+        xpToNext: Number(xpToNext),
+        experience: Number(character.experience),
+        atMaxLevel: character.level >= limits.maxLevel,
+      });
     } catch (err) {
       next(err);
     }

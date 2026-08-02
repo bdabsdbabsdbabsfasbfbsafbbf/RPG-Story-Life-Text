@@ -7,6 +7,7 @@ import { prisma } from "../../core/database";
 import { config } from "../../core/config";
 import { authenticate, AuthPayload } from "../../core/middleware/auth";
 import { AppError } from "../../core/middleware/errorHandler";
+import { getGameLimits } from "../../core/gameLimits";
 
 const registerSchema = z.object({
   username: z.string().min(3).max(20).regex(/^[a-zA-Z0-9_]+$/),
@@ -108,6 +109,7 @@ export function createAuthModule(app: Express): void {
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
 
+      const limits = await getGameLimits();
       const characters = await prisma.character.findMany({
         where: { userId: user.id },
         select: {
@@ -128,7 +130,8 @@ export function createAuthModule(app: Express): void {
           characters: characters.map((c: any) => ({
             ...c,
             experience: Number(c.experience),
-            experienceToNext: c.level * 150,
+            experienceToNext: c.level * limits.xpPerLevel,
+            atMaxLevel: c.level >= limits.maxLevel,
           })),
         },
         token,
@@ -163,12 +166,14 @@ export function createAuthModule(app: Express): void {
         },
       });
       if (!user) throw new AppError(404, "User not found");
+      const limits = await getGameLimits();
       res.json({
         ...user,
         characters: user.characters.map((c: any) => ({
           ...c,
           experience: Number(c.experience),
-          experienceToNext: c.level * 150,
+          experienceToNext: c.level * limits.xpPerLevel,
+          atMaxLevel: c.level >= limits.maxLevel,
         })),
       });
     } catch (err) {
@@ -204,12 +209,14 @@ export function createAuthModule(app: Express): void {
           },
         },
       });
+      const limits = await getGameLimits();
       res.json({
         ...user,
         characters: user.characters.map((c: any) => ({
           ...c,
           experience: Number(c.experience),
-          experienceToNext: c.level * 150,
+          experienceToNext: c.level * limits.xpPerLevel,
+          atMaxLevel: c.level >= limits.maxLevel,
         })),
       });
     } catch (err) {

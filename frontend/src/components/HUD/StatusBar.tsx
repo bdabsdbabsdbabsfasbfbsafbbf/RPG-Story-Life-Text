@@ -60,13 +60,13 @@ export default function StatusBar() {
               <div
                 className={styles.barFill}
                 style={{
-                  width: selectedCharacter.level >= 999 ? '100%' : `${xpPercent}%`,
+                  width: selectedCharacter.atMaxLevel ? '100%' : `${xpPercent}%`,
                   background: 'var(--xp-color)',
                 }}
               />
             </div>
             <span className={styles.barText}>
-              {selectedCharacter.level >= 999 ? 'MÁX' : `${selectedCharacter.experience}/${selectedCharacter.experienceToNext}`}
+              {selectedCharacter.atMaxLevel ? 'MÁX' : `${selectedCharacter.experience}/${selectedCharacter.experienceToNext}`}
             </span>
           </div>
         </div>

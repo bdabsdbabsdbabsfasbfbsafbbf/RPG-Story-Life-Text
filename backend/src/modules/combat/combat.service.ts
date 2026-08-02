@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import Redis from "ioredis";
 import { v4 as uuidv4 } from "uuid";
 import { CooldownManager } from "./cooldown.manager";
+import { getGameLimits } from "../../core/gameLimits";
 
 interface CombatInstance {
   id: string;
@@ -304,10 +305,13 @@ export class CombatService {
   }
 
   private async grantRewards(characterId: string, monster: any): Promise<any> {
-    const character = await this.prisma.character.findUnique({
-      where: { id: characterId },
-      include: { class: true, trait: true, classProgress: { where: { isActive: true } } },
-    });
+    const [character, limits] = await Promise.all([
+      this.prisma.character.findUnique({
+        where: { id: characterId },
+        include: { class: true, trait: true, classProgress: { where: { isActive: true } } },
+      }),
+      getGameLimits(),
+    ]);
     if (!character) return null;
 
     const traitMods: any = (character.trait?.modifiers as any) ?? {};
@@ -322,7 +326,10 @@ export class CombatService {
       data: { experience: { increment: xpGain } },
       select: { id: true, level: true, experience: true },
     });
-    while (updatedCharacter.experience >= BigInt(updatedCharacter.level * 150)) {
+    while (
+      updatedCharacter.level < limits.maxLevel &&
+      updatedCharacter.experience >= BigInt(updatedCharacter.level * limits.xpPerLevel)
+    ) {
       updatedCharacter = await this.prisma.character.update({
         where: { id: characterId },
         data: { level: { increment: 1 } },
@@ -349,11 +356,15 @@ export class CombatService {
       where: { id: character.userId },
     });
     if (user) {
+      const maxGold = BigInt(limits.maxGold);
+      const newGold = user.gold + BigInt(goldGain);
+      const clampedGold = newGold > maxGold ? maxGold : newGold;
+      const actualGoldGain = clampedGold > user.gold ? Number(clampedGold - user.gold) : 0;
       await this.prisma.user.update({
         where: { id: user.id },
         data: {
           experience: { increment: xpGain },
-          gold: { increment: goldGain },
+          gold: { increment: actualGoldGain },
         },
       });
     }

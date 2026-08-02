@@ -2,15 +2,17 @@ import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard, Map, Sword, Backpack, ScrollText,
-  Settings, Shield, MessageCircle, BookOpen,
+  Settings, Shield, MessageCircle, BookOpen, SlidersHorizontal,
 } from "lucide-react";
 import { questsApi } from "../../services/api";
+import { useAuthStore } from "../../store/authStore";
 
 interface SidebarProps {
   isOpen: boolean;
 }
 
 export function Sidebar({ isOpen }: SidebarProps) {
+  const { user } = useAuthStore();
   const [hasActiveQuest, setHasActiveQuest] = useState(false);
 
   useEffect(() => {
@@ -27,11 +29,14 @@ export function Sidebar({ isOpen }: SidebarProps) {
 
   if (!isOpen) return null;
 
+  const isAdmin = user?.role === "admin" || user?.role === "owner" || user?.role === "developer";
+
   const navItems = [
     { to: "/map", icon: Map, label: "Map" },
     { to: "/classes", icon: Sword, label: "Classes" },
     { to: "/inventory", icon: Backpack, label: "Inventory" },
     ...(hasActiveQuest ? [{ to: "/quests", icon: ScrollText, label: "Quests" }] : []),
+    ...(isAdmin ? [{ to: "/admin", icon: SlidersHorizontal, label: "Admin" }] : []),
   ];
 
   return (
