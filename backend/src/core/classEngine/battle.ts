@@ -15,7 +15,7 @@ import {
 } from "./types";
 import { computeStats, computeMonsterStats, applyStatModifiers, StatsInput } from "./stat-calculator";
 import { processEffectStep, serializeEffects, EffectModifiers } from "./effect-manager";
-import { executeActions, ActionResult, evaluateConditions, describeConditions, emptyResult } from "./action-executor";
+import { executeActions, ActionResult, evaluateConditions, describeConditions, emptyResult, absorbWithShield, reflectPercent, hitkillChanceOf, entityHasKind } from "./action-executor";
 
 export const TICK_MS = 1000;
 
@@ -294,6 +294,8 @@ export class Battle {
 
   canUseSkill(skill: SkillDef): { ok: boolean; reason?: string; requirements: string[] } {
     if (this.state !== "active") return { ok: false, reason: "Combate encerrado", requirements: [] };
+    if (entityHasKind(this.player, "stun")) return { ok: false, reason: "Atordoado(a) — não pode agir", requirements: [] };
+    if (entityHasKind(this.player, "silence")) return { ok: false, reason: "Silenciado(a) — skills bloqueadas", requirements: [] };
     if (skill.rankRequired > this.rank) return { ok: false, reason: `Requer rank ${skill.rankRequired}`, requirements: [] };
     if (this.getCooldown(skill.id) > 0) return { ok: false, reason: "Skill em cooldown", requirements: [] };
     if (skill.manaCost > 0 && this.player.mana < this.actualManaCost(skill)) return { ok: false, reason: "Mana insuficiente", requirements: [] };
@@ -419,6 +421,7 @@ export class Battle {
 
   // ============ Ataque do monstro ============
   monsterAttack(): void {
+    if (entityHasKind(this.monster, "stun")) return;
     const pStats = this.effectivePlayerStats();
     const mStats = this.effectiveMonsterStats();
     const reduction = Math.min(0.8, pStats.defense / (pStats.defense + 100));
@@ -433,8 +436,35 @@ export class Battle {
       return;
     }
 
-    this.player.hp = Math.max(0, this.player.hp - damage);
-    this.pushMessage(`${this.monster.name} causou ${damage} de dano em você${crit ? " (crítico)" : ""}`);
+    // Escudo do jogador
+    const { applied, absorbed } = absorbWithShield(this.player, damage);
+    if (absorbed > 0) this.pushMessage(`Seu escudo absorveu ${absorbed} de dano`);
+
+    if (applied > 0) {
+      this.player.hp = Math.max(0, this.player.hp - applied);
+      this.pushMessage(`${this.monster.name} causou ${applied} de dano em você${crit ? " (crítico)" : ""}`);
+    } else if (absorbed > 0) {
+      this.pushMessage(`O ataque foi totalmente absorvido pelo escudo`);
+    }
+
+    // Refletir do jogador
+    const reflected = Math.floor(applied * (reflectPercent(this.player) / 100));
+    if (reflected > 0) {
+      this.monster.hp = Math.max(0, this.monster.hp - reflected);
+      this.pushMessage(`Você refletiu ${reflected} de dano para ${this.monster.name}`);
+      if (this.monster.hp <= 0) {
+        this.monster.hp = 0;
+        this.state = "won";
+      }
+    }
+
+    // Golpe letal do monstro
+    const hk = hitkillChanceOf(this.monster);
+    if (hk > 0 && Math.random() * 100 < hk) {
+      this.player.hp = 0;
+      this.pushMessage(`Golpe letal! ${this.monster.name} aniquilou você de uma vez`);
+    }
+
     this.fire("onDamageTaken", { actor: this.player, target: this.monster });
     if (this.player.hp <= 0) {
       this.player.hp = 0;
@@ -473,7 +503,7 @@ export class Battle {
     }
 
     // Auto-ataque do jogador
-    if (this.state === "active" && now - this.player.lastAttackAt >= pStats.attackSpeedMs) {
+    if (this.state === "active" && !entityHasKind(this.player, "stun") && now - this.player.lastAttackAt >= pStats.attackSpeedMs) {
       this.player.lastAttackAt = now;
       this.autoAttack();
     }
@@ -495,7 +525,7 @@ export class Battle {
     }
 
     // Ataque do monstro
-    if (this.state === "active" && now - this.monster.lastAttackAt >= mStats.attackSpeedMs) {
+    if (this.state === "active" && !entityHasKind(this.monster, "stun") && now - this.monster.lastAttackAt >= mStats.attackSpeedMs) {
       this.monster.lastAttackAt = now;
       this.monsterAttack();
     }

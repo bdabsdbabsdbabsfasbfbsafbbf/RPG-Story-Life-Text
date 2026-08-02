@@ -14,6 +14,12 @@ export interface ApplyEffectResult {
   refreshed: boolean;
 }
 
+export interface ApplyEffectOptions {
+  modifiers?: EffectModifiers | null;
+  now?: number;
+  calcShield?: (effect: EffectDef, stacks: number) => number | null;
+}
+
 function findModifier(effectModifiers: Array<{ effectSlug: string; [k: string]: any }>, slug: string): EffectModifiers | null {
   if (!effectModifiers || effectModifiers.length === 0) return null;
   const match = effectModifiers.find((m) => m.effectSlug === slug) || effectModifiers.find((m) => m.effectSlug === "*");
@@ -24,13 +30,17 @@ export function applyEffect(
   effects: ActiveEffectRuntime[],
   effect: EffectDef,
   stacks: number,
-  opts?: { modifiers?: EffectModifiers | null; now?: number }
+  opts?: ApplyEffectOptions
 ): { effects: ActiveEffectRuntime[]; result: ApplyEffectResult } {
   const now = opts?.now ?? Date.now();
   const mods = opts?.modifiers ?? null;
   const durationMod = (mods?.durationPercent ?? 0) / 100;
   const stacksBonus = mods?.stacksBonus ?? 0;
   const gainedStacks = Math.max(1, Math.floor(stacks) + (stacksBonus || 0));
+  const newShieldHp = (e: EffectDef, s: number): number | undefined => {
+    if (!e.shield) return undefined;
+    return Math.max(0, Math.floor(opts?.calcShield?.(e, s) ?? 0));
+  };
 
   const existing = effects.find((e) => e.effect.slug === effect.slug);
 
@@ -60,6 +70,8 @@ export function applyEffect(
 
     maxed = newStacks >= maxStacks && existing.stacks < maxStacks;
     existing.stacks = newStacks;
+    // Escudo: recalculado a cada aplicação (reforço substitui o pool atual)
+    if (effect.shield) existing.shieldHp = newShieldHp(effect, newStacks);
     if (existing.nextTickAt === null && effect.tickInterval > 0) {
       existing.nextTickAt = now + effect.tickInterval;
     }
@@ -75,6 +87,7 @@ export function applyEffect(
     remainingMs: effect.duration > 0 ? Math.floor(effect.duration * (1 + durationMod)) : 0,
     nextTickAt: effect.tickInterval > 0 ? now + effect.tickInterval : null,
   };
+  if (effect.shield) runtime.shieldHp = newShieldHp(effect, runtime.stacks);
   effects.push(runtime);
   return { effects, result: { gainedStacks: runtime.stacks, maxed: false, refreshed: false } };
 }
@@ -161,5 +174,6 @@ export function serializeEffects(effects: ActiveEffectRuntime[]) {
     kind: e.effect.kind,
     stacks: e.stacks,
     remainingMs: e.remainingMs,
+    shieldHp: e.shieldHp && e.shieldHp > 0 ? e.shieldHp : undefined,
   }));
 }

@@ -405,7 +405,36 @@ export function createAdminModule(app: Express): void {
   // Relações opcionais: string vazia/null vira null (evita FK error)
   const NULLABLE_RELATIONS: Record<string, string[]> = {
     class: ["statModelId"],
+    shopitem: ["npcId", "itemId"],
+    mapnpc: ["mapId", "npcId"],
+    quest: ["giverNpcId", "mapId"],
   };
+
+  // Labels das FKs para mensagem amigável quando der P2003
+  const FK_LABELS: Record<string, string> = {
+    npcId: "NPC",
+    itemId: "Item",
+    mapId: "Mapa",
+    monsterId: "Monstro",
+    statModelId: "Stat Model",
+  };
+
+  async function saveWithFk(model: string, id: string | null, body: any) {
+    const data = normalizeBody(model, body);
+    try {
+      const client = prisma as any;
+      return id
+        ? await client[model].update({ where: { id }, data })
+        : await client[model].create({ data });
+    } catch (err: any) {
+      if (err?.code === "P2003") {
+        const field = String(err?.meta?.field_name ?? "");
+        const label = Object.entries(FK_LABELS).find(([k]) => field.includes(k))?.[1] ?? "Referência";
+        throw new AppError(400, `${label} inválido — escolha uma opção existente`);
+      }
+      throw err;
+    }
+  }
 
   function normalizeBody(model: string, body: any): any {
     if (!body || typeof body !== "object" || Array.isArray(body)) return body;
@@ -629,5 +658,71 @@ export function createAdminModule(app: Express): void {
 
   app.delete("/api/admin/traits/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try { await prisma.trait.delete({ where: { id: req.params.id } }); res.json({ message: "Deleted" }); } catch (err) { next(err); }
+  });
+
+  // NPCs CRUD
+  app.get("/api/admin/npcs", requireAdmin, async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      res.json(await prisma.npc.findMany({
+        include: { mapNpcs: { include: { map: true } }, shopItems: { include: { item: true } } },
+        orderBy: { name: "asc" },
+      }));
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/admin/npcs", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try { res.status(201).json(await saveWithFk("npc", null, req.body)); } catch (err) { next(err); }
+  });
+
+  app.put("/api/admin/npcs/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try { res.json(await saveWithFk("npc", req.params.id, req.body)); } catch (err) { next(err); }
+  });
+
+  app.delete("/api/admin/npcs/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try { await prisma.npc.delete({ where: { id: req.params.id } }); res.json({ message: "Deleted" }); } catch (err) { next(err); }
+  });
+
+  // ShopItems CRUD (itens que um NPC vende)
+  app.get("/api/admin/shopitems", requireAdmin, async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      res.json(await prisma.shopItem.findMany({
+        include: { item: true, npc: true },
+        orderBy: { createdAt: "desc" },
+      }));
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/admin/shopitems", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try { res.status(201).json(await saveWithFk("shopItem", null, req.body)); } catch (err) { next(err); }
+  });
+
+  app.put("/api/admin/shopitems/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try { res.json(await saveWithFk("shopItem", req.params.id, req.body)); } catch (err) { next(err); }
+  });
+
+  app.delete("/api/admin/shopitems/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try { await prisma.shopItem.delete({ where: { id: req.params.id } }); res.json({ message: "Deleted" }); } catch (err) { next(err); }
+  });
+
+  // MapNpcs CRUD (NPC posicionado em um mapa)
+  app.get("/api/admin/mapnpcs", requireAdmin, async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      res.json(await prisma.mapNpc.findMany({
+        include: { map: true, npc: true },
+        orderBy: { createdAt: "desc" },
+      }));
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/admin/mapnpcs", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try { res.status(201).json(await saveWithFk("mapNpc", null, req.body)); } catch (err) { next(err); }
+  });
+
+  app.put("/api/admin/mapnpcs/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try { res.json(await saveWithFk("mapNpc", req.params.id, req.body)); } catch (err) { next(err); }
+  });
+
+  app.delete("/api/admin/mapnpcs/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try { await prisma.mapNpc.delete({ where: { id: req.params.id } }); res.json({ message: "Deleted" }); } catch (err) { next(err); }
   });
 }

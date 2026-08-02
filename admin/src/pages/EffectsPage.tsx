@@ -9,11 +9,7 @@ import {
   effectCategoryOptions,
   refreshBehaviorOptions,
   damageTypeOptions,
-  passiveFlatGroups,
-  passivePercentGroups,
-  emptyStatModifiers,
   parseJsonArray,
-  parseStatModifiers,
 } from "../dslFields";
 
 const inputClass =
@@ -50,7 +46,10 @@ const defaultForm = {
   tickDamageType: "physical",
   tickHealingBase: 0,
   tickHealingScaling: [] as any[],
-  statModifiers: emptyStatModifiers(),
+  shieldBase: 0,
+  shieldScaling: [] as any[],
+  reflectPercent: 0,
+  hitkillChance: 0,
   onMaxStacks: [] as any[],
   onExpire: [] as any[],
   onTick: [] as any[],
@@ -103,6 +102,7 @@ export default function EffectsPage() {
     try { stackLoss = e.stackLoss ? JSON.parse(e.stackLoss) : {}; } catch { stackLoss = {}; }
     const td = parseNested(e.tickDamage);
     const th = parseNested(e.tickHealing);
+    const shield = parseNested(e.shield);
     setForm({
       name: e.name ?? "",
       slug: e.slug ?? "",
@@ -121,7 +121,10 @@ export default function EffectsPage() {
       tickDamageType: td.damageType,
       tickHealingBase: th.base,
       tickHealingScaling: th.scaling,
-      statModifiers: parseStatModifiers(e.statModifiers),
+      shieldBase: shield.base,
+      shieldScaling: shield.scaling,
+      reflectPercent: Number(e.reflect?.percent) || 0,
+      hitkillChance: Number(e.hitkillChance) || 0,
       onMaxStacks: parseJsonArray(e.onMaxStacks),
       onExpire: parseJsonArray(e.onExpire),
       onTick: parseJsonArray(e.onTick),
@@ -141,6 +144,10 @@ export default function EffectsPage() {
     if (Number(form.tickHealingBase)) tickHealing.base = Number(form.tickHealingBase);
     if (Array.isArray(form.tickHealingScaling) && form.tickHealingScaling.length) tickHealing.scaling = form.tickHealingScaling;
 
+    const shield: Record<string, any> = {};
+    if (Number(form.shieldBase)) shield.base = Number(form.shieldBase);
+    if (Array.isArray(form.shieldScaling) && form.shieldScaling.length) shield.scaling = form.shieldScaling;
+
     const payload: Record<string, any> = {
       name: form.name,
       slug: form.slug || null,
@@ -158,7 +165,9 @@ export default function EffectsPage() {
       stackLoss: JSON.stringify(form.stackLoss || {}),
       tickDamage: JSON.stringify(tickDamage),
       tickHealing: JSON.stringify(tickHealing),
-      statModifiers: JSON.stringify(form.statModifiers),
+      shield: JSON.stringify(shield),
+      reflect: JSON.stringify(form.reflectPercent > 0 ? { percent: Number(form.reflectPercent) } : {}),
+      hitkillChance: form.hitkillChance > 0 ? Number(form.hitkillChance) : null,
       onMaxStacks: JSON.stringify(form.onMaxStacks || []),
       onExpire: JSON.stringify(form.onExpire || []),
       onTick: JSON.stringify(form.onTick || []),
@@ -261,7 +270,13 @@ export default function EffectsPage() {
                     <p className="text-xs text-gray-500 max-w-xs truncate">{e.description}</p>
                   </td>
                   <td className="py-2.5 px-4">
-                    <span className={`px-2 py-0.5 rounded-full text-xs ${e.kind === "dot" || e.kind === "debuff" ? "bg-red-500/20 text-red-400" : e.kind === "hot" ? "bg-emerald-500/20 text-emerald-400" : "bg-blue-500/20 text-blue-400"}`}>
+                    <span className={`px-2 py-0.5 rounded-full text-xs ${
+                      e.kind === "dot" || e.kind === "debuff" ? "bg-red-500/20 text-red-400"
+                      : e.kind === "hot" ? "bg-emerald-500/20 text-emerald-400"
+                      : e.kind === "shield" || e.kind === "reflect" ? "bg-cyan-500/20 text-cyan-400"
+                      : e.kind === "hitkill" ? "bg-purple-500/20 text-purple-400"
+                      : e.kind === "silence" || e.kind === "stun" ? "bg-amber-500/20 text-amber-400"
+                      : "bg-blue-500/20 text-blue-400"}`}>
                       {e.kind}
                     </span>
                   </td>
@@ -341,56 +356,82 @@ export default function EffectsPage() {
                     onChange={(v) => setForm({ ...form, stackLoss: v })}
                   />
                 </div>
-                <div className="sm:col-span-2">
-                  <label className="block text-sm text-gray-400 mb-1.5">Tick Damage</label>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
-                    <div>
+                {form.kind === "dot" && (
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm text-gray-400 mb-1.5">Tick Damage (DOT)</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+                      <div>
+                        <label className="block text-[11px] text-gray-500 mb-1">Base</label>
+                        <input type="number" value={form.tickDamageBase} onChange={(e) => setForm({ ...form, tickDamageBase: Number(e.target.value) })} className={inputClass} />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="block text-[11px] text-gray-500 mb-1">Tipo de Dano</label>
+                        <select value={form.tickDamageType} onChange={(e) => setForm({ ...form, tickDamageType: e.target.value })} className={inputClass}>
+                          {damageTypeOptions.map((opt) => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <JsonField
+                      schema={{ mode: "object-array", addLabel: "Adicionar scaling", fields: scalingFields }}
+                      value={form.tickDamageScaling}
+                      onChange={(v) => setForm({ ...form, tickDamageScaling: v })}
+                    />
+                  </div>
+                )}
+                {form.kind === "hot" && (
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm text-gray-400 mb-1.5">Tick Healing (HOT)</label>
+                    <div className="mb-3">
                       <label className="block text-[11px] text-gray-500 mb-1">Base</label>
-                      <input type="number" value={form.tickDamageBase} onChange={(e) => setForm({ ...form, tickDamageBase: Number(e.target.value) })} className={inputClass} />
+                      <input type="number" value={form.tickHealingBase} onChange={(e) => setForm({ ...form, tickHealingBase: Number(e.target.value) })} className={inputClass} />
                     </div>
-                    <div className="sm:col-span-2">
-                      <label className="block text-[11px] text-gray-500 mb-1">Tipo de Dano</label>
-                      <select value={form.tickDamageType} onChange={(e) => setForm({ ...form, tickDamageType: e.target.value })} className={inputClass}>
-                        {damageTypeOptions.map((opt) => (
-                          <option key={opt} value={opt}>{opt}</option>
-                        ))}
-                      </select>
+                    <JsonField
+                      schema={{ mode: "object-array", addLabel: "Adicionar scaling", fields: scalingFields }}
+                      value={form.tickHealingScaling}
+                      onChange={(v) => setForm({ ...form, tickHealingScaling: v })}
+                    />
+                  </div>
+                )}
+                {form.kind === "shield" && (
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm text-gray-400 mb-1.5">Escudo (anula dano)</label>
+                    <div className="mb-3">
+                      <label className="block text-[11px] text-gray-500 mb-1">Base (pontos de escudo por stack)</label>
+                      <input type="number" value={form.shieldBase} onChange={(e) => setForm({ ...form, shieldBase: Number(e.target.value) })} className={inputClass} />
                     </div>
+                    <JsonField
+                      schema={{ mode: "object-array", addLabel: "Adicionar scaling", fields: scalingFields }}
+                      value={form.shieldScaling}
+                      onChange={(v) => setForm({ ...form, shieldScaling: v })}
+                    />
                   </div>
-                  <JsonField
-                    schema={{ mode: "object-array", addLabel: "Adicionar scaling", fields: scalingFields }}
-                    value={form.tickDamageScaling}
-                    onChange={(v) => setForm({ ...form, tickDamageScaling: v })}
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="block text-sm text-gray-400 mb-1.5">Tick Healing</label>
-                  <div className="mb-3">
-                    <label className="block text-[11px] text-gray-500 mb-1">Base</label>
-                    <input type="number" value={form.tickHealingBase} onChange={(e) => setForm({ ...form, tickHealingBase: Number(e.target.value) })} className={inputClass} />
+                )}
+                {form.kind === "reflect" && (
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1.5">Refletir — Dano refletido (%)</label>
+                    <input type="number" value={form.reflectPercent} onChange={(e) => setForm({ ...form, reflectPercent: Number(e.target.value) })} className={inputClass} />
+                    <p className="text-[11px] text-gray-500 mt-1">Percentual do dano recebido devolvido ao atacante (soma por stack)</p>
                   </div>
-                  <JsonField
-                    schema={{ mode: "object-array", addLabel: "Adicionar scaling", fields: scalingFields }}
-                    value={form.tickHealingScaling}
-                    onChange={(v) => setForm({ ...form, tickHealingScaling: v })}
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="block text-sm text-gray-400 mb-1.5">Stat Modifiers — Plano</label>
-                  <JsonField
-                    schema={{ mode: "fixed-record", groups: passiveFlatGroups }}
-                    value={form.statModifiers.flat}
-                    onChange={(v) => setForm({ ...form, statModifiers: { ...form.statModifiers, flat: v } })}
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="block text-sm text-gray-400 mb-1.5">Stat Modifiers — Percentual</label>
-                  <JsonField
-                    schema={{ mode: "fixed-record", groups: passivePercentGroups }}
-                    value={form.statModifiers.percent}
-                    onChange={(v) => setForm({ ...form, statModifiers: { ...form.statModifiers, percent: v } })}
-                  />
-                </div>
+                )}
+                {form.kind === "hitkill" && (
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1.5">Hitkill — Chance de golpe letal (%)</label>
+                    <input type="number" value={form.hitkillChance} onChange={(e) => setForm({ ...form, hitkillChance: Number(e.target.value) })} className={inputClass} />
+                    <p className="text-[11px] text-gray-500 mt-1">Chance de aniquilar o alvo instantaneamente ao acertar (soma por stack)</p>
+                  </div>
+                )}
+                {(form.kind === "silence" || form.kind === "stun") && (
+                  <div className="sm:col-span-2">
+                    <p className="text-xs text-gray-500 bg-dark-900 border border-dark-600 rounded-lg px-3 py-2">
+                      {form.kind === "silence"
+                        ? "Silêncio: o alvo não consegue usar skills enquanto o efeito durar."
+                        : "Stun: o alvo não consegue agir (skills nem auto-ataques) enquanto o efeito durar."}{" "}
+                      Use o campo "Duration (ms)" acima.
+                    </p>
+                  </div>
+                )}
                 <div className="sm:col-span-2">
                   <label className="block text-sm text-gray-400 mb-1.5">On Max Stacks (ações)</label>
                   <JsonField

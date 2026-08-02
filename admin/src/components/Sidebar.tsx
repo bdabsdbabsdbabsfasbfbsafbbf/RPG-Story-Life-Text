@@ -17,6 +17,8 @@ import {
   LogOut,
   Scale,
   Gauge,
+  Contact,
+  ShoppingBag,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -35,6 +37,8 @@ const navItems: NavItem[] = [
   { to: '/maps', icon: <Map size={18} />, label: 'Maps' },
   { to: '/quests', icon: <ScrollText size={18} />, label: 'Quests' },
   { to: '/effects', icon: <Activity size={18} />, label: 'Effects' },
+  { to: '/npcs', icon: <Contact size={18} />, label: 'NPCs' },
+  { to: '/shops', icon: <ShoppingBag size={18} />, label: 'Shops' },
   { to: '/statModels', icon: <Gauge size={18} />, label: 'Stat Models' },
   { to: '/races', icon: <Fingerprint size={18} />, label: 'Races' },
   { to: '/traits', icon: <Sparkles size={18} />, label: 'Traits' },

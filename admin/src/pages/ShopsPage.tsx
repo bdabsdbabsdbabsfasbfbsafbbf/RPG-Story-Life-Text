@@ -1,0 +1,415 @@
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import toast from "react-hot-toast";
+import { adminApi } from "../api";
+
+const inputClass =
+  "w-full bg-dark-900 border border-dark-600 rounded-lg px-3 py-2 text-sm text-white focus:border-accent-500 focus:outline-none";
+
+const labelClass = "block text-[11px] text-gray-500 mb-1";
+
+interface Npc {
+  id: string;
+  name: string;
+  type: string;
+  description: string;
+  shopItems?: any[];
+  mapNpcs?: any[];
+}
+
+interface Option {
+  id: string;
+  name: string;
+}
+
+export default function ShopsPage() {
+  const [npcs, setNpcs] = useState<Npc[]>([]);
+  const [items, setItems] = useState<Option[]>([]);
+  const [maps, setMaps] = useState<Option[]>([]);
+  const [selected, setSelected] = useState<Npc | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const [itemForm, setItemForm] = useState<Record<string, any>>({});
+  const [editingItem, setEditingItem] = useState<any>(null);
+  const [savingItem, setSavingItem] = useState(false);
+
+  const [mapForm, setMapForm] = useState<Record<string, any>>({});
+  const [editingMap, setEditingMap] = useState<any>(null);
+  const [savingMap, setSavingMap] = useState(false);
+
+  const [filter, setFilter] = useState("");
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const [npcsRes, itemsRes, mapsRes] = await Promise.all([
+        adminApi.npcs.list(),
+        adminApi.items.list(),
+        adminApi.maps.list(),
+      ]);
+      const npcList = Array.isArray(npcsRes.data) ? npcsRes.data : [];
+      setNpcs(npcList);
+      setItems(Array.isArray(itemsRes.data) ? itemsRes.data : []);
+      setMaps(Array.isArray(mapsRes.data) ? mapsRes.data : []);
+      if (selected) {
+        const updated = npcList.find((n: any) => n.id === selected.id);
+        if (updated) setSelected(updated);
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to load data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const filteredNpcs = useMemo(() => {
+    if (!filter.trim()) return npcs;
+    const q = filter.toLowerCase();
+    return npcs.filter((n) => n.name.toLowerCase().includes(q) || n.type.toLowerCase().includes(q));
+  }, [npcs, filter]);
+
+  const selectedShopItems = useMemo(() => selected?.shopItems ?? [], [selected]);
+  const selectedMapNpcs = useMemo(() => selected?.mapNpcs ?? [], [selected]);
+
+  const itemName = (id: string) => items.find((i) => i.id === id)?.name ?? id;
+  const mapName = (id: string) => maps.find((m) => m.id === id)?.name ?? id;
+
+  const resetItemForm = () => {
+    setItemForm({ itemId: "", price: 0, currency: "gold", stock: -1, rotationDays: 0 });
+    setEditingItem(null);
+  };
+
+  const resetMapForm = () => {
+    setMapForm({ mapId: "", positionX: 0, positionY: 0 });
+    setEditingMap(null);
+  };
+
+  const openEditItem = (s: any) => {
+    setEditingItem(s);
+    setItemForm({
+      itemId: s.itemId ?? "",
+      price: Number(s.price) || 0,
+      currency: s.currency ?? "gold",
+      stock: Number(s.stock) ?? -1,
+      rotationDays: Number(s.rotationDays) || 0,
+    });
+  };
+
+  const openEditMap = (m: any) => {
+    setEditingMap(m);
+    setMapForm({
+      mapId: m.mapId ?? "",
+      positionX: Number(m.positionX) ?? 0,
+      positionY: Number(m.positionY) ?? 0,
+    });
+  };
+
+  const handleItemSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!selected || !itemForm.itemId) {
+      toast.error("Escolha um item");
+      return;
+    }
+    setSavingItem(true);
+    try {
+      const payload = {
+        npcId: selected.id,
+        itemId: itemForm.itemId,
+        price: Number(itemForm.price) || 0,
+        currency: itemForm.currency || "gold",
+        stock: Number(itemForm.stock) ?? -1,
+        rotationDays: Number(itemForm.rotationDays) || 0,
+      };
+      if (editingItem?.id) {
+        await adminApi.shopItems.update(editingItem.id, payload);
+        toast.success("Item da loja atualizado");
+      } else {
+        await adminApi.shopItems.create(payload);
+        toast.success("Item adicionado à loja");
+      }
+      resetItemForm();
+      await load();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to save");
+    } finally {
+      setSavingItem(false);
+    }
+  };
+
+  const handleDeleteItem = async (s: any) => {
+    if (!window.confirm(`Remover "${itemName(s.itemId)}" da loja?`)) return;
+    try {
+      await adminApi.shopItems.delete(s.id);
+      toast.success("Removido");
+      await load();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to delete");
+    }
+  };
+
+  const handleMapSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!selected || !mapForm.mapId) {
+      toast.error("Escolha um mapa");
+      return;
+    }
+    setSavingMap(true);
+    try {
+      const payload = {
+        npcId: selected.id,
+        mapId: mapForm.mapId,
+        positionX: Number(mapForm.positionX) || 0,
+        positionY: Number(mapForm.positionY) || 0,
+      };
+      if (editingMap?.id) {
+        await adminApi.mapNpcs.update(editingMap.id, payload);
+        toast.success("Posição atualizada");
+      } else {
+        await adminApi.mapNpcs.create(payload);
+        toast.success("NPC posicionado no mapa");
+      }
+      resetMapForm();
+      await load();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to save");
+    } finally {
+      setSavingMap(false);
+    }
+  };
+
+  const handleDeleteMap = async (m: any) => {
+    if (!window.confirm(`Remover "${selected?.name}" do mapa "${mapName(m.mapId)}"?`)) return;
+    try {
+      await adminApi.mapNpcs.delete(m.id);
+      toast.success("Removido");
+      await load();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to delete");
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Shops &amp; NPCs em Mapas</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Itens que cada NPC vende e onde ele fica nos mapas. Crie NPCs na página NPCs.
+          </p>
+        </div>
+        <button onClick={load} className="px-4 py-2 bg-dark-700 hover:bg-dark-600 text-white rounded-lg text-sm transition-colors">
+          Refresh
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
+        {/* Lista de NPCs */}
+        <div className="bg-dark-800 border border-dark-600 rounded-xl overflow-hidden h-fit">
+          <div className="p-4 border-b border-dark-600">
+            <input
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              placeholder="Buscar NPC..."
+              className={inputClass}
+            />
+          </div>
+          <div className="max-h-[70vh] overflow-y-auto">
+            {loading && <p className="text-center text-gray-500 py-8">Loading...</p>}
+            {!loading && filteredNpcs.length === 0 && (
+              <p className="text-center text-gray-500 py-8">Nenhum NPC — crie um na página NPCs</p>
+            )}
+            {filteredNpcs.map((n) => (
+              <button
+                key={n.id}
+                onClick={() => setSelected(n)}
+                className={`w-full text-left px-4 py-3 border-b border-dark-700 transition-colors ${
+                  selected?.id === n.id ? "bg-accent-600/20 border-l-2 border-l-accent-500" : "hover:bg-dark-700/50"
+                }`}
+              >
+                <span className="font-medium text-white block">{n.name}</span>
+                <span className="text-xs text-gray-500">
+                  {n.type} • {n.shopItems?.length ?? 0} itens • {n.mapNpcs?.length ?? 0} mapas
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Detalhes do NPC selecionado */}
+        {selected ? (
+          <div className="space-y-6">
+            <div className="bg-dark-800 border border-dark-600 rounded-xl p-4">
+              <h2 className="text-lg font-bold text-white">{selected.name}</h2>
+              <p className="text-sm text-gray-400">{selected.description}</p>
+            </div>
+
+            {/* Itens da loja */}
+            <div className="bg-dark-800 border border-dark-600 rounded-xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-dark-600 flex items-center justify-between">
+                <h3 className="font-medium text-white">Itens da Loja</h3>
+                <button onClick={resetItemForm} className="text-xs text-accent-400 hover:text-accent-300">
+                  + Adicionar item
+                </button>
+              </div>
+
+              <form onSubmit={handleItemSubmit} className="p-4 border-b border-dark-700 grid grid-cols-2 sm:grid-cols-6 gap-3 items-end">
+                <div className="col-span-2 sm:col-span-2">
+                  <label className={labelClass}>Item *</label>
+                  <select value={itemForm.itemId ?? ""} onChange={(e) => setItemForm({ ...itemForm, itemId: e.target.value })} className={inputClass}>
+                    <option value="">Selecionar item...</option>
+                    {items.map((i) => (
+                      <option key={i.id} value={i.id}>{i.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelClass}>Preço</label>
+                  <input type="number" value={itemForm.price ?? 0} onChange={(e) => setItemForm({ ...itemForm, price: Number(e.target.value) })} className={inputClass} />
+                </div>
+                <div>
+                  <label className={labelClass}>Moeda</label>
+                  <select value={itemForm.currency ?? "gold"} onChange={(e) => setItemForm({ ...itemForm, currency: e.target.value })} className={inputClass}>
+                    <option value="gold">Gold</option>
+                    <option value="gems">Gems</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={labelClass}>Estoque (-1 = infinito)</label>
+                  <input type="number" value={itemForm.stock ?? -1} onChange={(e) => setItemForm({ ...itemForm, stock: Number(e.target.value) })} className={inputClass} />
+                </div>
+                <div>
+                  <label className={labelClass}>Rotação (dias)</label>
+                  <input type="number" value={itemForm.rotationDays ?? 0} onChange={(e) => setItemForm({ ...itemForm, rotationDays: Number(e.target.value) })} className={inputClass} />
+                </div>
+                <div className="col-span-2 sm:col-span-6 flex justify-end gap-2">
+                  {editingItem && (
+                    <button type="button" onClick={resetItemForm} className="px-3 py-2 text-sm text-gray-400 hover:text-white hover:bg-dark-700 rounded-lg transition-colors">
+                      Cancel
+                    </button>
+                  )}
+                  <button type="submit" disabled={savingItem} className="px-4 py-2 bg-accent-600 hover:bg-accent-500 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50">
+                    {savingItem ? "Saving..." : editingItem?.id ? "Salvar alterações" : "Adicionar à loja"}
+                  </button>
+                </div>
+              </form>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-dark-600">
+                      <th className="text-left py-2.5 px-4 text-gray-400 font-medium">Item</th>
+                      <th className="text-left py-2.5 px-4 text-gray-400 font-medium">Preço</th>
+                      <th className="text-left py-2.5 px-4 text-gray-400 font-medium">Moeda</th>
+                      <th className="text-left py-2.5 px-4 text-gray-400 font-medium">Estoque</th>
+                      <th className="text-left py-2.5 px-4 text-gray-400 font-medium">Rotação</th>
+                      <th className="text-right py-2.5 px-4 text-gray-400 font-medium">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedShopItems.map((s) => (
+                      <tr key={s.id} className="border-b border-dark-700 hover:bg-dark-800/50">
+                        <td className="py-2.5 px-4 font-medium text-white">{itemName(s.itemId)}</td>
+                        <td className="py-2.5 px-4 font-mono text-xs">{String(s.price)}</td>
+                        <td className="py-2.5 px-4 text-gray-400">{s.currency}</td>
+                        <td className="py-2.5 px-4 font-mono text-xs">{s.stock}</td>
+                        <td className="py-2.5 px-4 font-mono text-xs">{s.rotationDays}</td>
+                        <td className="py-2.5 px-4 text-right whitespace-nowrap">
+                          <button onClick={() => openEditItem(s)} className="text-blue-400 hover:text-blue-300 mr-3">Edit</button>
+                          <button onClick={() => handleDeleteItem(s)} className="text-red-400 hover:text-red-300">Delete</button>
+                        </td>
+                      </tr>
+                    ))}
+                    {selectedShopItems.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="py-6 text-center text-gray-500">Nenhum item na loja deste NPC</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Mapas */}
+            <div className="bg-dark-800 border border-dark-600 rounded-xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-dark-600 flex items-center justify-between">
+                <h3 className="font-medium text-white">NPC nos Mapas</h3>
+                <button onClick={resetMapForm} className="text-xs text-accent-400 hover:text-accent-300">
+                  + Posicionar em mapa
+                </button>
+              </div>
+
+              <form onSubmit={handleMapSubmit} className="p-4 border-b border-dark-700 grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+                <div className="sm:col-span-2">
+                  <label className={labelClass}>Mapa *</label>
+                  <select value={mapForm.mapId ?? ""} onChange={(e) => setMapForm({ ...mapForm, mapId: e.target.value })} className={inputClass}>
+                    <option value="">Selecionar mapa...</option>
+                    {maps.map((m) => (
+                      <option key={m.id} value={m.id}>{m.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelClass}>Posição X</label>
+                  <input type="number" value={mapForm.positionX ?? 0} onChange={(e) => setMapForm({ ...mapForm, positionX: Number(e.target.value) })} className={inputClass} />
+                </div>
+                <div>
+                  <label className={labelClass}>Posição Y</label>
+                  <input type="number" value={mapForm.positionY ?? 0} onChange={(e) => setMapForm({ ...mapForm, positionY: Number(e.target.value) })} className={inputClass} />
+                </div>
+                <div className="sm:col-span-4 flex justify-end gap-2">
+                  {editingMap && (
+                    <button type="button" onClick={resetMapForm} className="px-3 py-2 text-sm text-gray-400 hover:text-white hover:bg-dark-700 rounded-lg transition-colors">
+                      Cancel
+                    </button>
+                  )}
+                  <button type="submit" disabled={savingMap} className="px-4 py-2 bg-accent-600 hover:bg-accent-500 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50">
+                    {savingMap ? "Saving..." : editingMap?.id ? "Salvar posição" : "Posicionar"}
+                  </button>
+                </div>
+              </form>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-dark-600">
+                      <th className="text-left py-2.5 px-4 text-gray-400 font-medium">Mapa</th>
+                      <th className="text-left py-2.5 px-4 text-gray-400 font-medium">Posição X</th>
+                      <th className="text-left py-2.5 px-4 text-gray-400 font-medium">Posição Y</th>
+                      <th className="text-right py-2.5 px-4 text-gray-400 font-medium">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedMapNpcs.map((m) => (
+                      <tr key={m.id} className="border-b border-dark-700 hover:bg-dark-800/50">
+                        <td className="py-2.5 px-4 font-medium text-white">{mapName(m.mapId)}</td>
+                        <td className="py-2.5 px-4 font-mono text-xs">{m.positionX}</td>
+                        <td className="py-2.5 px-4 font-mono text-xs">{m.positionY}</td>
+                        <td className="py-2.5 px-4 text-right whitespace-nowrap">
+                          <button onClick={() => openEditMap(m)} className="text-blue-400 hover:text-blue-300 mr-3">Edit</button>
+                          <button onClick={() => handleDeleteMap(m)} className="text-red-400 hover:text-red-300">Delete</button>
+                        </td>
+                      </tr>
+                    ))}
+                    {selectedMapNpcs.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="py-6 text-center text-gray-500">Este NPC ainda não está em nenhum mapa</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-dark-800 border border-dark-600 rounded-xl flex items-center justify-center p-16">
+            <p className="text-gray-500">Selecione um NPC para gerenciar loja e mapas</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

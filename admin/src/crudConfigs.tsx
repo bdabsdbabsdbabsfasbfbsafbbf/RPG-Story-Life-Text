@@ -345,4 +345,27 @@ export const crudConfigs: CrudConfig[] = [
       { name: "isActive", label: "Active", type: "boolean", defaultValue: true },
     ],
   },
+  {
+    key: "npcs",
+    title: "NPCs",
+    columns: [
+      idColumn,
+      { key: "name", label: "Name", render: (v) => <span className="font-medium text-white">{v}</span> },
+      { key: "type", label: "Type", render: (v) => <span className="px-2 py-0.5 rounded-full text-xs bg-blue-500/20 text-blue-400">{v || "-"}</span> },
+      { key: "description", label: "Description", render: (v) => <span className="text-gray-400 max-w-xs truncate block">{v}</span> },
+    ],
+    fields: [
+      { name: "name", label: "Name", type: "text", required: true },
+      {
+        name: "type",
+        label: "Type",
+        type: "select",
+        options: ["shop", "quest", "blacksmith", "trainer", "lore", "guard", "other"],
+        defaultValue: "shop",
+      },
+      { name: "description", label: "Description", type: "textarea", required: true },
+      { name: "imageUrl", label: "Image URL", type: "text" },
+      { name: "dialogue", label: "Dialogue", type: "textarea" },
+    ],
+  },
 ];

@@ -138,4 +138,22 @@ export const adminApi = {
     update: (id: string, data: any) => api.put(`/admin/codes/${id}`, data),
     delete: (id: string) => api.delete(`/admin/codes/${id}`),
   },
+  npcs: {
+    list: () => api.get("/admin/npcs"),
+    create: (data: any) => api.post("/admin/npcs", data),
+    update: (id: string, data: any) => api.put(`/admin/npcs/${id}`, data),
+    delete: (id: string) => api.delete(`/admin/npcs/${id}`),
+  },
+  shopItems: {
+    list: () => api.get("/admin/shopitems"),
+    create: (data: any) => api.post("/admin/shopitems", data),
+    update: (id: string, data: any) => api.put(`/admin/shopitems/${id}`, data),
+    delete: (id: string) => api.delete(`/admin/shopitems/${id}`),
+  },
+  mapNpcs: {
+    list: () => api.get("/admin/mapnpcs"),
+    create: (data: any) => api.post("/admin/mapnpcs", data),
+    update: (id: string, data: any) => api.put(`/admin/mapnpcs/${id}`, data),
+    delete: (id: string) => api.delete(`/admin/mapnpcs/${id}`),
+  },
 };

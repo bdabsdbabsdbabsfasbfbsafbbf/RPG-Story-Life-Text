@@ -70,7 +70,7 @@ export interface EffectDef {
   slug: string;
   description: string;
   icon?: string | null;
-  kind: string; // buff, debuff, hot, dot
+  kind: string; // buff, debuff, hot, dot, shield, reflect, hitkill, silence, stun
   category: string;
   maxStacks: number;
   duration: number; // ms; 0 = permanente
@@ -81,6 +81,9 @@ export interface EffectDef {
   tickDamage: { base?: number; scaling?: Scaling[]; damageType?: string };
   tickHealing: { base?: number; scaling?: Scaling[] };
   statModifiers: { flat?: Record<string, number>; percent?: Record<string, number> };
+  shield?: { base?: number; scaling?: Scaling[] };
+  reflect?: { percent?: number };
+  hitkillChance?: number; // % chance de golpe letal por stack ao acertar
   onMaxStacks: Action[];
   onExpire: Action[];
   onTick: Action[];
@@ -92,6 +95,7 @@ export interface ActiveEffectRuntime {
   stacks: number;
   remainingMs: number; // 0 = permanente
   nextTickAt: number | null;
+  shieldHp?: number; // pool de escudo restante (kinds shield)
 }
 
 export interface SummonRuntime {

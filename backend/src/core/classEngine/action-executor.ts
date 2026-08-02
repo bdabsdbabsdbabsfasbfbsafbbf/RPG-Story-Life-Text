@@ -1,5 +1,57 @@
-import { Action, BattleEntity, Condition, DerivedStats, EffectDef, Scaling } from "./types";
+import { Action, ActiveEffectRuntime, BattleEntity, Condition, DerivedStats, EffectDef, Scaling } from "./types";
 import { applyEffect, enforceExclusiveGroups, EffectModifiers } from "./effect-manager";
+
+export function isEffectActive(e: ActiveEffectRuntime): boolean {
+  return e.remainingMs > 0 || e.effect.duration === 0;
+}
+
+export function entityHasKind(entity: BattleEntity, kind: string): boolean {
+  return entity.effects.some((e) => e.effect.kind === kind && isEffectActive(e));
+}
+
+export function totalShieldHp(entity: BattleEntity): number {
+  let total = 0;
+  for (const e of entity.effects) {
+    if (isEffectActive(e) && e.shieldHp && e.shieldHp > 0) total += e.shieldHp;
+  }
+  return total;
+}
+
+// Aplica dano respeitando escudos. Retorna quanto passou e quanto foi absorvido.
+export function absorbWithShield(entity: BattleEntity, amount: number): { applied: number; absorbed: number } {
+  if (amount <= 0) return { applied: 0, absorbed: 0 };
+  let remaining = amount;
+  for (const e of entity.effects) {
+    if (remaining <= 0) break;
+    if (!isEffectActive(e) || !e.shieldHp || e.shieldHp <= 0) continue;
+    const take = Math.min(remaining, e.shieldHp);
+    e.shieldHp -= take;
+    remaining -= take;
+  }
+  return { applied: remaining, absorbed: amount - remaining };
+}
+
+// Percentual total de reflexo (soma por stack).
+export function reflectPercent(entity: BattleEntity): number {
+  let total = 0;
+  for (const e of entity.effects) {
+    if (!isEffectActive(e)) continue;
+    const pct = Number(e.effect.reflect?.percent) || 0;
+    if (pct > 0) total += pct * e.stacks;
+  }
+  return Math.min(100, total);
+}
+
+// Chance total de golpe letal (soma por stack, cap 100%).
+export function hitkillChanceOf(entity: BattleEntity): number {
+  let total = 0;
+  for (const e of entity.effects) {
+    if (!isEffectActive(e)) continue;
+    const pct = Number(e.effect.hitkillChance) || 0;
+    if (pct > 0) total += pct * e.stacks;
+  }
+  return Math.min(100, total);
+}
 
 export interface ActionContext {
   actor: BattleEntity;
@@ -102,12 +154,39 @@ export function executeActions(actions: Action[], ctx: ActionContext, result: Ac
           continue;
         }
         if (amount <= 0) continue;
-        ctx.target.hp = Math.max(0, ctx.target.hp - amount);
-        result.damage += amount;
-        result.isCritical = result.isCritical || isCritical;
-        result.hit = true;
-        result.messages.push(isCritical ? `Dano crítico de ${amount}!` : `Causou ${amount} de dano`);
-        if (ctx.target.hp <= 0) {
+
+        // Escudo do alvo absorve parte do dano
+        const { applied, absorbed } = absorbWithShield(ctx.target, amount);
+        if (absorbed > 0) {
+          result.messages.push(`Escudo absorveu ${absorbed} de dano`);
+        }
+
+        if (applied > 0) {
+          ctx.target.hp = Math.max(0, ctx.target.hp - applied);
+          result.damage += applied;
+          result.isCritical = result.isCritical || isCritical;
+          result.hit = true;
+          result.messages.push(isCritical ? `Dano crítico de ${applied}!` : `Causou ${applied} de dano`);
+          if (ctx.target.hp <= 0) {
+            ctx.onKill?.();
+          }
+        } else if (absorbed > 0) {
+          result.hit = true;
+          result.messages.push(`O ataque foi totalmente absorvido pelo escudo`);
+        }
+
+        // Refletir: o alvo devolve % do dano aplicado ao atacante
+        const reflected = Math.floor(applied * (reflectPercent(ctx.target) / 100));
+        if (reflected > 0) {
+          ctx.actor.hp = Math.max(0, ctx.actor.hp - reflected);
+          result.messages.push(`Refletiu ${reflected} de dano de volta`);
+        }
+
+        // Golpe letal: chance do atacante aniquilar o alvo na hora
+        const hk = hitkillChanceOf(ctx.actor);
+        if (hk > 0 && Math.random() * 100 < hk) {
+          ctx.target.hp = 0;
+          result.messages.push(`Golpe letal! ${ctx.target.name} foi derrotado instantaneamente`);
           ctx.onKill?.();
         }
         break;
@@ -134,13 +213,19 @@ export function executeActions(actions: Action[], ctx: ActionContext, result: Ac
       case "applyEffect": {
         const effect = ctx.resolveEffect(action.effect);
         if (!effect) continue;
-        const target = action.target === "self" ? ctx.actor : ctx.target;
+        const isSelf = action.target === "self";
+        const target = isSelf ? ctx.actor : ctx.target;
+        const targetStats = isSelf ? ctx.actorStats : ctx.targetStats;
         const mods = ctx.effectModifiers(effect.slug);
-        const { effects } = applyEffect(target.effects, effect, action.stacks ?? 1, { modifiers: mods });
+        const calcShield = effect.shield
+          ? (ef: EffectDef, stacks: number) =>
+              (scaleValue(ef.shield?.base ?? 0, ef.shield?.scaling, targetStats) || 0) * stacks
+          : undefined;
+        const { effects } = applyEffect(target.effects, effect, action.stacks ?? 1, { modifiers: mods, calcShield });
         target.effects = enforceExclusiveGroups(effects, effect);
         result.appliedEffects.push(effect.name);
         result.messages.push(
-          action.target === "self"
+          isSelf
             ? `Aplicou ${effect.name} em si mesmo`
             : `Aplicou ${effect.name} no inimigo`
         );

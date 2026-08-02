@@ -5,7 +5,7 @@ export const kindOptions = ["attack", "heal", "buff", "debuff", "summon", "mobil
 export const triggerOptions = ["auto", "active", "ultimate"];
 export const targetOptions = ["enemy", "self"];
 export const damageTypeOptions = ["physical", "magic", "true"];
-export const effectKindOptions = ["buff", "debuff", "hot", "dot"];
+export const effectKindOptions = ["buff", "debuff", "hot", "dot", "shield", "reflect", "hitkill", "silence", "stun"];
 export const effectCategoryOptions = ["defense", "offense", "control", "mobility", "utility", "recovery"];
 export const refreshBehaviorOptions = ["refresh", "extend", "overwrite", "stack"];
 
