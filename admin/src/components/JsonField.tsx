@@ -1,11 +1,13 @@
+import { useEffect, useState } from "react";
 import { Plus, X } from "lucide-react";
+import { adminApi } from "../api";
 
 export type JsonFieldDef =
   | { mode: "record"; keyPlaceholder?: string; valueType: "number" | "string"; valuePlaceholder?: string; addLabel?: string }
   | { mode: "string-array"; placeholder?: string; addLabel?: string }
   | {
       mode: "object-array";
-      fields: { name: string; label: string; type: "text" | "number" | "select"; options?: string[]; placeholder?: string }[];
+      fields: { name: string; label: string; type: "text" | "number" | "select" | "effect-slug"; options?: string[]; placeholder?: string }[];
       addLabel?: string;
     }
   | {
@@ -26,7 +28,39 @@ const inputClass =
 const addBtnClass =
   "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-accent-600/20 text-accent-400 border border-accent-600/30 hover:bg-accent-600/30 transition-colors";
 
+const effectOptionsCache: { list: { slug: string; name: string }[] } = { list: [] };
+
+function useEffectOptions(schema: JsonFieldDef): { slug: string; name: string }[] {
+  const needsEffectOptions = schema.mode === "object-array" && schema.fields.some((f) => f.type === "effect-slug");
+  const [list, setList] = useState(effectOptionsCache.list);
+
+  useEffect(() => {
+    if (!needsEffectOptions) return;
+    if (effectOptionsCache.list.length > 0) {
+      setList(effectOptionsCache.list);
+      return;
+    }
+    let active = true;
+    adminApi.effects
+      .list()
+      .then(({ data }) => {
+        const items = Array.isArray(data) ? data : [];
+        const mapped = items.map((e: any) => ({ slug: e.slug, name: e.name }));
+        effectOptionsCache.list = mapped;
+        if (active) setList(mapped);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [needsEffectOptions]);
+
+  return list;
+}
+
 export default function JsonField({ schema, value, onChange }: JsonFieldProps) {
+  const effectOptions = useEffectOptions(schema);
+
   if (schema.mode === "fixed-record") {
     const current: Record<string, any> =
       value && typeof value === "object" && !Array.isArray(value) ? value : {};
@@ -204,7 +238,27 @@ export default function JsonField({ schema, value, onChange }: JsonFieldProps) {
             {schema.fields.map((f) => (
               <div key={f.name}>
                 <label className="block text-[11px] text-gray-500 mb-1">{f.label}</label>
-                {f.type === "select" ? (
+                {f.type === "effect-slug" ? (
+                  <select
+                    className={inputClass}
+                    value={item?.[f.name] ?? ""}
+                    onChange={(e) => {
+                      const next = [...list];
+                      next[idx] = { ...(item || {}), [f.name]: e.target.value };
+                      onChange(next);
+                    }}
+                  >
+                    <option value="">Selecione...</option>
+                    {effectOptions.map((opt) => (
+                      <option key={opt.slug} value={opt.slug}>
+                        {opt.name}
+                      </option>
+                    ))}
+                    {item?.[f.name] && !effectOptions.some((o) => o.slug === item[f.name]) && (
+                      <option value={item[f.name]}>{item[f.name]} (não catalogado)</option>
+                    )}
+                  </select>
+                ) : f.type === "select" ? (
                   <select
                     className={inputClass}
                     value={item?.[f.name] ?? ""}

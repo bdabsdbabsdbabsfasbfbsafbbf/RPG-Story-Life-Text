@@ -33,7 +33,7 @@ export const conditionTypeOptions = [
 export const actionFields = [
   { name: "action", label: "Ação", type: "select" as const, options: actionOptions },
   { name: "amount", label: "Quantidade Base", type: "number" as const },
-  { name: "effect", label: "Efeito (slug)", type: "text" as const, placeholder: "bleed, fortify…" },
+  { name: "effect", label: "Efeito (slug)", type: "effect-slug" as const },
   { name: "stacks", label: "Stacks", type: "number" as const },
   { name: "target", label: "Alvo", type: "select" as const, options: targetOptions },
   { name: "damageType", label: "Tipo de Dano", type: "select" as const, options: damageTypeOptions },
@@ -46,7 +46,7 @@ export const actionFields = [
 
 export const conditionFields = [
   { name: "type", label: "Condição", type: "select" as const, options: conditionTypeOptions },
-  { name: "effect", label: "Efeito (slug)", type: "text" as const, placeholder: "bleed, mark…" },
+  { name: "effect", label: "Efeito (slug)", type: "effect-slug" as const },
   { name: "stacks", label: "Stacks", type: "number" as const },
   { name: "percent", label: "Percentual (HP/Mana)", type: "number" as const },
   { name: "round", label: "Rodada", type: "number" as const },
@@ -61,7 +61,7 @@ export const skillModifierFields = [
 ];
 
 export const effectModifierFields = [
-  { name: "effectSlug", label: "Efeito (slug)", type: "text" as const, placeholder: "bleed, burn…" },
+  { name: "effectSlug", label: "Efeito (slug)", type: "effect-slug" as const },
   { name: "durationPercent", label: "Duração %", type: "number" as const },
   { name: "tickPercent", label: "Tick %", type: "number" as const },
   { name: "damagePercent", label: "Dano %", type: "number" as const },
