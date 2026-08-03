@@ -2,6 +2,18 @@ import { Express, Request, Response, NextFunction } from "express";
 import { prisma } from "../../core/database";
 
 export function createItemsModule(app: Express): void {
+  app.get("/api/enchantments", async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const enchantments = await prisma.enchantment.findMany({
+        where: { isActive: true },
+        orderBy: { name: "asc" },
+      });
+      res.json(enchantments);
+    } catch (err) {
+      next(err);
+    }
+  });
+
   app.get("/api/items", async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { type, rarity, level, search, page = "1", limit = "20" } = req.query;
@@ -34,9 +46,7 @@ export function createItemsModule(app: Express): void {
       const item = await prisma.item.findUnique({
         where: { id: req.params.id },
         include: {
-          enchantments: true,
-          gems: true,
-          runes: true,
+          enchantment: true,
         },
       });
       if (!item) {

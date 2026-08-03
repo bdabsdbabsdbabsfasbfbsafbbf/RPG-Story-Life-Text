@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { inventoryApi, classesApi, authApi, marketApi } from "../services/api";
-import { InventoryItem } from "../types";
-import { Backpack, Search, Filter, ArrowUpDown, Star, Swords, Check, Lock, Coins } from "lucide-react";
+import { InventoryItem, UserEnchantment } from "../types";
+import {
+  Backpack, Search, Star, Swords, Check, Coins, Lock,
+  Sword, Crown, HardHat, Shield, Wind, Gem, Link2, Sparkles, X,
+} from "lucide-react";
 import { useGameStore } from "../store/gameStore";
 import { useAuthStore } from "../store/authStore";
 import toast from "react-hot-toast";
@@ -9,6 +12,25 @@ import toast from "react-hot-toast";
 const rarityOrder: Record<string, number> = {
   common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4, mythic: 5, artifact: 6,
 };
+
+const SLOTS: { key: string; label: string; icon: any }[] = [
+  { key: "weapon", label: "Arma", icon: Sword },
+  { key: "class", label: "Classe", icon: Crown },
+  { key: "helm", label: "Elmo", icon: HardHat },
+  { key: "armor", label: "Armadura", icon: Shield },
+  { key: "cape", label: "Capa", icon: Wind },
+  { key: "ring", label: "Anel", icon: Gem },
+  { key: "necklace", label: "Colar", icon: Link2 },
+];
+
+const CORE_STAT_LABELS: { key: string; label: string; color: string }[] = [
+  { key: "strength", label: "Força", color: "text-orange-400" },
+  { key: "intellect", label: "Intelecto", color: "text-blue-400" },
+  { key: "endurance", label: "Vigor", color: "text-red-400" },
+  { key: "dexterity", label: "Destreza", color: "text-green-400" },
+  { key: "wisdom", label: "Sabedoria", color: "text-purple-400" },
+  { key: "luck", label: "Sorte", color: "text-yellow-400" },
+];
 
 interface UnlockedClass {
   id: string;
@@ -24,24 +46,21 @@ export function InventoryPage() {
   const [filterType, setFilterType] = useState<string>("all");
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [classes, setClasses] = useState<UnlockedClass[]>([]);
-  const [catalog, setCatalog] = useState<any[]>([]);
-  const [switching, setSwitching] = useState(false);
   const [selling, setSelling] = useState(false);
   const [listing, setListing] = useState(false);
   const [listPrice, setListPrice] = useState(0);
   const [listQty, setListQty] = useState(1);
+  const [ownedEnchants, setOwnedEnchants] = useState<UserEnchantment[]>([]);
+  const [enchantBusy, setEnchantBusy] = useState(false);
   const { selectedCharacter } = useGameStore();
   const { user, setUser } = useAuthStore();
-
-  useEffect(() => {
-    classesApi.list()
-      .then(({ data }) => setCatalog(Array.isArray(data) ? data : []))
-      .catch(() => {});
-  }, []);
 
   const loadItems = () => {
     inventoryApi.list()
       .then(({ data }) => setItems(data))
+      .catch(() => {});
+    inventoryApi.enchantments()
+      .then(({ data }) => setOwnedEnchants(Array.isArray(data) ? data : []))
       .catch(() => {});
   };
 
@@ -50,6 +69,9 @@ export function InventoryPage() {
       .then(({ data }) => setItems(data))
       .catch(() => {})
       .finally(() => setLoading(false));
+    inventoryApi.enchantments()
+      .then(({ data }) => setOwnedEnchants(Array.isArray(data) ? data : []))
+      .catch(() => {});
   }, []);
 
   const refreshUser = async () => {
@@ -106,21 +128,81 @@ export function InventoryPage() {
     loadClasses();
   }, [selectedCharacter?.id]);
 
-  const handleEquipClass = async (classId: string) => {
+  const handleEquip = async (inv: InventoryItem) => {
     if (!selectedCharacter) return;
-    setSwitching(true);
+    setSelling(true);
     try {
-      await classesApi.switchClass(selectedCharacter.id, classId);
-      toast.success("Classe equipada!");
-      loadClasses();
-      const { data } = await authApi.me();
-      if (data) setUser(data);
+      await inventoryApi.equip({ inventoryId: inv.id, characterId: selectedCharacter.id });
+      toast.success(`${inv.item.name} equipado!`);
+      loadItems();
     } catch (err: any) {
-      toast.error(err.response?.data?.error || "Falha ao equipar classe");
+      toast.error(err.response?.data?.error || "Falha ao equipar");
     } finally {
-      setSwitching(false);
+      setSelling(false);
     }
   };
+
+  const handleUnequip = async (inv: InventoryItem) => {
+    if (!selectedCharacter) return;
+    setSelling(true);
+    try {
+      await inventoryApi.unequip({ inventoryId: inv.id, characterId: selectedCharacter.id });
+      toast.success("Item desequipado");
+      setSelectedItem(null);
+      loadItems();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Falha ao desequipar");
+    } finally {
+      setSelling(false);
+    }
+  };
+
+  const compatibleEnchants = (item: InventoryItem): UserEnchantment[] => {
+    if (!item.item || item.item.type === "consumable") return [];
+    let slots: string[] = [];
+    try { slots = JSON.parse(item.item.enchantment?.compatibleSlots || "[]"); } catch {}
+    return ownedEnchants.filter((ue) => {
+      const en = ue.enchantment;
+      if (!en || ue.quantity < 1) return false;
+      if (item.item.rank < (en.minRank || 1)) return false;
+      if (slots.length > 0 && !slots.includes(item.item.type)) return false;
+      return true;
+    });
+  };
+
+  const handleApplyEnchant = async (enchantmentId: string) => {
+    if (!selectedItem) return;
+    setEnchantBusy(true);
+    try {
+      await inventoryApi.enchant({ inventoryId: selectedItem.id, enchantmentId });
+      toast.success("Encantamento aplicado!");
+      loadItems();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Falha ao encantar");
+    } finally {
+      setEnchantBusy(false);
+    }
+  };
+
+  const handleRemoveEnchant = async () => {
+    if (!selectedItem) return;
+    setEnchantBusy(true);
+    try {
+      await inventoryApi.removeEnchant({ inventoryId: selectedItem.id });
+      toast.success("Encantamento removido");
+      loadItems();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Falha ao remover encantamento");
+    } finally {
+      setEnchantBusy(false);
+    }
+  };
+
+  const equippedItems = items.filter((i) => i.isEquipped);
+  const equippedMap: Record<string, InventoryItem> = {};
+  for (const inv of equippedItems) {
+    equippedMap[inv.item.type] = inv;
+  }
 
   const filtered = items
     .filter(i => filterType === "all" || i.item.type === filterType)
@@ -143,70 +225,68 @@ export function InventoryPage() {
       {classes.length > 0 && (
         <div className="panel p-4">
           <h2 className="font-display font-semibold mb-3 flex items-center gap-2">
-            <Swords size={16} className="text-blue-400" /> Classes
+            <Swords size={16} className="text-blue-400" /> Classe
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 max-w-xl">
             {classes.map((p) => {
               const equipped = !!p.isActive;
               return (
-                <div key={p.id} className={`card-hover p-3 flex items-center justify-between gap-3 ${equipped ? "border-purple-500/40" : ""}`}>
+                <div key={p.id} className={`card-hover p-4 flex items-center justify-between gap-3 ${equipped ? "border-purple-500/40" : ""}`}>
                   <div className="min-w-0">
-                    <p className="font-medium text-sm truncate">{p.gameClass?.name}</p>
-                    <p className="text-[11px] text-gray-500 capitalize">
+                    <p className="font-medium">{p.gameClass?.name}</p>
+                    <p className="text-xs text-gray-500 capitalize">
                       {p.gameClass?.role} • Rank {p.rank}
                     </p>
                   </div>
-                  {equipped ? (
-                    <span className="flex items-center gap-1 text-xs text-purple-400 px-2 py-1 shrink-0">
-                      <Check size={13} /> Equipada
-                    </span>
-                  ) : (
-                    <button
-                      onClick={() => handleEquipClass(p.gameClass?.id)}
-                      disabled={switching}
-                      className="btn-primary text-xs px-3 py-1.5 shrink-0 disabled:opacity-50"
-                    >
-                      {switching ? "Equipando..." : "Equipar"}
-                    </button>
-                  )}
+                  <span className="flex items-center gap-1 text-xs text-purple-400 px-2 py-1 shrink-0">
+                    <Check size={13} /> Equipada
+                  </span>
                 </div>
               );
             })}
-            {catalog
-              .filter((c) => !classes.some((p) => p.gameClass?.id === c.id))
-              .map((c) => {
-                const lockedLevel = c.requiredLevel > 1 && (selectedCharacter?.level ?? 0) < c.requiredLevel;
-                const lockedVip = !!c.requiredVip && !(user?.vipOwned ?? false);
-                const locked = lockedLevel || lockedVip;
-                return (
-                  <div key={c.id} className="card-hover p-3 flex items-center justify-between gap-3 opacity-70">
-                    <div className="min-w-0">
-                      <p className="font-medium text-sm truncate flex items-center gap-1.5">
-                        {locked ? <Lock size={12} className="text-gray-500" /> : null}
-                        {c.name}
-                        {c.requiredVip && <span className="text-[9px] uppercase tracking-wide text-yellow-400 bg-yellow-500/10 border border-yellow-500/30 px-1.5 py-0.5 rounded">VIP</span>}
-                      </p>
-                      <p className="text-[11px] text-gray-500 capitalize">{c.role}</p>
-                    </div>
-                    {locked ? (
-                      <span className="text-xs text-yellow-500 px-2 py-1 shrink-0 whitespace-nowrap">
-                        {lockedVip ? "Exclusivo VIP" : `Requer Lv.${c.requiredLevel}`}
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() => handleEquipClass(c.id)}
-                        disabled={switching}
-                        className="btn-primary text-xs px-3 py-1.5 shrink-0 disabled:opacity-50"
-                      >
-                        {switching ? "Equipando..." : "Equipar"}
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
           </div>
         </div>
       )}
+
+      <div className="panel p-4">
+        <h2 className="font-display font-semibold mb-3 flex items-center gap-2">
+          <Shield size={16} className="text-yellow-400" /> Equipamento
+        </h2>
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+          {SLOTS.map((slot) => {
+            const inv = equippedMap[slot.key];
+            const Icon = slot.icon;
+            return (
+              <button
+                key={slot.key}
+                onClick={() => inv && setSelectedItem(inv)}
+                className={`card-hover p-3 text-center min-h-[110px] flex flex-col items-center justify-center gap-2 ${
+                  inv ? "border-purple-500/40" : "border-dashed border-dark-600"
+                }`}
+              >
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                  inv ? "bg-gradient-to-br from-purple-600 to-blue-600" : "bg-dark-800/60"
+                }`}>
+                  <Icon size={18} className={inv ? "text-white" : "text-gray-600"} />
+                </div>
+                {inv ? (
+                  <>
+                    <p className="text-xs font-medium leading-tight">{inv.item.name}</p>
+                    <p className={`text-[10px] capitalize text-rarity-${inv.item.rarity || "common"}`}>
+                      {inv.item.rarity}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs font-medium text-gray-500">{slot.label}</p>
+                    <p className="text-[10px] text-gray-600">Vazio</p>
+                  </>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 max-w-xs">
@@ -247,6 +327,11 @@ export function InventoryPage() {
                 EQUIPPED
               </div>
             )}
+            {inv.item.enchantment && (
+              <div className="absolute top-2 left-2 px-1.5 py-0.5 bg-yellow-500/15 text-yellow-400 text-[10px] rounded font-bold flex items-center gap-1">
+                <Sparkles size={10} /> {inv.item.enchantment.name}
+              </div>
+            )}
             <div className="flex items-start gap-3">
               <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${
                 inv.item.rarity === "rare" ? "from-blue-600 to-purple-600" :
@@ -260,7 +345,7 @@ export function InventoryPage() {
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm truncate">{inv.item.name}</p>
                 <p className={`text-xs capitalize text-rarity-${inv.item.rarity || "common"}`}>
-                  {inv.item.rarity}
+                  {inv.item.rarity} • Rank {inv.item.rank}
                 </p>
                 <p className="text-xs text-gray-500 capitalize">{inv.item.type} {inv.item.level > 1 ? `• Lv.${inv.item.level}` : ""}</p>
                 {inv.quantity > 1 && (
@@ -281,11 +366,12 @@ export function InventoryPage() {
 
       {selectedItem && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setSelectedItem(null)}>
-          <div className="panel p-6 max-w-md w-full" onClick={e => e.stopPropagation()}>
+          <div className="panel p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-start gap-4 mb-4">
               <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${
                 selectedItem.item.rarity === "rare" ? "from-blue-600 to-purple-600" :
                 selectedItem.item.rarity === "epic" ? "from-purple-600 to-pink-600" :
+                selectedItem.item.rarity === "legendary" ? "from-orange-500 to-yellow-500" :
                 "from-dark-600 to-dark-500"
               } flex items-center justify-center`}>
                 <Star size={32} className="text-white/80" />
@@ -293,24 +379,88 @@ export function InventoryPage() {
               <div className="flex-1">
                 <h3 className="text-lg font-display font-bold">{selectedItem.item.name}</h3>
                 <p className={`text-sm capitalize text-rarity-${selectedItem.item.rarity || "common"}`}>
-                  {selectedItem.item.rarity} {selectedItem.item.type}
+                  {selectedItem.item.rarity} • Rank {selectedItem.item.rank} • {selectedItem.item.type}
                 </p>
                 <p className="text-sm text-gray-400 mt-1">{selectedItem.item.description}</p>
               </div>
               <button onClick={() => setSelectedItem(null)} className="text-gray-500 hover:text-gray-300">✕</button>
             </div>
 
-            {selectedItem.item.stats && (
+            {selectedItem.item.type !== "consumable" && (
               <div className="bg-dark-800/50 rounded-lg p-3 mb-4">
-                <p className="text-xs text-gray-500 mb-2">Stats</p>
+                <p className="text-xs text-gray-500 mb-2">Core Stats</p>
                 <div className="grid grid-cols-2 gap-1 text-sm">
-                  {Object.entries(JSON.parse(selectedItem.item.stats) as Record<string, number>).map(([key, val]) => (
-                    <div key={key} className="flex items-center justify-between">
-                      <span className="text-gray-400 capitalize">{key.replace(/([A-Z])/g, " $1")}</span>
-                      <span className="font-mono text-green-400">+{val}</span>
-                    </div>
-                  ))}
+                  {CORE_STAT_LABELS.map(({ key, label, color }) => {
+                    const value = (selectedItem.item as any)[key] ?? 0;
+                    if (!value && !selectedItem.item.enchantment) return null;
+                    const enchValue = (selectedItem.item.enchantment as any)?.[key] ?? 0;
+                    return (
+                      <div key={key} className="flex items-center justify-between">
+                        <span className={`text-gray-400 ${color}`}>{label}</span>
+                        <span className="font-mono text-green-400">
+                          +{value}
+                          {enchValue > 0 && <span className="text-yellow-400"> (+{enchValue})</span>}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
+              </div>
+            )}
+
+            {selectedItem.item.type !== "consumable" && (
+              <div className="bg-dark-800/50 rounded-lg p-3 mb-4">
+                <p className="text-xs text-gray-500 mb-2 flex items-center gap-1.5">
+                  <Sparkles size={12} className="text-yellow-400" /> Encantamento
+                </p>
+                {selectedItem.item.enchantment ? (
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-yellow-300">{selectedItem.item.enchantment.name}</p>
+                      <p className="text-xs text-gray-500">{selectedItem.item.enchantment.description}</p>
+                    </div>
+                    <button
+                      onClick={handleRemoveEnchant}
+                      disabled={enchantBusy}
+                      className="text-xs text-red-400 hover:text-red-300 shrink-0 disabled:opacity-50"
+                    >
+                      Remover
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-500 mb-2">Nenhum encantamento equipado.</p>
+                )}
+                {compatibleEnchants(selectedItem).length > 0 && (
+                  <div className="space-y-2">
+                    {compatibleEnchants(selectedItem).map((ue) => (
+                      <div key={ue.id} className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-sm">{ue.enchantment.name} <span className="text-gray-500 text-xs">x{ue.quantity}</span></p>
+                          <p className="text-[11px] text-gray-500">
+                            {[
+                              ue.enchantment.strength ? `Força +${ue.enchantment.strength}` : null,
+                              ue.enchantment.intellect ? `Intelecto +${ue.enchantment.intellect}` : null,
+                              ue.enchantment.endurance ? `Vigor +${ue.enchantment.endurance}` : null,
+                              ue.enchantment.dexterity ? `Destreza +${ue.enchantment.dexterity}` : null,
+                              ue.enchantment.wisdom ? `Sabedoria +${ue.enchantment.wisdom}` : null,
+                              ue.enchantment.luck ? `Sorte +${ue.enchantment.luck}` : null,
+                            ].filter(Boolean).join(" • ")}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => handleApplyEnchant(ue.enchantment.id)}
+                          disabled={enchantBusy}
+                          className="btn-primary text-xs px-3 py-1.5 shrink-0 disabled:opacity-50"
+                        >
+                          {enchantBusy ? "Aplicando..." : selectedItem.item.enchantment ? "Trocar" : "Aplicar"}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {compatibleEnchants(selectedItem).length === 0 && !selectedItem.item.enchantment && (
+                  <p className="text-[11px] text-gray-600">Nenhum encantamento compatível na sua mochila. Compre na Loja (aba Encantamentos).</p>
+                )}
               </div>
             )}
 
@@ -348,16 +498,18 @@ export function InventoryPage() {
                 </div>
               </div>
             ) : (
-              <div className="flex gap-2">
-                <button
-                  onClick={async () => {
-                    // TODO: implement equip
-                    setSelectedItem(null);
-                  }}
-                  className="btn-primary flex-1"
-                >
-                  {selectedItem.isEquipped ? "Unequip" : "Equip"}
-                </button>
+              <div className="flex gap-2 flex-wrap">
+                {selectedItem.item.type !== "consumable" && (
+                  selectedItem.isEquipped ? (
+                    <button onClick={() => handleUnequip(selectedItem)} disabled={selling} className="btn-secondary flex-1 disabled:opacity-50">
+                      {selling ? "..." : "Desequipar"}
+                    </button>
+                  ) : (
+                    <button onClick={() => handleEquip(selectedItem)} disabled={selling} className="btn-primary flex-1 disabled:opacity-50">
+                      {selling ? "Equipando..." : "Equipar"}
+                    </button>
+                  )
+                )}
                 <button
                   onClick={handleSellNow}
                   disabled={selling || !selectedItem.item.isSellable}

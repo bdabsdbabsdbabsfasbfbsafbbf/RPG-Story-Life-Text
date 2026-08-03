@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { shopApi, authApi } from "../services/api";
-import { ShoppingBag, Gem, Crown, Trophy, Coins } from "lucide-react";
+import { ShoppingBag, Gem, Crown, Trophy, Coins, Sparkles } from "lucide-react";
 import { useAuthStore } from "../store/authStore";
 import toast from "react-hot-toast";
 
@@ -9,11 +9,24 @@ interface ShopProduct {
   slug: string;
   name: string;
   description: string;
-  type: "diamond_pack" | "vip" | "pass_premium";
-  currency: "diamond" | "money";
+  type: "diamond_pack" | "vip" | "pass_premium" | "enchantment";
+  currency: "diamond" | "money" | "gold";
   price: number;
   diamondAmount: number;
   vipDays: number;
+  enchantmentId?: string | null;
+  enchantment?: {
+    name: string;
+    description: string;
+    rarity: string;
+    minRank: number;
+    strength: number;
+    intellect: number;
+    endurance: number;
+    dexterity: number;
+    wisdom: number;
+    luck: number;
+  } | null;
   icon?: string | null;
 }
 
@@ -21,6 +34,7 @@ const typeMeta: Record<ShopProduct["type"], { label: string; icon: any; color: s
   diamond_pack: { label: "Diamantes", icon: Gem, color: "text-cyan-400" },
   vip: { label: "VIP", icon: Crown, color: "text-yellow-400" },
   pass_premium: { label: "Passe Premium", icon: Trophy, color: "text-purple-400" },
+  enchantment: { label: "Encantamentos", icon: Sparkles, color: "text-green-400" },
 };
 
 export function ShopPage() {
@@ -67,7 +81,7 @@ export function ShopPage() {
     return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" /></div>;
   }
 
-  const groups = ["diamond_pack", "vip", "pass_premium"]
+  const groups = ["diamond_pack", "vip", "pass_premium", "enchantment"]
     .map((type) => ({ type: type as ShopProduct["type"], items: products.filter((p) => p.type === type) }))
     .filter((g) => g.items.length > 0);
 
@@ -103,7 +117,8 @@ export function ShopPage() {
               const meta = typeMeta[product.type];
               const Icon = meta.icon;
               const diamondPrice = product.currency === "diamond";
-              const enough = diamondPrice && (user?.diamonds ?? 0) >= product.price;
+              const goldPrice = product.currency === "gold";
+              const enough = diamondPrice ? (user?.diamonds ?? 0) >= product.price : goldPrice ? (user?.gold ?? 0) >= product.price : true;
               return (
                 <div key={product.id} className="panel p-4 flex flex-col">
                   <div className="flex items-center gap-3 mb-2">
@@ -118,13 +133,25 @@ export function ShopPage() {
                       {product.type === "pass_premium" && (
                         <p className="text-[11px] text-purple-400">Temporada atual</p>
                       )}
+                      {product.type === "enchantment" && product.enchantment && (
+                        <p className="text-[11px] text-green-400">
+                          {[
+                            product.enchantment.strength ? `Força +${product.enchantment.strength}` : null,
+                            product.enchantment.intellect ? `Intelecto +${product.enchantment.intellect}` : null,
+                            product.enchantment.endurance ? `Vigor +${product.enchantment.endurance}` : null,
+                            product.enchantment.dexterity ? `Destreza +${product.enchantment.dexterity}` : null,
+                            product.enchantment.wisdom ? `Sabedoria +${product.enchantment.wisdom}` : null,
+                            product.enchantment.luck ? `Sorte +${product.enchantment.luck}` : null,
+                          ].filter(Boolean).join(" • ")}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <p className="text-xs text-gray-400 mb-4 flex-1">{product.description}</p>
                   <button
                     onClick={() => setConfirm(product)}
                     className={`w-full text-sm px-3 py-2 rounded-lg font-medium transition-colors ${
-                      diamondPrice
+                      diamondPrice || goldPrice
                         ? enough
                           ? "bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:opacity-90"
                           : "bg-dark-700 text-gray-500"
@@ -132,8 +159,10 @@ export function ShopPage() {
                     }`}
                   >
                     <span className="flex items-center justify-center gap-1.5">
-                      {diamondPrice ? <Gem size={14} className="text-cyan-300" /> : <Coins size={14} />}
-                      {diamondPrice ? `${product.price} 💎` : `R$ ${(product.price / 100).toFixed(2)}`}
+                      {diamondPrice ? <Gem size={14} className="text-cyan-300" />
+                        : goldPrice ? <Coins size={14} className="text-yellow-400" />
+                        : <Coins size={14} />}
+                      {diamondPrice ? `${product.price} 💎` : goldPrice ? `${product.price} de ouro` : `R$ ${(product.price / 100).toFixed(2)}`}
                     </span>
                   </button>
                 </div>
@@ -165,19 +194,25 @@ export function ShopPage() {
               {confirm.type === "pass_premium" && (
                 <p className="text-purple-300 flex items-center gap-1.5"><Trophy size={14} /> Passe Premium da temporada</p>
               )}
+              {confirm.type === "enchantment" && confirm.enchantment && (
+                <p className="text-green-300 flex items-center gap-1.5"><Sparkles size={14} /> {confirm.enchantment.name} — vai para sua mochila para aplicar em equipamentos compatíveis.</p>
+              )}
               <p className="text-gray-400 mt-2 flex items-center gap-1.5">
                 {confirm.currency === "diamond" ? <Gem size={14} /> : <Coins size={14} />}
-                Custo: {confirm.currency === "diamond" ? `${confirm.price} diamantes` : `R$ ${(confirm.price / 100).toFixed(2)}`}
+                Custo: {confirm.currency === "diamond" ? `${confirm.price} diamantes` : confirm.currency === "gold" ? `${confirm.price} de ouro` : `R$ ${(confirm.price / 100).toFixed(2)}`}
               </p>
               {confirm.currency === "diamond" && (user?.diamonds ?? 0) < confirm.price && (
                 <p className="text-red-400 text-xs mt-2">Saldo insuficiente de diamantes.</p>
+              )}
+              {confirm.currency === "gold" && (user?.gold ?? 0) < confirm.price && (
+                <p className="text-red-400 text-xs mt-2">Ouro insuficiente.</p>
               )}
             </div>
             <div className="flex gap-2">
               <button onClick={() => setConfirm(null)} className="btn-secondary flex-1">Cancelar</button>
               <button
                 onClick={handlePurchase}
-                disabled={buying || (confirm.currency === "diamond" && (user?.diamonds ?? 0) < confirm.price)}
+                disabled={buying || (confirm.currency === "diamond" && (user?.diamonds ?? 0) < confirm.price) || (confirm.currency === "gold" && (user?.gold ?? 0) < confirm.price)}
                 className="btn-primary flex-1 disabled:opacity-50"
               >
                 {buying ? "Comprando..." : "Comprar"}

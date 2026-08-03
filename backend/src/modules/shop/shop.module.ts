@@ -51,6 +51,16 @@ async function applyProduct(
     return { amount: 1, message: "Passe Premium da temporada ativa" };
   }
 
+  if (product.type === "enchantment") {
+    if (!product.enchantmentId) throw new AppError(400, "Produto sem encantamento vinculado");
+    await tx.userEnchantment.upsert({
+      where: { userId_enchantmentId: { userId, enchantmentId: product.enchantmentId } },
+      create: { userId, enchantmentId: product.enchantmentId, quantity: 1 },
+      update: { quantity: { increment: 1 } },
+    });
+    return { amount: 1, message: "Encantamento adquirido" };
+  }
+
   throw new AppError(400, "Produto inválido");
 }
 
@@ -60,6 +70,7 @@ export function createShopModule(app: Express): void {
     try {
       const products = await prisma.shopProduct.findMany({
         where: { isActive: true },
+        include: { enchantment: true },
         orderBy: [{ type: "asc" }, { sortOrder: "asc" }],
       });
       res.json(products);
@@ -93,9 +104,39 @@ export function createShopModule(app: Express): void {
               userId: req.user!.userId,
               productId: product.id,
               type: product.type,
-              amount: product.type === "vip" ? product.vipDays : product.diamondAmount,
+              amount: product.type === "vip" ? product.vipDays : product.type === "diamond_pack" ? product.diamondAmount : 1,
               price: product.price,
               currency: "diamond",
+              status: "paid",
+            },
+          });
+        });
+        res.json({ message: "Compra realizada!", detail: product.name });
+        return;
+      }
+
+      if (product.currency === "gold") {
+        const user = await prisma.user.findUnique({
+          where: { id: req.user!.userId },
+          select: { gold: true },
+        });
+        if (!user || Number(user.gold) < product.price) {
+          throw new AppError(400, `Ouro insuficiente — custa ${product.price} de ouro`);
+        }
+        await prisma.$transaction(async (tx) => {
+          await tx.user.update({
+            where: { id: req.user!.userId },
+            data: { gold: { decrement: product.price } },
+          });
+          await applyProduct(tx, req.user!.userId, product);
+          await tx.shopOrder.create({
+            data: {
+              userId: req.user!.userId,
+              productId: product.id,
+              type: product.type,
+              amount: 1,
+              price: product.price,
+              currency: "gold",
               status: "paid",
             },
           });
@@ -138,7 +179,7 @@ export function createShopModule(app: Express): void {
     try {
       const orders = await prisma.shopOrder.findMany({
         where: { userId: req.user!.userId },
-        include: { product: true },
+        include: { product: { include: { enchantment: true } } },
         orderBy: { createdAt: "desc" },
         take: 50,
       });

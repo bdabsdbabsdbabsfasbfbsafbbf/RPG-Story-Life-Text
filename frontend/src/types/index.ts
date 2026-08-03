@@ -288,14 +288,49 @@ export interface InventoryItem {
   item: Item;
 }
 
+export interface Enchantment {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  category: string;
+  rarity: string;
+  minRank: number;
+  price: number;
+  compatibleSlots: string;
+  strength: number;
+  intellect: number;
+  endurance: number;
+  dexterity: number;
+  wisdom: number;
+  luck: number;
+}
+
+export interface UserEnchantment {
+  id: string;
+  enchantmentId: string;
+  quantity: number;
+  enchantment: Enchantment;
+}
+
 export interface Item {
   id: string;
   name: string;
   type: ItemType;
   rarity: Rarity;
   level: number;
+  rank: number;
   description: string;
   stats?: string | null;
+  effects?: string | null;
+  strength: number;
+  intellect: number;
+  endurance: number;
+  dexterity: number;
+  wisdom: number;
+  luck: number;
+  enchantmentId?: string | null;
+  enchantment?: Enchantment | null;
   sellPrice: number;
   buyPrice: number;
   stackable: boolean;
@@ -306,20 +341,13 @@ export interface Item {
 
 export type ItemType =
   | 'weapon'
-  | 'helmet'
-  | 'chestplate'
-  | 'leggings'
-  | 'boots'
-  | 'shield'
-  | 'ring'
-  | 'amulet'
+  | 'class'
+  | 'helm'
+  | 'armor'
   | 'cape'
-  | 'gloves'
-  | 'belt'
-  | 'consumable'
-  | 'material'
-  | 'quest_item'
-  | 'key';
+  | 'ring'
+  | 'necklace'
+  | 'consumable';
 
 export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'mythic';
 
@@ -333,17 +361,12 @@ export interface ItemRequirements {
 
 export type EquipmentSlot =
   | 'weapon'
-  | 'helmet'
-  | 'chestplate'
-  | 'leggings'
-  | 'boots'
-  | 'shield'
-  | 'ring1'
-  | 'ring2'
-  | 'amulet'
+  | 'class'
+  | 'helm'
+  | 'armor'
   | 'cape'
-  | 'gloves'
-  | 'belt';
+  | 'ring'
+  | 'necklace';
 
 export type EquipmentMap = Record<EquipmentSlot, InventoryItem | null>;
 

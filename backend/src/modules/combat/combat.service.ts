@@ -6,6 +6,7 @@ import { applyCharacterXp, clampGold, grantClassXp, addItemsToInventory } from "
 import { Battle, TICK_MS } from "../../core/classEngine/battle";
 import { SkillDef, PassiveDef, EffectDef, ActiveEffectRuntime } from "../../core/classEngine/types";
 import { StatsInput } from "../../core/classEngine/stat-calculator";
+import { sumCoreStats } from "../../core/stats/coreStats";
 import { grantPassXp } from "../seasons/seasons.module";
 import { isVipActive, VIP_XP_BONUS, VIP_GOLD_BONUS } from "../../core/progression";
 
@@ -163,19 +164,13 @@ export class CombatService {
         },
         equipment: {
           include: {
-            weapon: true,
-            helmet: true,
-            chestplate: true,
-            pants: true,
-            boots: true,
-            gloves: true,
-            shield: true,
-            amulet: true,
-            ring1: true,
-            ring2: true,
-            cape: true,
-            relic: true,
-            pet: true,
+            weapon: { include: { enchantment: true } },
+            classItem: { include: { enchantment: true } },
+            helm: { include: { enchantment: true } },
+            armor: { include: { enchantment: true } },
+            cape: { include: { enchantment: true } },
+            ring: { include: { enchantment: true } },
+            necklace: { include: { enchantment: true } },
           },
         },
         classProgress: { where: { isActive: true } },
@@ -202,21 +197,21 @@ export class CombatService {
       .filter((p: any) => (p.rankRequired ?? 1) <= rank)
       .map(parsePassive);
 
-    // Stats de equipamento (item.stats JSON)
-    const equipmentStats: Array<Record<string, any>> = [];
-    if (character.equipment) {
-      const slots = [
-        "weapon", "helmet", "chestplate", "pants", "boots", "gloves",
-        "shield", "amulet", "ring1", "ring2", "cape", "relic", "pet",
-      ];
-      for (const slot of slots) {
-        const item = (character.equipment as any)[slot];
-        if (item?.stats) {
-          const parsed = parseJson(item.stats, null);
-          if (parsed && typeof parsed === "object") equipmentStats.push(parsed);
-        }
-      }
-    }
+    // Core Stats de equipamento (item + encantamento equipado) — conversão centralizada no Combat Engine
+    const coreStats = sumCoreStats([
+      ...["weapon", "classItem", "helm", "armor", "cape", "ring", "necklace"].map((slot) => {
+        const item = (character.equipment as any)?.[slot];
+        if (!item) return null;
+        return {
+          strength: (item.strength ?? 0) + (item.enchantment?.strength ?? 0),
+          intellect: (item.intellect ?? 0) + (item.enchantment?.intellect ?? 0),
+          endurance: (item.endurance ?? 0) + (item.enchantment?.endurance ?? 0),
+          dexterity: (item.dexterity ?? 0) + (item.enchantment?.dexterity ?? 0),
+          wisdom: (item.wisdom ?? 0) + (item.enchantment?.wisdom ?? 0),
+          luck: (item.luck ?? 0) + (item.enchantment?.luck ?? 0),
+        };
+      }),
+    ]);
 
     const statsInput: StatsInput = {
       level: character.level,
@@ -227,7 +222,7 @@ export class CombatService {
       },
       resource: parseJson(gameClass.resource, {}),
       passives,
-      equipmentStats,
+      coreStats,
     };
 
     const battle = new Battle({

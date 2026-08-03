@@ -40,6 +40,7 @@ model User {
   partyMembers  PartyMember[] @relation()
   redeemRedemptions RedeemRedemption[]
   shopOrders    ShopOrder[] @relation()
+  userEnchantments UserEnchantment[] @relation()
 
   @@index([discordId])
   @@index([username])
@@ -281,85 +282,68 @@ model ActiveCooldown {
 }
 
 model Equipment {
-  id            String   @id @default(uuid())
-  characterId   String   @unique
-  helmetId      String?  @unique
-  chestplateId  String?  @unique
-  pantsId       String?  @unique
-  bootsId       String?  @unique
-  glovesId      String?  @unique
-  weaponId      String?  @unique
-  shieldId      String?  @unique
-  amuletId      String?  @unique
-  ring1Id       String?  @unique
-  ring2Id       String?  @unique
-  capeId        String?  @unique
-  relicId       String?  @unique
-  petId         String?  @unique
-  updatedAt     DateTime @updatedAt
-  character     Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
-  helmet        Item?     @relation("EquippedHelmet", fields: [helmetId], references: [id])
-  chestplate    Item?     @relation("EquippedChestplate", fields: [chestplateId], references: [id])
-  pants         Item?     @relation("EquippedPants", fields: [pantsId], references: [id])
-  boots         Item?     @relation("EquippedBoots", fields: [bootsId], references: [id])
-  gloves        Item?     @relation("EquippedGloves", fields: [glovesId], references: [id])
-  weapon        Item?     @relation("EquippedWeapon", fields: [weaponId], references: [id])
-  shield        Item?     @relation("EquippedShield", fields: [shieldId], references: [id])
-  amulet        Item?     @relation("EquippedAmulet", fields: [amuletId], references: [id])
-  ring1         Item?     @relation("EquippedRing1", fields: [ring1Id], references: [id])
-  ring2         Item?     @relation("EquippedRing2", fields: [ring2Id], references: [id])
-  cape          Item?     @relation("EquippedCape", fields: [capeId], references: [id])
-  relic         Item?     @relation("EquippedRelic", fields: [relicId], references: [id])
-  pet           Item?     @relation("EquippedPet", fields: [petId], references: [id])
+  id          String   @id @default(uuid())
+  characterId String   @unique
+  weaponId    String?  @unique
+  classItemId String?  @unique
+  helmId      String?  @unique
+  armorId     String?  @unique
+  capeId      String?  @unique
+  ringId      String?  @unique
+  necklaceId  String?  @unique
+  updatedAt   DateTime @updatedAt
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  weapon      Item?     @relation("EquippedWeapon", fields: [weaponId], references: [id])
+  classItem   Item?     @relation("EquippedClassItem", fields: [classItemId], references: [id])
+  helm        Item?     @relation("EquippedHelm", fields: [helmId], references: [id])
+  armor       Item?     @relation("EquippedArmor", fields: [armorId], references: [id])
+  cape        Item?     @relation("EquippedCape", fields: [capeId], references: [id])
+  ring        Item?     @relation("EquippedRing", fields: [ringId], references: [id])
+  necklace    Item?     @relation("EquippedNecklace", fields: [necklaceId], references: [id])
 }
 
 model Item {
-  id            String   @id @default(uuid())
-  name          String
-  description   String
-  icon          String?
-  type          String
-  subtype       String?
-  rarity        String
-  level         Int      @default(1)
-  tier          Int      @default(1)
-  isTradable    Boolean  @default(true)
-  isSellable    Boolean  @default(true)
-  isStackable   Boolean  @default(false)
-  maxStack      Int      @default(1)
-  buyPrice      BigInt   @default(0)
-  sellPrice     BigInt   @default(0)
-  stats         String?
-  requirements  String?
-  effects       String?
-  enchantSlots  Int      @default(0)
-  gemSlots      Int      @default(0)
-  runeSlots     Int      @default(0)
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  icon        String?
+  type        String // weapon | class | helm | armor | cape | ring | necklace | consumable
+  rarity      String
+  level       Int      @default(1)
+  rank        Int      @default(1)
+  isTradable  Boolean  @default(true)
+  isSellable  Boolean  @default(true)
+  isStackable Boolean  @default(false)
+  maxStack    Int      @default(1)
+  buyPrice    BigInt   @default(0)
+  sellPrice   BigInt   @default(0)
+  effects     String? // apenas consumíveis (ex: {"heal":50})
+  // Core Stats — únicos atributos que equipamentos fornecem
+  strength    Int      @default(0)
+  intellect   Int      @default(0)
+  endurance   Int      @default(0)
+  dexterity   Int      @default(0)
+  wisdom      Int      @default(0)
+  luck        Int      @default(0)
+  // Encantamento equipado (opcional)
+  enchantmentId String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  enchantments  Enchantment[]
-  gems          GemSlot[]
-  runes         RuneSlot[]
-  inventory     Inventory[]
-  shopItems     ShopItem[]
-  dropItems     DropItem[]
-  mailItems     MailItem[]
+  enchantment Enchantment? @relation(fields: [enchantmentId], references: [id])
+  inventory   Inventory[]
+  shopItems   ShopItem[]
+  dropItems   DropItem[]
+  mailItems   MailItem[]
   marketListings MarketListing[]
-  equippedAsHelmet    Equipment? @relation("EquippedHelmet")
-  equippedAsChestplate Equipment? @relation("EquippedChestplate")
-  equippedAsPants     Equipment? @relation("EquippedPants")
-  equippedAsBoots     Equipment? @relation("EquippedBoots")
-  equippedAsGloves    Equipment? @relation("EquippedGloves")
-  equippedAsWeapon    Equipment? @relation("EquippedWeapon")
-  equippedAsShield    Equipment? @relation("EquippedShield")
-  equippedAsAmulet    Equipment? @relation("EquippedAmulet")
-  equippedAsRing1     Equipment? @relation("EquippedRing1")
-  equippedAsRing2     Equipment? @relation("EquippedRing2")
-  equippedAsCape      Equipment? @relation("EquippedCape")
-  equippedAsRelic     Equipment? @relation("EquippedRelic")
-  equippedAsPet       Equipment? @relation("EquippedPet")
+  equippedAsWeapon   Equipment? @relation("EquippedWeapon")
+  equippedAsClassItem Equipment? @relation("EquippedClassItem")
+  equippedAsHelm     Equipment? @relation("EquippedHelm")
+  equippedAsArmor    Equipment? @relation("EquippedArmor")
+  equippedAsCape     Equipment? @relation("EquippedCape")
+  equippedAsRing     Equipment? @relation("EquippedRing")
+  equippedAsNecklace Equipment? @relation("EquippedNecklace")
 
   @@index([type])
   @@index([rarity])
@@ -368,33 +352,43 @@ model Item {
 }
 
 model Enchantment {
-  id            String   @id @default(uuid())
-  itemId        String
-  enchantType   String
-  value         Float
-  createdAt     DateTime @default(now())
-  item          Item     @relation(fields: [itemId], references: [id])
-  @@index([itemId])
+  id              String   @id @default(uuid())
+  name            String
+  slug            String   @unique
+  description     String
+  category        String // physical | magical | defensive | utility
+  rarity          String   @default("common")
+  minRank         Int      @default(1) // rank mínimo do equipamento
+  price           BigInt   @default(0) // valor em ouro
+  compatibleSlots String   @default("[]") // JSON: ["weapon","helm",...]
+  strength        Int      @default(0)
+  intellect       Int      @default(0)
+  endurance       Int      @default(0)
+  dexterity       Int      @default(0)
+  wisdom          Int      @default(0)
+  luck            Int      @default(0)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  items           Item[]
+  userEnchantments UserEnchantment[]
+  shopProducts    ShopProduct[]
+
+  @@index([category])
+  @@index([rarity])
 }
 
-model GemSlot {
+model UserEnchantment {
   id            String   @id @default(uuid())
-  itemId        String
-  gemId         String?
-  slotIndex     Int
-  createdAt     DateTime @default(now())
-  item          Item     @relation(fields: [itemId], references: [id])
-  @@index([itemId])
-}
+  userId        String
+  enchantmentId String
+  quantity      Int      @default(1)
+  acquiredAt    DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enchantment   Enchantment @relation(fields: [enchantmentId], references: [id], onDelete: Cascade)
 
-model RuneSlot {
-  id            String   @id @default(uuid())
-  itemId        String
-  runeId        String?
-  slotIndex     Int
-  createdAt     DateTime @default(now())
-  item          Item     @relation(fields: [itemId], references: [id])
-  @@index([itemId])
+  @@unique([userId, enchantmentId])
+  @@index([userId])
 }
 
 model Inventory {
@@ -951,17 +945,19 @@ model ShopProduct {
   slug          String   @unique
   name          String
   description   String
-  type          String   @default("diamond_pack") // diamond_pack | vip | pass_premium
-  currency      String   @default("diamond") // diamond | money
-  price         Int      @default(0) // custo em diamantes ou centavos (moeda real)
+  type          String   @default("diamond_pack") // diamond_pack | vip | pass_premium | enchantment
+  currency      String   @default("diamond") // diamond | money | gold
+  price         Int      @default(0) // custo em diamantes, centavos (moeda real) ou ouro
   diamondAmount Int      @default(0) // diamantes entregues (diamond_pack)
   vipDays       Int      @default(0) // dias de VIP entregues (vip)
+  enchantmentId String?
   icon          String?
   isActive      Boolean  @default(true)
   sortOrder     Int      @default(0)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   orders        ShopOrder[] @relation()
+  enchantment   Enchantment? @relation(fields: [enchantmentId], references: [id])
 
   @@index([type])
 }

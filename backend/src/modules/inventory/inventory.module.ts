@@ -3,12 +3,33 @@ import { prisma } from "../../core/database";
 import { authenticate } from "../../core/middleware/auth";
 import { AppError } from "../../core/middleware/errorHandler";
 
+const EQUIP_SLOTS = ["weapon", "class", "helm", "armor", "cape", "ring", "necklace"] as const;
+
+const SLOT_MAP: Record<string, string> = {
+  weapon: "weaponId",
+  class: "classItemId",
+  helm: "helmId",
+  armor: "armorId",
+  cape: "capeId",
+  ring: "ringId",
+  necklace: "necklaceId",
+};
+
+function parseSlots(raw: string | null): string[] {
+  try {
+    const parsed = JSON.parse(raw || "[]");
+    return Array.isArray(parsed) ? parsed.filter((s) => typeof s === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
 export function createInventoryModule(app: Express): void {
   app.get("/api/inventory", authenticate, async (req: Request, res: Response, next: NextFunction) => {
     try {
       const items = await prisma.inventory.findMany({
         where: { userId: req.user!.userId },
-        include: { item: true },
+        include: { item: { include: { enchantment: true } } },
         orderBy: { acquiredAt: "desc" },
       });
       res.json(items);
@@ -21,7 +42,7 @@ export function createInventoryModule(app: Express): void {
     try {
       const equipped = await prisma.inventory.findMany({
         where: { userId: req.user!.userId, isEquipped: true },
-        include: { item: true },
+        include: { item: { include: { enchantment: true } } },
       });
       res.json(equipped);
     } catch (err) {
@@ -29,6 +50,7 @@ export function createInventoryModule(app: Express): void {
     }
   });
 
+  // Equipa um item no slot correspondente ao seu tipo
   app.post("/api/inventory/equip", authenticate, async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { inventoryId, characterId } = req.body;
@@ -41,8 +63,7 @@ export function createInventoryModule(app: Express): void {
       }
 
       const itemType = inv.item.type;
-      const validSlots = ["helmet", "chestplate", "pants", "boots", "gloves", "weapon", "shield", "amulet", "ring", "cape", "relic", "pet"];
-      if (!validSlots.includes(itemType)) {
+      if (!EQUIP_SLOTS.includes(itemType as any)) {
         throw new AppError(400, "Item cannot be equipped");
       }
 
@@ -68,31 +89,12 @@ export function createInventoryModule(app: Express): void {
           data: { isEquipped: true },
         });
 
-        // Update character equipment
-        const equipmentData: any = {};
-        const slotMap: any = {
-          helmet: "helmetId",
-          chestplate: "chestplateId",
-          pants: "pantsId",
-          boots: "bootsId",
-          gloves: "glovesId",
-          weapon: "weaponId",
-          shield: "shieldId",
-          amulet: "amuletId",
-          ring: "ring1Id",
-          cape: "capeId",
-          relic: "relicId",
-          pet: "petId",
-        };
-        const field = slotMap[itemType];
-        if (field) {
-          equipmentData[field] = inv.itemId;
-          await tx.equipment.upsert({
-            where: { characterId },
-            create: { characterId, [field]: inv.itemId },
-            update: { [field]: inv.itemId },
-          });
-        }
+        const field = SLOT_MAP[itemType];
+        await tx.equipment.upsert({
+          where: { characterId },
+          create: { characterId, [field]: inv.itemId },
+          update: { [field]: inv.itemId },
+        });
       });
 
       res.json({ message: "Item equipped" });
@@ -118,21 +120,7 @@ export function createInventoryModule(app: Express): void {
           data: { isEquipped: false },
         });
 
-        const slotMap: any = {
-          helmet: "helmetId",
-          chestplate: "chestplateId",
-          pants: "pantsId",
-          boots: "bootsId",
-          gloves: "glovesId",
-          weapon: "weaponId",
-          shield: "shieldId",
-          amulet: "amuletId",
-          ring: "ring1Id",
-          cape: "capeId",
-          relic: "relicId",
-          pet: "petId",
-        };
-        const field = slotMap[inv.item.type];
+        const field = SLOT_MAP[inv.item.type];
         if (field) {
           await tx.equipment.update({
             where: { characterId },
@@ -142,6 +130,116 @@ export function createInventoryModule(app: Express): void {
       });
 
       res.json({ message: "Item unequipped" });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Encantamentos que o jogador possui
+  app.get("/api/inventory/enchantments", authenticate, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const owned = await prisma.userEnchantment.findMany({
+        where: { userId: req.user!.userId },
+        include: { enchantment: true },
+        orderBy: { acquiredAt: "desc" },
+      });
+      res.json(owned);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Aplica (ou troca) um encantamento em um item equipável compatível
+  app.post("/api/inventory/enchant", authenticate, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { inventoryId, enchantmentId } = req.body;
+      const inv = await prisma.inventory.findUnique({
+        where: { id: inventoryId },
+        include: { item: true },
+      });
+      if (!inv || inv.userId !== req.user!.userId) {
+        throw new AppError(404, "Item not found in inventory");
+      }
+      if (!EQUIP_SLOTS.includes(inv.item.type as any)) {
+        throw new AppError(400, "Este item não aceita encantamentos");
+      }
+
+      const enchantment = await prisma.enchantment.findUnique({ where: { id: enchantmentId } });
+      if (!enchantment || !enchantment.isActive) {
+        throw new AppError(404, "Encantamento não encontrado");
+      }
+      if (inv.item.rank < (enchantment.minRank || 1)) {
+        throw new AppError(400, `Encantamento requer item de rank ${enchantment.minRank}`);
+      }
+      const compatible = parseSlots(enchantment.compatibleSlots);
+      if (compatible.length > 0 && !compatible.includes(inv.item.type)) {
+        throw new AppError(400, "Encantamento incompatível com este item");
+      }
+
+      await prisma.$transaction(async (tx) => {
+        const owned = await tx.userEnchantment.findUnique({
+          where: { userId_enchantmentId: { userId: req.user!.userId, enchantmentId } },
+        });
+        if (!owned || owned.quantity < 1) {
+          throw new AppError(400, "Você não possui este encantamento");
+        }
+
+        // Troca: devolve o encantamento antigo para o jogador
+        const oldEnchantmentId = inv.item.enchantmentId;
+        if (oldEnchantmentId && oldEnchantmentId !== enchantmentId) {
+          await tx.userEnchantment.upsert({
+            where: { userId_enchantmentId: { userId: req.user!.userId, enchantmentId: oldEnchantmentId } },
+            create: { userId: req.user!.userId, enchantmentId: oldEnchantmentId, quantity: 1 },
+            update: { quantity: { increment: 1 } },
+          });
+        }
+
+        await tx.userEnchantment.update({
+          where: { userId_enchantmentId: { userId: req.user!.userId, enchantmentId } },
+          data: { quantity: { decrement: 1 } },
+        });
+
+        await tx.item.update({
+          where: { id: inv.itemId },
+          data: { enchantmentId },
+        });
+      });
+
+      res.json({ message: "Encantamento aplicado!" });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Remove o encantamento do item, devolvendo-o ao jogador
+  app.post("/api/inventory/enchant/remove", authenticate, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { inventoryId } = req.body;
+      const inv = await prisma.inventory.findUnique({
+        where: { id: inventoryId },
+        include: { item: true },
+      });
+      if (!inv || inv.userId !== req.user!.userId) {
+        throw new AppError(404, "Item not found in inventory");
+      }
+      const enchantmentId = inv.item.enchantmentId;
+      if (!enchantmentId) {
+        throw new AppError(400, "Item sem encantamento");
+      }
+
+      await prisma.$transaction(async (tx) => {
+        await tx.item.update({
+          where: { id: inv.itemId },
+          data: { enchantmentId: null },
+        });
+        await tx.userEnchantment.upsert({
+          where: { userId_enchantmentId: { userId: req.user!.userId, enchantmentId } },
+          create: { userId: req.user!.userId, enchantmentId, quantity: 1 },
+          update: { quantity: { increment: 1 } },
+        });
+      });
+
+      res.json({ message: "Encantamento removido" });
     } catch (err) {
       next(err);
     }

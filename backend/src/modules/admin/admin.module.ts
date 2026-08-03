@@ -504,7 +504,7 @@ export function createAdminModule(app: Express): void {
 
   // Items CRUD
   app.get("/api/admin/items", requireAdmin, async (_req: Request, res: Response, next: NextFunction) => {
-    try { res.json(await prisma.item.findMany({ orderBy: { name: "asc" } })); } catch (err) { next(err); }
+    try { res.json(await prisma.item.findMany({ include: { enchantment: true }, orderBy: { name: "asc" } })); } catch (err) { next(err); }
   });
 
   app.post("/api/admin/items", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
@@ -517,6 +517,23 @@ export function createAdminModule(app: Express): void {
 
   app.delete("/api/admin/items/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try { await prisma.item.delete({ where: { id: req.params.id } }); res.json({ message: "Deleted" }); } catch (err) { next(err); }
+  });
+
+  // Enchantments CRUD
+  app.get("/api/admin/enchantments", requireAdmin, async (_req: Request, res: Response, next: NextFunction) => {
+    try { res.json(await prisma.enchantment.findMany({ orderBy: { name: "asc" } })); } catch (err) { next(err); }
+  });
+
+  app.post("/api/admin/enchantments", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try { res.status(201).json(await prisma.enchantment.create({ data: normalizeBody("enchantment", req.body) })); } catch (err) { next(err); }
+  });
+
+  app.put("/api/admin/enchantments/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try { res.json(await prisma.enchantment.update({ where: { id: req.params.id }, data: normalizeBody("enchantment", req.body) })); } catch (err) { next(err); }
+  });
+
+  app.delete("/api/admin/enchantments/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try { await prisma.enchantment.delete({ where: { id: req.params.id } }); res.json({ message: "Deleted" }); } catch (err) { next(err); }
   });
 
   // Monsters CRUD
@@ -726,9 +743,10 @@ export function createAdminModule(app: Express): void {
   });
 
   // Backup de conteúdo: exporta todas as tabelas de conteúdo em JSON (BigInt vira string)
-  const EXPORT_ORDER = ["statModel", "gameClass", "effect", "item", "map", "monster", "npc", "quest", "skill", "passive", "mapNpc", "mapMonster", "shopItem", "dropItem"] as const;
+  const EXPORT_ORDER = ["statModel", "gameClass", "effect", "item", "enchantment", "map", "monster", "npc", "quest", "skill", "passive", "mapNpc", "mapMonster", "shopItem", "dropItem"] as const;
   const BIGINT_FIELDS: Record<string, string[]> = {
     item: ["buyPrice", "sellPrice"],
+    enchantment: ["price"],
     monster: ["xpReward", "goldReward"],
     quest: ["xpReward", "goldReward"],
     shopItem: ["price"],

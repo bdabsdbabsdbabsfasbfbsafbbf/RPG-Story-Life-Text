@@ -59,10 +59,20 @@ export const contentApi = {
 
 export const itemsApi = {
   list: (params?: any) => api.get("/items", { params }),
+  enchantments: () => api.get("/enchantments"),
 };
 
 export const inventoryApi = {
   list: () => api.get("/inventory"),
+  equip: (data: { inventoryId: string; characterId: string }) =>
+    api.post("/inventory/equip", data),
+  unequip: (data: { inventoryId: string; characterId: string }) =>
+    api.post("/inventory/unequip", data),
+  enchant: (data: { inventoryId: string; enchantmentId: string }) =>
+    api.post("/inventory/enchant", data),
+  removeEnchant: (data: { inventoryId: string }) =>
+    api.post("/inventory/enchant/remove", data),
+  enchantments: () => api.get("/inventory/enchantments"),
 };
 
 export const mapsApi = {

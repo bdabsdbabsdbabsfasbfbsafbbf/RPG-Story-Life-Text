@@ -127,18 +127,51 @@ const starterClasses = [
 // ===== World content: items, monsters, maps, npcs, shops, quests, skills, buffs, passives, codes =====
 
 const items = [
-  { name: "Espada de Iniciante", description: "Uma espada simples forjada para novos aventureiros.", type: "weapon", subtype: "sword", rarity: "common", level: 1, buyPrice: 50, sellPrice: 10, stats: '{"attack": 5}' },
-  { name: "Adaga de Iniciante", description: "Leve e afiada, ideal para golpes precisos.", type: "weapon", subtype: "dagger", rarity: "common", level: 1, buyPrice: 50, sellPrice: 10, stats: '{"attack": 4, "criticalChance": 3}' },
-  { name: "Cajado do Aprendiz", description: "Canaliza os primeiros feitiços de um mago.", type: "weapon", subtype: "staff", rarity: "common", level: 1, buyPrice: 50, sellPrice: 10, stats: '{"magic": 6}' },
-  { name: "Cajado da Luz", description: "Um cajado abençoado que fortalece as curas.", type: "weapon", subtype: "staff", rarity: "common", level: 1, buyPrice: 50, sellPrice: 10, stats: '{"magic": 5, "healingPower": 3}' },
-  { name: "Escudo de Madeira", description: "Um escudo robusto que absorve golpes.", type: "shield", subtype: "shield", rarity: "common", level: 1, buyPrice: 40, sellPrice: 8, stats: '{"defense": 5}' },
-  { name: "Poção de Vida", description: "Restaura 50 de vida.", type: "consumable", subtype: "potion", rarity: "common", level: 1, isStackable: true, maxStack: 99, buyPrice: 20, sellPrice: 4, effects: '{"heal": 50}' },
-  { name: "Poção de Mana", description: "Restaura 40 de mana.", type: "consumable", subtype: "potion", rarity: "common", level: 1, isStackable: true, maxStack: 99, buyPrice: 25, sellPrice: 5, effects: '{"manaRestore": 40}' },
-  // Shop test gear
-  { name: "Espada de Ferro", description: "Uma espada de ferro confiável para aventureiros iniciantes.", type: "weapon", subtype: "sword", rarity: "uncommon", level: 3, buyPrice: 150, sellPrice: 30, stats: '{"attack": 10}' },
-  { name: "Adaga Serrilhada", description: "Lâmina serrilhada que causa ferimentos graves.", type: "weapon", subtype: "dagger", rarity: "uncommon", level: 3, buyPrice: 140, sellPrice: 28, stats: '{"attack": 9, "criticalChance": 5}' },
-  { name: "Cajado Arcano", description: "Canaliza poder arcano com precisão.", type: "weapon", subtype: "staff", rarity: "uncommon", level: 3, buyPrice: 160, sellPrice: 32, stats: '{"magic": 12}' },
-  { name: "Armadura de Couro", description: "Proteção leve e resistente.", type: "chestplate", subtype: "leather", rarity: "uncommon", level: 2, buyPrice: 120, sellPrice: 24, stats: '{"defense": 8, "maxHp": 20}' },
+  // ===== Weapons (STR/INT) =====
+  { name: "Espada de Iniciante", description: "Uma espada simples forjada para novos aventureiros.", type: "weapon", rarity: "common", level: 1, rank: 1, buyPrice: 50, sellPrice: 10, strength: 4, dexterity: 1 },
+  { name: "Adaga de Iniciante", description: "Leve e afiada, ideal para golpes precisos.", type: "weapon", rarity: "common", level: 1, rank: 1, buyPrice: 50, sellPrice: 10, strength: 2, dexterity: 3 },
+  { name: "Cajado do Aprendiz", description: "Canaliza os primeiros feitiços de um mago.", type: "weapon", rarity: "common", level: 1, rank: 1, buyPrice: 50, sellPrice: 10, intellect: 5 },
+  { name: "Cajado da Luz", description: "Um cajado abençoado que fortalece as curas.", type: "weapon", rarity: "common", level: 1, rank: 1, buyPrice: 50, sellPrice: 10, intellect: 4, wisdom: 1 },
+  { name: "Espada de Ferro", description: "Uma espada de ferro confiável para aventureiros iniciantes.", type: "weapon", rarity: "uncommon", level: 3, rank: 2, buyPrice: 150, sellPrice: 30, strength: 8, dexterity: 2 },
+  { name: "Adaga Serrilhada", description: "Lâmina serrilhada que causa ferimentos graves.", type: "weapon", rarity: "uncommon", level: 3, rank: 2, buyPrice: 140, sellPrice: 28, strength: 4, dexterity: 6 },
+  { name: "Cajado Arcano", description: "Canaliza poder arcano com precisão.", type: "weapon", rarity: "uncommon", level: 3, rank: 2, buyPrice: 160, sellPrice: 32, intellect: 10, wisdom: 2 },
+  { name: "Machado de Batalha", description: "Uma lâmina pesada que parte escudos.", type: "weapon", rarity: "rare", level: 6, rank: 3, buyPrice: 400, sellPrice: 80, strength: 18, endurance: 3 },
+  { name: "Grimório Antigo", description: "Um tomo arcano repleto de feitiços esquecidos.", type: "weapon", rarity: "rare", level: 6, rank: 3, buyPrice: 420, sellPrice: 84, intellect: 16, wisdom: 5 },
+  // ===== Helms (END/WIS) =====
+  { name: "Capuz de Pano", description: "Proteção simples para a cabeça.", type: "helm", rarity: "common", level: 1, rank: 1, buyPrice: 30, sellPrice: 6, endurance: 2, wisdom: 1 },
+  { name: "Elmo de Ferro", description: "Elmo resistente dos soldados da vila.", type: "helm", rarity: "uncommon", level: 3, rank: 2, buyPrice: 110, sellPrice: 22, endurance: 6, wisdom: 2 },
+  { name: "Coroa Arcano", description: "Coroa encantada que amplifica o conhecimento.", type: "helm", rarity: "rare", level: 6, rank: 3, buyPrice: 360, sellPrice: 72, wisdom: 10, intellect: 5 },
+  // ===== Armors (END/DEX) =====
+  { name: "Túnica Simples", description: "Roupas leves e confortáveis.", type: "armor", rarity: "common", level: 1, rank: 1, buyPrice: 40, sellPrice: 8, endurance: 3 },
+  { name: "Armadura de Couro", description: "Proteção leve e resistente.", type: "armor", rarity: "uncommon", level: 2, rank: 2, buyPrice: 120, sellPrice: 24, endurance: 8, dexterity: 2 },
+  { name: "Cota de Malha", description: "Anéis de aço entrelaçados para máxima defesa.", type: "armor", rarity: "rare", level: 6, rank: 3, buyPrice: 380, sellPrice: 76, endurance: 14, strength: 4 },
+  // ===== Capes (WIS/LUK) =====
+  { name: "Capa Esfarrapada", description: "Uma capa velha que esconde bem seu dono.", type: "cape", rarity: "common", level: 1, rank: 1, buyPrice: 35, sellPrice: 7, wisdom: 2, luck: 1 },
+  { name: "Manto de Veludo", description: "Um manto elegante dos nobres da vila.", type: "cape", rarity: "uncommon", level: 3, rank: 2, buyPrice: 130, sellPrice: 26, wisdom: 6, luck: 3 },
+  { name: "Capa do Vento", description: "Flutua como o vento e melhora os reflexos.", type: "cape", rarity: "rare", level: 6, rank: 3, buyPrice: 340, sellPrice: 68, dexterity: 8, luck: 4 },
+  // ===== Rings (LUK/STR ou INT) =====
+  { name: "Anel de Bronze", description: "Um anel simples, dizem que traz sorte.", type: "ring", rarity: "common", level: 1, rank: 1, buyPrice: 45, sellPrice: 9, luck: 2, strength: 1 },
+  { name: "Anel de Prata", description: "Anel prateado de um artesão habilidoso.", type: "ring", rarity: "uncommon", level: 3, rank: 2, buyPrice: 145, sellPrice: 29, luck: 5, strength: 3 },
+  { name: "Anel do Fogo", description: "Pulsa com energia ardente.", type: "ring", rarity: "rare", level: 6, rank: 3, buyPrice: 390, sellPrice: 78, intellect: 7, luck: 5 },
+  // ===== Necklaces (WIS/LUK) =====
+  { name: "Colar de Contas", description: "Contas de madeira entalhadas à mão.", type: "necklace", rarity: "common", level: 1, rank: 1, buyPrice: 40, sellPrice: 8, wisdom: 2, luck: 1 },
+  { name: "Amuleto da Sorte", description: "Um amuleto que afasta o azar.", type: "necklace", rarity: "uncommon", level: 3, rank: 2, buyPrice: 140, sellPrice: 28, luck: 5, wisdom: 3 },
+  { name: "Colar Arcano", description: "Um colar banhado em energia mística.", type: "necklace", rarity: "rare", level: 6, rank: 3, buyPrice: 370, sellPrice: 74, wisdom: 8, intellect: 4 },
+  // ===== Consumables =====
+  { name: "Poção de Vida", description: "Restaura 50 de vida.", type: "consumable", rarity: "common", level: 1, isStackable: true, maxStack: 99, buyPrice: 20, sellPrice: 4, effects: '{"heal": 50}' },
+  { name: "Poção de Mana", description: "Restaura 40 de mana.", type: "consumable", rarity: "common", level: 1, isStackable: true, maxStack: 99, buyPrice: 25, sellPrice: 5, effects: '{"manaRestore": 40}' },
+];
+
+// ===== Encantamentos (independentes dos itens, comprados na loja) =====
+const enchantments = [
+  { name: "Titã", slug: "titan", description: "Fortalece o corpo do portador, aumentando a força.", category: "physical", rarity: "common", minRank: 1, price: 5000, compatibleSlots: '["weapon","armor","ring","necklace"]', strength: 15 },
+  { name: "Mago", slug: "mage", description: "Amplifica o poder arcano do portador.", category: "magical", rarity: "common", minRank: 1, price: 5000, compatibleSlots: '["weapon","cape","ring","necklace"]', intellect: 15 },
+  { name: "Guardião", slug: "guardian", description: "Fortalece o corpo para resistir a golpes.", category: "defensive", rarity: "common", minRank: 1, price: 4500, compatibleSlots: '["helm","armor","necklace"]', endurance: 12 },
+  { name: "Caçador", slug: "hunter", description: "Aguça os reflexos do portador.", category: "utility", rarity: "common", minRank: 1, price: 4000, compatibleSlots: '["weapon","helm","cape","ring"]', dexterity: 10 },
+  { name: "Sábio", slug: "sage", description: "Expande a sabedoria e o equilíbrio do portador.", category: "magical", rarity: "common", minRank: 1, price: 4500, compatibleSlots: '["helm","cape","necklace"]', wisdom: 12 },
+  { name: "Fortuna", slug: "fortune", description: "Atrai a sorte para o portador.", category: "utility", rarity: "common", minRank: 1, price: 3500, compatibleSlots: '["ring","cape","necklace"]', luck: 8 },
+  { name: "Ventania", slug: "swift", description: "Movimento mais ágil e golpes mais precisos.", category: "utility", rarity: "uncommon", minRank: 2, price: 6000, compatibleSlots: '["weapon","cape","ring"]', dexterity: 6, luck: 2 },
+  { name: "Colosso", slug: "colossus", description: "Uma força descomunal para os mais fortes.", category: "physical", rarity: "rare", minRank: 3, price: 12000, compatibleSlots: '["weapon","armor"]', strength: 30 },
 ];
 
 const monsters = [
@@ -385,12 +418,28 @@ const shopProducts = [
   { slug: "vip-30d-cash", name: "VIP — 30 dias (R$)", description: "VIP por 30 dias comprado com dinheiro real.", type: "vip", currency: "money", price: 4000, vipDays: 30, icon: "Crown", sortOrder: 12 },
   { slug: "pass-premium", name: "Passe Premium", description: "Ativa o Passe Premium da temporada atual e libera as recompensas premium dos tiers.", type: "pass_premium", currency: "diamond", price: 600, icon: "Trophy", sortOrder: 20 },
   { slug: "pass-premium-cash", name: "Passe Premium (R$)", description: "Ativa o Passe Premium da temporada atual comprando com dinheiro real.", type: "pass_premium", currency: "money", price: 3000, icon: "Trophy", sortOrder: 21 },
+  { slug: "enc-titan", name: "Encantamento: Titã", description: "Strength +15 — compatível com Arma, Armadura, Anel e Colar.", type: "enchantment", currency: "gold", price: 5000, enchantmentSlug: "titan", icon: "Dumbbell", sortOrder: 30 },
+  { slug: "enc-mage", name: "Encantamento: Mago", description: "Intellect +15 — compatível com Arma, Capa, Anel e Colar.", type: "enchantment", currency: "gold", price: 5000, enchantmentSlug: "mage", icon: "Sparkles", sortOrder: 31 },
+  { slug: "enc-guardian", name: "Encantamento: Guardião", description: "Endurance +12 — compatível com Elmo, Armadura e Colar.", type: "enchantment", currency: "gold", price: 4500, enchantmentSlug: "guardian", icon: "Shield", sortOrder: 32 },
+  { slug: "enc-hunter", name: "Encantamento: Caçador", description: "Dexterity +10 — compatível com Arma, Elmo, Capa e Anel.", type: "enchantment", currency: "gold", price: 4000, enchantmentSlug: "hunter", icon: "Crosshair", sortOrder: 33 },
+  { slug: "enc-sage", name: "Encantamento: Sábio", description: "Wisdom +12 — compatível com Elmo, Capa e Colar.", type: "enchantment", currency: "gold", price: 4500, enchantmentSlug: "sage", icon: "BookOpen", sortOrder: 34 },
+  { slug: "enc-fortune", name: "Encantamento: Fortuna", description: "Luck +8 — compatível com Anel, Capa e Colar.", type: "enchantment", currency: "gold", price: 3500, enchantmentSlug: "fortune", icon: "Clover", sortOrder: 35 },
+  { slug: "enc-swift", name: "Encantamento: Ventania", description: "Dexterity +6, Luck +2 — compatível com Arma, Capa e Anel (item rank 2+).", type: "enchantment", currency: "gold", price: 6000, enchantmentSlug: "swift", icon: "Wind", sortOrder: 36 },
+  { slug: "enc-colossus", name: "Encantamento: Colosso", description: "Strength +30 — compatível com Arma e Armadura (item rank 3+).", type: "enchantment", currency: "gold", price: 12000, enchantmentSlug: "colossus", icon: "Mountain", sortOrder: 37 },
 ];
 
 async function upsertItem(item) {
   const existing = await prisma.item.findFirst({ where: { name: item.name } });
   if (existing) return prisma.item.update({ where: { id: existing.id }, data: { ...item } });
   return prisma.item.create({ data: { ...item } });
+}
+
+async function upsertEnchantment(enchantment) {
+  const existing = await prisma.enchantment.findFirst({
+    where: { OR: [{ slug: enchantment.slug }, { name: enchantment.name }] },
+  });
+  if (existing) return prisma.enchantment.update({ where: { id: existing.id }, data: { ...enchantment } });
+  return prisma.enchantment.create({ data: { ...enchantment } });
 }
 
 async function upsertMonster(monster) {
@@ -641,6 +690,12 @@ async function seedWorld() {
     }
   }
 
+  console.log("Seeding enchantments...");
+  for (const enchantment of enchantments) {
+    const created = await upsertEnchantment(enchantment);
+    console.log("  enchantment:", created.slug);
+  }
+
   console.log("Seeding effects...");
   const effectMap = {};
   for (const effect of effects) {
@@ -743,11 +798,21 @@ async function seedWorld() {
 
   console.log("Seeding shop products...");
   for (const product of shopProducts) {
+    const { enchantmentSlug, ...productData } = product;
     const created = await prisma.shopProduct.upsert({
       where: { slug: product.slug },
-      update: { ...product },
-      create: { ...product },
+      update: { ...productData },
+      create: { ...productData },
     });
+    if (enchantmentSlug) {
+      const enchantment = await prisma.enchantment.findFirst({ where: { slug: enchantmentSlug } });
+      if (enchantment) {
+        await prisma.shopProduct.update({
+          where: { id: created.id },
+          data: { enchantmentId: enchantment.id },
+        });
+      }
+    }
     console.log("  product:", created.slug);
   }
 

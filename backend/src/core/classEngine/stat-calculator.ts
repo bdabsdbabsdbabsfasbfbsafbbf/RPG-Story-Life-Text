@@ -1,4 +1,5 @@
 import { DerivedStats, PassiveDef } from "./types";
+import { CoreStats, coreToDerived, sumCoreStats } from "../stats/coreStats";
 
 const CORE_KEYS = ["hp", "mana", "attack", "defense", "magic", "magicDefense", "speed"] as const;
 const BASE_STATS: DerivedStats = {
@@ -55,10 +56,6 @@ function pickFrom(record: Record<string, any>, target: string): number {
   return 0;
 }
 
-function plus(acc: Record<string, number>, record: Record<string, any>, key: string): number {
-  return acc[key] + pickFrom(record, key);
-}
-
 export interface StatsInput {
   level: number;
   hp?: number;
@@ -70,7 +67,7 @@ export interface StatsInput {
   };
   resource?: Record<string, any>;
   passives: PassiveDef[]; // apenas passivas desbloqueadas pelo rank
-  equipmentStats?: Array<Record<string, any>>;
+  coreStats?: CoreStats; // Core Stats vindos de equipamentos + encantamentos
 }
 
 function flatPassiveMods(passives: PassiveDef[], key: string): number {
@@ -114,15 +111,19 @@ export function computeStats(input: StatsInput): DerivedStats {
   stats.magicDefense += flatPassiveMods(input.passives, "magicDefense");
   stats.speed += flatPassiveMods(input.passives, "speed");
 
-  if (input.equipmentStats) {
-    for (const eq of input.equipmentStats) {
-      stats.hp = plus(stats as any, eq, "hp");
-      stats.mana = plus(stats as any, eq, "mana");
-      stats.attack = plus(stats as any, eq, "attack");
-      stats.defense = plus(stats as any, eq, "defense");
-      stats.magic = plus(stats as any, eq, "magic");
-      stats.magicDefense = plus(stats as any, eq, "magicDefense");
-      stats.speed = plus(stats as any, eq, "speed");
+  if (input.coreStats) {
+    const core = input.coreStats;
+    if (core.strength || core.intellect || core.endurance || core.dexterity || core.wisdom || core.luck) {
+      const derived = coreToDerived(sumCoreStats([core]));
+      stats.hp += derived.hp || 0;
+      stats.mana += derived.mana || 0;
+      stats.attack += derived.attack || 0;
+      stats.defense += derived.defense || 0;
+      stats.magic += derived.magic || 0;
+      stats.magicDefense += derived.magicDefense || 0;
+      stats.speed += derived.speed || 0;
+      stats.critChance += derived.critChance || 0;
+      stats.dodge += derived.dodge || 0;
     }
   }
 
