@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { inventoryApi, classesApi, authApi } from "../services/api";
 import { InventoryItem } from "../types";
-import { Backpack, Search, Filter, ArrowUpDown, Star, Swords, Check } from "lucide-react";
+import { Backpack, Search, Filter, ArrowUpDown, Star, Swords, Check, Lock } from "lucide-react";
 import { useGameStore } from "../store/gameStore";
 import { useAuthStore } from "../store/authStore";
 import toast from "react-hot-toast";
@@ -24,9 +24,16 @@ export function InventoryPage() {
   const [filterType, setFilterType] = useState<string>("all");
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [classes, setClasses] = useState<UnlockedClass[]>([]);
+  const [catalog, setCatalog] = useState<any[]>([]);
   const [switching, setSwitching] = useState(false);
   const { selectedCharacter } = useGameStore();
   const { setUser } = useAuthStore();
+
+  useEffect(() => {
+    classesApi.list()
+      .then(({ data }) => setCatalog(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     inventoryApi.list()
@@ -112,6 +119,35 @@ export function InventoryPage() {
                 </div>
               );
             })}
+            {catalog
+              .filter((c) => !classes.some((p) => p.gameClass?.id === c.id))
+              .map((c) => {
+                const lockedLevel = c.requiredLevel > 1 && (selectedCharacter?.level ?? 0) < c.requiredLevel;
+                return (
+                  <div key={c.id} className="card-hover p-3 flex items-center justify-between gap-3 opacity-70">
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm truncate flex items-center gap-1.5">
+                        {lockedLevel ? <Lock size={12} className="text-gray-500" /> : null}
+                        {c.name}
+                      </p>
+                      <p className="text-[11px] text-gray-500 capitalize">{c.role}</p>
+                    </div>
+                    {lockedLevel ? (
+                      <span className="text-xs text-yellow-500 px-2 py-1 shrink-0 whitespace-nowrap">
+                        Requer Lv.{c.requiredLevel}
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => handleEquipClass(c.id)}
+                        disabled={switching}
+                        className="btn-primary text-xs px-3 py-1.5 shrink-0 disabled:opacity-50"
+                      >
+                        {switching ? "Equipando..." : "Equipar"}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
           </div>
         </div>
       )}

@@ -223,6 +223,12 @@ export function createClassesModule(app: Express): void {
         return;
       }
 
+      // Classe só pode ser equipada a partir do nível exigido
+      if (character.level < (gameClass.requiredLevel || 1)) {
+        res.status(403).json({ error: `Requer nível ${gameClass.requiredLevel} para equipar esta classe` });
+        return;
+      }
+
       // Upsert CharacterClass progress entry
       await prisma.characterClass.upsert({
         where: {
