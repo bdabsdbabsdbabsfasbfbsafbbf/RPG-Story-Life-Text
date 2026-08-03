@@ -13,7 +13,7 @@ interface NpcDetail {
   id: string;
   name: string;
   type: string;
-  shopItems?: { id: string; price: string | number; item: { id: string; name: string; description: string; type: string; rarity: string } }[];
+  shopItems?: { id: string; price: string | number; classId?: string | null; requiredLevel?: number; class?: { name: string; slug: string } | null; item: { id: string; name: string; description: string; type: string; rarity: string } }[];
   quests?: { id: string; title: string; description: string; requiredLevel: number; requiredRank: number; requiredQuestIds?: string | null; xpReward: string | number; goldReward: string | number }[];
 }
 
@@ -355,6 +355,18 @@ export function MapPage() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium">{offer.item.name}</p>
                         <p className="text-[11px] text-gray-500 line-clamp-1">{offer.item.description}</p>
+                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                          {offer.class && (
+                            <span className="text-[10px] px-1.5 py-0.5 bg-purple-500/15 text-purple-300 rounded-md flex items-center gap-1">
+                              <Shield size={9} /> Classe: {offer.class.name}
+                            </span>
+                          )}
+                          {Number(offer.requiredLevel) > 0 && (
+                            <span className="text-[10px] px-1.5 py-0.5 bg-yellow-500/15 text-yellow-300 rounded-md">
+                              Nv. {offer.requiredLevel}+
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <div className="text-right shrink-0">
                         <p className="text-sm text-yellow-400">{Number(offer.price).toLocaleString()} gold</p>

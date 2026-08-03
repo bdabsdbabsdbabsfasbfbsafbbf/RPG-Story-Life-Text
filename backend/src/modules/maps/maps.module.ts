@@ -27,7 +27,7 @@ export function createMapsModule(app: Express): void {
       const map = await prisma.map.findUnique({
         where: { slug: req.params.slug },
         include: {
-          npcs: { include: { npc: { include: { shopItems: { include: { item: true } }, quests: true } } } },
+          npcs: { include: { npc: { include: { shopItems: { include: { item: true, class: true } }, quests: true } } } },
           monsters: {
             include: { monster: { include: { drops: { include: { item: true } } } } },
             orderBy: { spawnRate: "desc" },

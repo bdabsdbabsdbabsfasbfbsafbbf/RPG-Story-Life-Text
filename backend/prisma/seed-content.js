@@ -233,10 +233,10 @@ const npcs = [
 const shopOffers = [
   { npc: "Aurelia", item: "Poção de Vida", price: 20 },
   { npc: "Aurelia", item: "Poção de Mana", price: 25 },
-  { npc: "Aurelia", item: "Espada de Ferro", price: 150 },
-  { npc: "Aurelia", item: "Adaga Serrilhada", price: 140 },
-  { npc: "Aurelia", item: "Cajado Arcano", price: 160 },
-  { npc: "Aurelia", item: "Armadura de Couro", price: 120 },
+  { npc: "Aurelia", item: "Espada de Ferro", price: 150, class: "cavaleiro" },
+  { npc: "Aurelia", item: "Adaga Serrilhada", price: 140, class: "assassino" },
+  { npc: "Aurelia", item: "Cajado Arcano", price: 160, class: "mago" },
+  { npc: "Aurelia", item: "Armadura de Couro", price: 120, requiredLevel: 3 },
 ];
 
 const quests = [
@@ -687,12 +687,22 @@ async function seedWorld() {
     const npc = npcMap[offer.npc];
     const item = itemMap[offer.item];
     if (!npc || !item) continue;
+    const cls = offer.class ? await prisma.gameClass.findUnique({ where: { slug: offer.class } }) : null;
+    const data = {
+      npcId: npc.id,
+      itemId: item.id,
+      price: BigInt(offer.price),
+      currency: "gold",
+      classId: cls?.id ?? null,
+      requiredLevel: offer.requiredLevel || 0,
+    };
     const existing = await prisma.shopItem.findFirst({ where: { npcId: npc.id, itemId: item.id } });
-    if (!existing) {
-      await prisma.shopItem.create({
-        data: { npcId: npc.id, itemId: item.id, price: BigInt(offer.price), currency: "gold" },
-      });
-      console.log("  shop:", offer.npc, "->", offer.item);
+    if (existing) {
+      await prisma.shopItem.update({ where: { id: existing.id }, data: { classId: data.classId, requiredLevel: data.requiredLevel } });
+      console.log("  shop (updated):", offer.npc, "->", offer.item, cls ? `[${cls.name}]` : "");
+    } else {
+      await prisma.shopItem.create({ data });
+      console.log("  shop:", offer.npc, "->", offer.item, cls ? `[${cls.name}]` : "");
     }
   }
 

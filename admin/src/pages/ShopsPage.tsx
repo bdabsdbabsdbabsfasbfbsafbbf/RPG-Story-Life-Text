@@ -24,6 +24,7 @@ interface Option {
 export default function ShopsPage() {
   const [npcs, setNpcs] = useState<Npc[]>([]);
   const [items, setItems] = useState<Option[]>([]);
+  const [classes, setClasses] = useState<Option[]>([]);
   const [maps, setMaps] = useState<Option[]>([]);
   const [selected, setSelected] = useState<Npc | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,15 +42,17 @@ export default function ShopsPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const [npcsRes, itemsRes, mapsRes] = await Promise.all([
+      const [npcsRes, itemsRes, mapsRes, classesRes] = await Promise.all([
         adminApi.npcs.list(),
         adminApi.items.list(),
         adminApi.maps.list(),
+        adminApi.classes.list(),
       ]);
       const npcList = Array.isArray(npcsRes.data) ? npcsRes.data : [];
       setNpcs(npcList);
       setItems(Array.isArray(itemsRes.data) ? itemsRes.data : []);
       setMaps(Array.isArray(mapsRes.data) ? mapsRes.data : []);
+      setClasses(Array.isArray(classesRes.data) ? classesRes.data : []);
       if (selected) {
         const updated = npcList.find((n: any) => n.id === selected.id);
         if (updated) setSelected(updated);
@@ -76,10 +79,11 @@ export default function ShopsPage() {
   const selectedMapNpcs = useMemo(() => selected?.mapNpcs ?? [], [selected]);
 
   const itemName = (id: string) => items.find((i) => i.id === id)?.name ?? id;
+  const className = (id: string | null) => classes.find((c) => c.id === id)?.name ?? null;
   const mapName = (id: string) => maps.find((m) => m.id === id)?.name ?? id;
 
   const resetItemForm = () => {
-    setItemForm({ itemId: "", price: 0, currency: "gold", stock: -1, rotationDays: 0 });
+    setItemForm({ itemId: "", price: 0, currency: "gold", stock: -1, rotationDays: 0, classId: "", requiredLevel: 0 });
     setEditingItem(null);
   };
 
@@ -96,6 +100,8 @@ export default function ShopsPage() {
       currency: s.currency ?? "gold",
       stock: Number(s.stock) ?? -1,
       rotationDays: Number(s.rotationDays) || 0,
+      classId: s.classId ?? "",
+      requiredLevel: Number(s.requiredLevel) || 0,
     });
   };
 
@@ -123,6 +129,8 @@ export default function ShopsPage() {
         currency: itemForm.currency || "gold",
         stock: Number(itemForm.stock) ?? -1,
         rotationDays: Number(itemForm.rotationDays) || 0,
+        classId: itemForm.classId || null,
+        requiredLevel: Number(itemForm.requiredLevel) || 0,
       };
       if (editingItem?.id) {
         await adminApi.shopItems.update(editingItem.id, payload);
@@ -285,6 +293,19 @@ export default function ShopsPage() {
                   <label className={labelClass}>Rotação (dias)</label>
                   <input type="number" value={itemForm.rotationDays ?? 0} onChange={(e) => setItemForm({ ...itemForm, rotationDays: Number(e.target.value) })} className={inputClass} />
                 </div>
+                <div>
+                  <label className={labelClass}>Classe (opcional)</label>
+                  <select value={itemForm.classId ?? ""} onChange={(e) => setItemForm({ ...itemForm, classId: e.target.value })} className={inputClass}>
+                    <option value="">Qualquer classe</option>
+                    {classes.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelClass}>Nível mín.</label>
+                  <input type="number" value={itemForm.requiredLevel ?? 0} onChange={(e) => setItemForm({ ...itemForm, requiredLevel: Number(e.target.value) })} className={inputClass} />
+                </div>
                 <div className="col-span-2 sm:col-span-6 flex justify-end gap-2">
                   {editingItem && (
                     <button type="button" onClick={resetItemForm} className="px-3 py-2 text-sm text-gray-400 hover:text-white hover:bg-dark-700 rounded-lg transition-colors">
@@ -304,8 +325,9 @@ export default function ShopsPage() {
                       <th className="text-left py-2.5 px-4 text-gray-400 font-medium">Item</th>
                       <th className="text-left py-2.5 px-4 text-gray-400 font-medium">Preço</th>
                       <th className="text-left py-2.5 px-4 text-gray-400 font-medium">Moeda</th>
+                      <th className="text-left py-2.5 px-4 text-gray-400 font-medium">Classe</th>
+                      <th className="text-left py-2.5 px-4 text-gray-400 font-medium">Nv. mín</th>
                       <th className="text-left py-2.5 px-4 text-gray-400 font-medium">Estoque</th>
-                      <th className="text-left py-2.5 px-4 text-gray-400 font-medium">Rotação</th>
                       <th className="text-right py-2.5 px-4 text-gray-400 font-medium">Ações</th>
                     </tr>
                   </thead>
@@ -315,8 +337,17 @@ export default function ShopsPage() {
                         <td className="py-2.5 px-4 font-medium text-white">{itemName(s.itemId)}</td>
                         <td className="py-2.5 px-4 font-mono text-xs">{String(s.price)}</td>
                         <td className="py-2.5 px-4 text-gray-400">{s.currency}</td>
+                        <td className="py-2.5 px-4">
+                          {s.classId ? (
+                            <span className="px-2 py-0.5 rounded-full text-xs bg-purple-500/20 text-purple-300">
+                              {className(s.classId)}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-gray-500">Qualquer</span>
+                          )}
+                        </td>
+                        <td className="py-2.5 px-4 font-mono text-xs">{Number(s.requiredLevel) > 0 ? s.requiredLevel : "-"}</td>
                         <td className="py-2.5 px-4 font-mono text-xs">{s.stock}</td>
-                        <td className="py-2.5 px-4 font-mono text-xs">{s.rotationDays}</td>
                         <td className="py-2.5 px-4 text-right whitespace-nowrap">
                           <button onClick={() => openEditItem(s)} className="text-blue-400 hover:text-blue-300 mr-3">Edit</button>
                           <button onClick={() => handleDeleteItem(s)} className="text-red-400 hover:text-red-300">Delete</button>
@@ -325,7 +356,7 @@ export default function ShopsPage() {
                     ))}
                     {selectedShopItems.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="py-6 text-center text-gray-500">Nenhum item na loja deste NPC</td>
+                        <td colSpan={7} className="py-6 text-center text-gray-500">Nenhum item na loja deste NPC</td>
                       </tr>
                     )}
                   </tbody>
