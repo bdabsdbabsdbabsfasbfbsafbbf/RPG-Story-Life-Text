@@ -83,29 +83,35 @@ export async function applyClassXp(
   return { xpGain, rank: updated.rank, experience: Number(updated.experience), rankUps };
 }
 
-// Apenas acumula XP (rank up continua manual, pelo botão).
+// Aplica XP à classe e sobe ranks automaticamente (sem botão) até maxRank.
 export async function grantClassXp(
   tx: Prisma.TransactionClient,
   progressId: string,
   xpGain: number
-): Promise<{ xpGain: number; experience: number; xpToNext: number }> {
-  if (xpGain > 0) {
-    const updated = await tx.characterClass.update({
-      where: { id: progressId },
-      data: { experience: { increment: xpGain } },
-      select: { experience: true, rank: true },
-    });
-    return { xpGain, experience: Number(updated.experience), xpToNext: classXpToNextRank(updated.rank) };
-  }
-  const current = await tx.characterClass.findUnique({
+): Promise<{ xpGain: number; experience: number; xpToNext: number; rank: number; rankUps: number }> {
+  const progress = await tx.characterClass.findUnique({
     where: { id: progressId },
-    select: { experience: true, rank: true },
+    select: { rank: true, experience: true, gameClass: { select: { rankMax: true } } },
   });
-  return {
-    xpGain,
-    experience: Number(current?.experience ?? 0),
-    xpToNext: classXpToNextRank(current?.rank ?? 1),
-  };
+  if (!progress) return { xpGain, experience: 0, xpToNext: classXpToNextRank(1), rank: 1, rankUps: 0 };
+
+  let rank = progress.rank;
+  let experience = Number(progress.experience) + Math.max(0, xpGain);
+  let rankUps = 0;
+  const maxRank = progress.gameClass?.rankMax ?? 10;
+  while (rank < maxRank && experience >= classXpToNextRank(rank)) {
+    experience -= classXpToNextRank(rank);
+    rank++;
+    rankUps++;
+  }
+
+  if (rankUps > 0 || xpGain > 0) {
+    await tx.characterClass.update({
+      where: { id: progressId },
+      data: { rank, experience: BigInt(experience) },
+    });
+  }
+  return { xpGain, experience, xpToNext: classXpToNextRank(rank), rank, rankUps };
 }
 
 // ===== Ouro (clamp no máximo das game limits) =====

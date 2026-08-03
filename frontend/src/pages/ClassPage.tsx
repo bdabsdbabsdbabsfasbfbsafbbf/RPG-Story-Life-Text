@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { classesApi, charactersApi } from "../services/api";
+import { classesApi } from "../services/api";
 import { useGameStore } from "../store/gameStore";
 import { Character, Skill, ClassPassive } from "../types";
 import {
   Shield, Sword, Zap, Star, Clock, Droplets, Heart, Swords,
-  ShieldCheck, Sparkles, Lock, ArrowUp, ChevronRight, X, MapPin,
+  ShieldCheck, Sparkles, Lock, ChevronRight, X, MapPin,
   UserPlus, Activity, Footprints, ShieldHalf, Flame, HeartPulse, Skull,
   Ban, Crosshair, Scan, Wind, Gauge, Siren, Target, Percent, Brain,
 } from "lucide-react";
@@ -37,7 +37,6 @@ export function ClassPage() {
   const [data, setData] = useState<Character | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
-  const [rankingUp, setRankingUp] = useState(false);
   const [statPanel, setStatPanel] = useState<"core" | "modifiers" | "combat">("core");
 
   useEffect(() => {
@@ -84,7 +83,6 @@ export function ClassPage() {
   const rankXp = progress?.experience ?? 0;
   const xpToNextRank = (data as any).rankXpToNext ?? rank * 150;
   const maxRank = gameClass.rankMax ?? 10;
-  const canRankUp = rank < maxRank && rankXp >= xpToNextRank;
 
   const skills: Skill[] = gameClass.skills || [];
   const passives: ClassPassive[] = gameClass.passives || [];
@@ -107,20 +105,6 @@ export function ClassPage() {
       if (a.action === "heal") heal += a.amount ?? 0;
     }
     return { dmg, heal, effects };
-  };
-
-  const handleRankUp = async () => {
-    setRankingUp(true);
-    try {
-      const { data: res } = await charactersApi.rankUp();
-      toast.success(`Rank up! Agora você é Rank ${res.rank}`);
-      const updated = await classesApi.characterClass(selectedCharacter.id);
-      setData(updated.data);
-    } catch (err: any) {
-      toast.error(err.response?.data?.error || "Falha no rank up");
-    } finally {
-      setRankingUp(false);
-    }
   };
 
   const SkillCard = ({ skill }: { skill: Skill }) => {
@@ -225,16 +209,10 @@ export function ClassPage() {
                 <div className="stat-bar-fill bg-gradient-to-r from-purple-500 to-blue-500" style={{ width: `${Math.min(100, (rankXp / xpToNextRank) * 100)}%` }} />
               </div>
             </div>
-            <button
-              onClick={handleRankUp}
-              disabled={!canRankUp || rankingUp}
-              className={`btn-primary text-xs px-4 py-2 mt-3 flex items-center gap-1.5 ${!canRankUp ? "opacity-50 cursor-not-allowed" : ""}`}
-            >
-              <ArrowUp size={13} />
-              {rank >= maxRank ? "Rank Máximo" : rankingUp ? "Subindo..." : `Subir de Rank (${xpToNextRank} XP)`}
-            </button>
-            {!canRankUp && rank < maxRank && (
-              <p className="text-[10px] text-gray-500 mt-1.5">Ganhe XP de classe em combates para subir.</p>
+            {rank < maxRank && (
+              <p className="text-[10px] text-gray-500 mt-3 text-center">
+                Rank sobe automaticamente ao acumular XP de classe em combates.
+              </p>
             )}
           </div>
         </div>
