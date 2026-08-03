@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { Plus, X } from "lucide-react";
 import { adminApi } from "../api";
 import JsonField from "../components/JsonField";
 import {
@@ -14,6 +15,81 @@ import {
 
 const inputClass =
   "w-full bg-dark-900 border border-dark-600 rounded-lg px-3 py-2 text-sm text-white focus:border-accent-500 focus:outline-none";
+
+const addBtnClass =
+  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-accent-600/20 text-accent-400 border border-accent-600/30 hover:bg-accent-600/30 transition-colors";
+
+// Stats disponíveis para "efeito de status" — aplicados enquanto o efeito estiver ativo
+const STAT_OPTIONS: Array<{ key: string; label: string }> = [
+  { key: "hp", label: "Vida (HP)" },
+  { key: "mana", label: "Mana" },
+  { key: "defense", label: "Defesa (reduz dano tomado)" },
+  { key: "dodge", label: "Esquiva" },
+  { key: "damagePercent", label: "Dano (%)" },
+  { key: "cooldownReduction", label: "Redução de Recarga (%)" },
+  { key: "attack", label: "Ataque" },
+  { key: "magic", label: "Magia" },
+  { key: "magicDefense", label: "Defesa Mágica" },
+  { key: "speed", label: "Velocidade" },
+  { key: "attackPower", label: "Poder de Ataque" },
+  { key: "spellPower", label: "Poder de Magia" },
+  { key: "critChance", label: "Chance de Crítico" },
+  { key: "critDamage", label: "Dano Crítico" },
+  { key: "magicDamagePercent", label: "Dano Mágico (%)" },
+  { key: "healingPercent", label: "Cura (%)" },
+  { key: "dotPercent", label: "Dano Contínuo (%)" },
+  { key: "manaCostReduction", label: "Redução de Custo de Mana (%)" },
+  { key: "healthRegenPerTick", label: "Regeneração de Vida" },
+  { key: "manaRegenPerTick", label: "Regeneração de Mana" },
+];
+
+function StatModifierEditor({ value, onChange }: { value: any[]; onChange: (v: any[]) => void }) {
+  const list = Array.isArray(value) ? value : [];
+  const update = (idx: number, patch: any) => {
+    const next = [...list];
+    next[idx] = { ...(next[idx] || {}), ...patch };
+    onChange(next);
+  };
+  return (
+    <div className="space-y-2">
+      {list.map((m, idx) => (
+        <div key={idx} className="flex items-center gap-2">
+          <select className={inputClass} value={m?.stat ?? ""} onChange={(e) => update(idx, { stat: e.target.value })}>
+            <option value="">Em quê?</option>
+            {STAT_OPTIONS.map((s) => (
+              <option key={s.key} value={s.key}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+          <select className={`${inputClass} w-28`} value={m?.kind ?? "flat"} onChange={(e) => update(idx, { kind: e.target.value })}>
+            <option value="flat">Flat</option>
+            <option value="percent">Percentual</option>
+          </select>
+          <input
+            type="number"
+            step="any"
+            className={`${inputClass} w-24`}
+            placeholder="valor"
+            value={m?.value ?? ""}
+            onChange={(e) => update(idx, { value: Number(e.target.value) })}
+          />
+          <button
+            type="button"
+            onClick={() => onChange(list.filter((_, i) => i !== idx))}
+            className="text-gray-500 hover:text-red-400 transition-colors shrink-0"
+            title="Remove"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      ))}
+      <button type="button" onClick={() => onChange([...list, { stat: "", kind: "flat", value: 0 }])} className={addBtnClass}>
+        <Plus size={14} /> Adicionar modificador
+      </button>
+    </div>
+  );
+}
 
 interface EffectLite {
   id: string;
@@ -50,6 +126,7 @@ const defaultForm = {
   shieldScaling: [] as any[],
   reflectPercent: 0,
   hitkillChance: 0,
+  statModifiers: [] as any[],
   onMaxStacks: [] as any[],
   onExpire: [] as any[],
   onTick: [] as any[],
@@ -125,6 +202,19 @@ export default function EffectsPage() {
       shieldScaling: shield.scaling,
       reflectPercent: Number(e.reflect?.percent) || 0,
       hitkillChance: Number(e.hitkillChance) || 0,
+      statModifiers: (() => {
+        let raw: any = {};
+        try { raw = e.statModifiers ? JSON.parse(e.statModifiers) : {}; } catch { raw = {}; }
+        const list: any[] = [];
+        for (const [kind, map] of Object.entries(raw || {})) {
+          if ((kind !== "flat" && kind !== "percent") || !map || typeof map !== "object") continue;
+          for (const [stat, value] of Object.entries(map as Record<string, number>)) {
+            const v = Number(value) || 0;
+            if (v !== 0) list.push({ stat, kind, value: v });
+          }
+        }
+        return list;
+      })(),
       onMaxStacks: parseJsonArray(e.onMaxStacks),
       onExpire: parseJsonArray(e.onExpire),
       onTick: parseJsonArray(e.onTick),
@@ -148,9 +238,16 @@ export default function EffectsPage() {
     if (Number(form.shieldBase)) shield.base = Number(form.shieldBase);
     if (Array.isArray(form.shieldScaling) && form.shieldScaling.length) shield.scaling = form.shieldScaling;
 
+    const statModifiers: { flat: Record<string, number>; percent: Record<string, number> } = { flat: {}, percent: {} };
+    for (const m of (Array.isArray(form.statModifiers) ? form.statModifiers : []) as Array<{ stat?: string; kind?: string; value?: number }>) {
+      if (!m?.stat || (m.kind !== "flat" && m.kind !== "percent")) continue;
+      const v = Number(m.value) || 0;
+      if (v !== 0) statModifiers[m.kind][m.stat] = v;
+    }
+
     const payload: Record<string, any> = {
       name: form.name,
-      slug: form.slug || null,
+      slug: form.slug || form.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || `effect-${Date.now()}`,
       description: form.description,
       icon: form.icon || null,
       kind: form.kind,
@@ -168,6 +265,7 @@ export default function EffectsPage() {
       shield: JSON.stringify(shield),
       reflect: JSON.stringify(form.reflectPercent > 0 ? { percent: Number(form.reflectPercent) } : {}),
       hitkillChance: form.hitkillChance > 0 ? Number(form.hitkillChance) : null,
+      statModifiers: JSON.stringify(statModifiers),
       onMaxStacks: JSON.stringify(form.onMaxStacks || []),
       onExpire: JSON.stringify(form.onExpire || []),
       onTick: JSON.stringify(form.onTick || []),
@@ -433,29 +531,41 @@ export default function EffectsPage() {
                   </div>
                 )}
                 <div className="sm:col-span-2">
-                  <label className="block text-sm text-gray-400 mb-1.5">On Max Stacks (ações)</label>
-                  <JsonField
-                    schema={{ mode: "object-array", addLabel: "Adicionar ação", fields: effectActionFields }}
-                    value={form.onMaxStacks}
-                    onChange={(v) => setForm({ ...form, onMaxStacks: v })}
-                  />
+                  <label className="block text-sm text-gray-400 mb-1.5">Stat Modifiers — efeito de status (aplica enquanto ativo)</label>
+                  <p className="text-[11px] text-gray-500 mb-2">
+                    Funciona com skills de gatilho "auto" (gera stacks) ou skills ativas que aplicam o efeito. Os modificadores valem enquanto o efeito durar e somam por stack. Percentuais usam o valor como % (ex.: 10 = +10%).
+                  </p>
+                  <StatModifierEditor value={form.statModifiers} onChange={(v) => setForm({ ...form, statModifiers: v })} />
                 </div>
-                <div className="sm:col-span-2">
-                  <label className="block text-sm text-gray-400 mb-1.5">On Expire (ações)</label>
-                  <JsonField
-                    schema={{ mode: "object-array", addLabel: "Adicionar ação", fields: effectActionFields }}
-                    value={form.onExpire}
-                    onChange={(v) => setForm({ ...form, onExpire: v })}
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="block text-sm text-gray-400 mb-1.5">On Tick (ações)</label>
-                  <JsonField
-                    schema={{ mode: "object-array", addLabel: "Adicionar ação", fields: effectActionFields }}
-                    value={form.onTick}
-                    onChange={(v) => setForm({ ...form, onTick: v })}
-                  />
-                </div>
+                <details className="sm:col-span-2 bg-dark-900 border border-dark-600 rounded-lg px-3 py-2">
+                  <summary className="text-xs text-gray-500 cursor-pointer select-none uppercase tracking-wider">Gatilhos avançados (ações DSL)</summary>
+                  <div className="mt-3 space-y-4">
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1.5">On Max Stacks (ações)</label>
+                      <JsonField
+                        schema={{ mode: "object-array", addLabel: "Adicionar ação", fields: effectActionFields }}
+                        value={form.onMaxStacks}
+                        onChange={(v) => setForm({ ...form, onMaxStacks: v })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1.5">On Expire (ações)</label>
+                      <JsonField
+                        schema={{ mode: "object-array", addLabel: "Adicionar ação", fields: effectActionFields }}
+                        value={form.onExpire}
+                        onChange={(v) => setForm({ ...form, onExpire: v })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1.5">On Tick (ações)</label>
+                      <JsonField
+                        schema={{ mode: "object-array", addLabel: "Adicionar ação", fields: effectActionFields }}
+                        value={form.onTick}
+                        onChange={(v) => setForm({ ...form, onTick: v })}
+                      />
+                    </div>
+                  </div>
+                </details>
                 <div>
                   <label className="block text-sm text-gray-400 mb-1.5">Active</label>
                   <div className="flex items-center gap-2 pt-1">

@@ -60,6 +60,8 @@ function parsePassive(p: any): PassiveDef {
 }
 
 function parseEffect(e: any): EffectDef {
+  const shield = parseJson(e.shield, null);
+  const reflect = parseJson(e.reflect, null);
   return {
     id: e.id,
     name: e.name,
@@ -77,6 +79,9 @@ function parseEffect(e: any): EffectDef {
     tickDamage: parseJson(e.tickDamage, {}),
     tickHealing: parseJson(e.tickHealing, {}),
     statModifiers: parseJson(e.statModifiers, {}),
+    shield: shield && (Number(shield.base) > 0 || (Array.isArray(shield.scaling) && shield.scaling.length > 0)) ? shield : undefined,
+    reflect: reflect && Number(reflect.percent) > 0 ? { percent: Number(reflect.percent) } : undefined,
+    hitkillChance: Number(e.hitkillChance) > 0 ? Number(e.hitkillChance) : undefined,
     onMaxStacks: asActionArray(e.onMaxStacks),
     onExpire: asActionArray(e.onExpire),
     onTick: asActionArray(e.onTick),

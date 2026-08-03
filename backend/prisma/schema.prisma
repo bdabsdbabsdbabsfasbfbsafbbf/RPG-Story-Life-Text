@@ -252,6 +252,9 @@ model Effect {
   tickDamage      Json     @default("{}") // { base, scaling: [{stat,factor}], damageType }
   tickHealing     Json     @default("{}") // { base, scaling: [{stat,factor}] }
   statModifiers   Json     @default("{}") // { flat: {...}, percent: {...} }
+  shield          Json     @default("{}") // { base, scaling: [{stat,factor}] }
+  reflect         Json     @default("{}") // { percent }
+  hitkillChance   Float?   // % chance de golpe letal por stack ao acertar
   onMaxStacks     Json     @default("[]") // [actions]
   onExpire        Json     @default("[]") // [actions]
   onTick          Json     @default("[]") // [actions]

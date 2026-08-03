@@ -616,16 +616,27 @@ export function createAdminModule(app: Express): void {
   });
 
   // Effects CRUD (buffs/debuffs/hots/dots independentes)
+  const effectError = (err: any) => {
+    if (err?.code === "P2002") {
+      const field = String(err?.meta?.target ?? "");
+      return new AppError(400, `Já existe um efeito com esse ${field.includes("name") ? "nome" : "slug"} — use outro`);
+    }
+    if (err?.code?.startsWith("P2")) {
+      return new AppError(400, "Dados inválidos — verifique os campos do efeito (nome, slug e descrição são obrigatórios)");
+    }
+    return err;
+  };
+
   app.get("/api/admin/effects", requireAdmin, async (_req: Request, res: Response, next: NextFunction) => {
     try { res.json(await prisma.effect.findMany({ orderBy: { name: "asc" } })); } catch (err) { next(err); }
   });
 
   app.post("/api/admin/effects", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
-    try { res.status(201).json(await prisma.effect.create({ data: normalizeBody("effect", req.body) })); } catch (err) { next(err); }
+    try { res.status(201).json(await prisma.effect.create({ data: normalizeBody("effect", req.body) })); } catch (err) { next(effectError(err)); }
   });
 
   app.put("/api/admin/effects/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
-    try { res.json(await prisma.effect.update({ where: { id: req.params.id }, data: normalizeBody("effect", req.body) })); } catch (err) { next(err); }
+    try { res.json(await prisma.effect.update({ where: { id: req.params.id }, data: normalizeBody("effect", req.body) })); } catch (err) { next(effectError(err)); }
   });
 
   app.delete("/api/admin/effects/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
