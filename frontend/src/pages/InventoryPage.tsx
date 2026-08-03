@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { inventoryApi, classesApi, authApi } from "../services/api";
+import { inventoryApi, classesApi, authApi, marketApi } from "../services/api";
 import { InventoryItem } from "../types";
-import { Backpack, Search, Filter, ArrowUpDown, Star, Swords, Check, Lock } from "lucide-react";
+import { Backpack, Search, Filter, ArrowUpDown, Star, Swords, Check, Lock, Coins } from "lucide-react";
 import { useGameStore } from "../store/gameStore";
 import { useAuthStore } from "../store/authStore";
 import toast from "react-hot-toast";
@@ -26,6 +26,10 @@ export function InventoryPage() {
   const [classes, setClasses] = useState<UnlockedClass[]>([]);
   const [catalog, setCatalog] = useState<any[]>([]);
   const [switching, setSwitching] = useState(false);
+  const [selling, setSelling] = useState(false);
+  const [listing, setListing] = useState(false);
+  const [listPrice, setListPrice] = useState(0);
+  const [listQty, setListQty] = useState(1);
   const { selectedCharacter } = useGameStore();
   const { setUser } = useAuthStore();
 
@@ -35,12 +39,61 @@ export function InventoryPage() {
       .catch(() => {});
   }, []);
 
+  const loadItems = () => {
+    inventoryApi.list()
+      .then(({ data }) => setItems(data))
+      .catch(() => {});
+  };
+
   useEffect(() => {
     inventoryApi.list()
       .then(({ data }) => setItems(data))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  const refreshUser = async () => {
+    try {
+      const { data } = await authApi.me();
+      if (data) setUser(data);
+    } catch {}
+  };
+
+  const handleSellNow = async () => {
+    if (!selectedItem) return;
+    setSelling(true);
+    try {
+      await marketApi.sellNow({ inventoryId: selectedItem.id });
+      toast.success(`Vendido por ${selectedItem.item.sellPrice}G!`);
+      setSelectedItem(null);
+      loadItems();
+      refreshUser();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Falha ao vender");
+    } finally {
+      setSelling(false);
+    }
+  };
+
+  const handleList = async () => {
+    if (!selectedItem || listPrice <= 0) return;
+    setSelling(true);
+    try {
+      await marketApi.sell({
+        inventoryId: selectedItem.id,
+        price: listPrice,
+        quantity: selectedItem.quantity > 1 ? listQty : undefined,
+      });
+      toast.success("Item anunciado no mercado!");
+      setSelectedItem(null);
+      setListing(false);
+      loadItems();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Falha ao anunciar");
+    } finally {
+      setSelling(false);
+    }
+  };
 
   const loadClasses = () => {
     if (!selectedCharacter?.id) return;
@@ -258,18 +311,73 @@ export function InventoryPage() {
               </div>
             )}
 
-            <div className="flex gap-2">
+            {listing ? (
+              <div className="bg-dark-800/50 rounded-lg p-3 mb-4 space-y-3">
+                <p className="text-xs text-gray-400">Anunciar no mercado</p>
+                <input
+                  type="number"
+                  min={1}
+                  value={listPrice || ""}
+                  onChange={e => setListPrice(parseInt(e.target.value) || 0)}
+                  placeholder="Preço (ouro)"
+                  className="input-rpg"
+                />
+                {selectedItem.quantity > 1 && (
+                  <input
+                    type="number"
+                    min={1}
+                    max={selectedItem.quantity}
+                    value={listQty}
+                    onChange={e => setListQty(Math.min(selectedItem.quantity, Math.max(1, parseInt(e.target.value) || 1)))}
+                    placeholder={`Quantidade (máx. ${selectedItem.quantity})`}
+                    className="input-rpg"
+                  />
+                )}
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleList}
+                    disabled={selling || listPrice <= 0}
+                    className="btn-primary flex-1 disabled:opacity-50"
+                  >
+                    {selling ? "Anunciando..." : "Confirmar anúncio"}
+                  </button>
+                  <button onClick={() => setListing(false)} className="btn-secondary">Voltar</button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <button
+                  onClick={async () => {
+                    // TODO: implement equip
+                    setSelectedItem(null);
+                  }}
+                  className="btn-primary flex-1"
+                >
+                  {selectedItem.isEquipped ? "Unequip" : "Equip"}
+                </button>
+                <button
+                  onClick={handleSellNow}
+                  disabled={selling || !selectedItem.item.isSellable}
+                  title={selectedItem.item.isSellable ? undefined : "Item não pode ser vendido"}
+                  className="btn-secondary flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  <Coins size={14} /> {selling ? "Vendendo..." : `Vender (${selectedItem.item.sellPrice}G)`}
+                </button>
+              </div>
+            )}
+
+            {!listing && selectedItem.item.isTradable && (
               <button
-                onClick={async () => {
-                  // TODO: implement equip
-                  setSelectedItem(null);
+                onClick={() => {
+                  setListPrice(selectedItem.item.sellPrice * 3 || 1);
+                  setListQty(1);
+                  setListing(true);
                 }}
-                className="btn-primary flex-1"
+                className="mt-2 w-full text-xs text-purple-400 hover:text-purple-300 transition-colors"
               >
-                {selectedItem.isEquipped ? "Unequip" : "Equip"}
+                Anunciar no mercado
               </button>
-              <button className="btn-secondary">Sell ({selectedItem.item.sellPrice}G)</button>
-            </div>
+            )}
           </div>
         </div>
       )}

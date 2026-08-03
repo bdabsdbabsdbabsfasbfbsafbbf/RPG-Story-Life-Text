@@ -52,7 +52,9 @@ export function createMarketModule(app: Express): void {
   app.post("/api/market/sell", authenticate, async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { inventoryId, price } = req.body;
+      const quantity = Math.max(1, Math.floor(Number(req.body.quantity) || 1));
       if (!inventoryId || !price) throw new AppError(400, "Inventory item and price required");
+      if (price <= 0) throw new AppError(400, "Price must be positive");
 
       const inv = await prisma.inventory.findUnique({
         where: { id: inventoryId },
@@ -61,14 +63,22 @@ export function createMarketModule(app: Express): void {
       if (!inv || inv.userId !== req.user!.userId) throw new AppError(404, "Item not found");
       if (!inv.item.isTradable) throw new AppError(400, "Item is not tradable");
       if (inv.isEquipped) throw new AppError(400, "Cannot sell equipped item");
+      if (quantity > inv.quantity) throw new AppError(400, "Not enough quantity");
 
       await prisma.$transaction(async (tx) => {
-        await tx.inventory.delete({ where: { id: inventoryId } });
+        if (quantity >= inv.quantity) {
+          await tx.inventory.delete({ where: { id: inventoryId } });
+        } else {
+          await tx.inventory.update({
+            where: { id: inventoryId },
+            data: { quantity: { decrement: quantity } },
+          });
+        }
         await tx.marketListing.create({
           data: {
             sellerId: req.user!.userId,
             itemId: inv.itemId,
-            quantity: inv.quantity,
+            quantity,
             price: BigInt(price),
             status: "active",
             expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
@@ -77,6 +87,44 @@ export function createMarketModule(app: Express): void {
       });
 
       res.status(201).json({ message: "Item listed for sale" });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.post("/api/market/sell-now", authenticate, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { inventoryId } = req.body;
+      const quantity = Math.max(1, Math.floor(Number(req.body.quantity) || 1));
+      if (!inventoryId) throw new AppError(400, "Inventory item required");
+
+      const inv = await prisma.inventory.findUnique({
+        where: { id: inventoryId },
+        include: { item: true },
+      });
+      if (!inv || inv.userId !== req.user!.userId) throw new AppError(404, "Item not found");
+      if (!inv.item.isSellable) throw new AppError(400, "Item cannot be sold");
+      if (inv.isEquipped) throw new AppError(400, "Cannot sell equipped item");
+      if (quantity > inv.quantity) throw new AppError(400, "Not enough quantity");
+
+      const gold = inv.item.sellPrice * BigInt(quantity);
+
+      await prisma.$transaction(async (tx) => {
+        if (quantity >= inv.quantity) {
+          await tx.inventory.delete({ where: { id: inventoryId } });
+        } else {
+          await tx.inventory.update({
+            where: { id: inventoryId },
+            data: { quantity: { decrement: quantity } },
+          });
+        }
+        await tx.user.update({
+          where: { id: req.user!.userId },
+          data: { gold: { increment: gold } },
+        });
+      });
+
+      res.json({ message: "Item sold", gold: gold.toString() });
     } catch (err) {
       next(err);
     }

@@ -94,6 +94,10 @@ export const guildApi = {
 export const marketApi = {
   list: (params?: any) => api.get("/market", { params }),
   buy: (listingId: string) => api.post(`/market/buy/${listingId}`),
+  sell: (data: { inventoryId: string; price: number; quantity?: number }) =>
+    api.post("/market/sell", data),
+  sellNow: (data: { inventoryId: string; quantity?: number }) =>
+    api.post("/market/sell-now", data),
 };
 
 export const npcApi = {

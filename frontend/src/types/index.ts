@@ -297,6 +297,8 @@ export interface Item {
   sellPrice: number;
   buyPrice: number;
   stackable: boolean;
+  isTradable: boolean;
+  isSellable: boolean;
   icon?: string | null;
 }
 
