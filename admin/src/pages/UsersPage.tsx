@@ -26,8 +26,6 @@ interface AdminCharacter {
   experience: string | number;
   classId: string;
   class: { id: string; name: string; slug: string };
-  race?: { id: string; name: string } | null;
-  trait?: { id: string; name: string } | null;
   classProgress?: {
     id: string;
     rank: number;
@@ -452,7 +450,7 @@ export default function UsersPage() {
                   <div key={c.id} className="border border-dark-600 rounded-lg p-3 space-y-2">
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-medium text-white">{c.name}</p>
-                      <p className="text-xs text-gray-500">{c.class?.name} · {c.race?.name || "-"} · {c.trait?.name || "-"}</p>
+                      <p className="text-xs text-gray-500">{c.class?.name}</p>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       <label className="block text-[11px] text-gray-400 col-span-2">

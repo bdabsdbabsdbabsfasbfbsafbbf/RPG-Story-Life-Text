@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Sparkles } from "lucide-react";
 import { CrudConfig } from "./pages/CrudPage";
-import { EQUIP_GROUPS, TRAIT_GROUPS, RACE_GROUPS } from "./statFields";
+import { EQUIP_GROUPS } from "./statFields";
 
 const boolBadge = (v: any, yesClass = "bg-green-500/20 text-green-400", noClass = "bg-gray-600/20 text-gray-400") => (
   <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${v ? yesClass : noClass}`}>
@@ -292,55 +292,6 @@ export const crudConfigs: CrudConfig[] = [
         label: "Scaling (derivados)",
         type: "json",
         jsonSchema: { mode: "fixed-record", fields: STAT_SCALING_FIELDS },
-      },
-      { name: "isActive", label: "Active", type: "boolean", defaultValue: true },
-    ],
-  },
-  {
-    key: "races",
-    title: "Races",
-    columns: [
-      idColumn,
-      { key: "name", label: "Name", render: (v) => <span className="font-medium text-white">{v}</span> },
-      { key: "slug", label: "Slug", render: (v) => <span className="text-xs text-gray-500">{v}</span> },
-      { key: "description", label: "Description", render: (v) => <span className="text-gray-400 max-w-xs truncate block">{v}</span> },
-      { key: "traits", label: "Modifiers", render: jsonPreview },
-      { key: "isActive", label: "Active", render: (v) => boolBadge(v) },
-    ],
-    fields: [
-      { name: "name", label: "Name", type: "text", required: true },
-      { name: "slug", label: "Slug", type: "text", required: true, hint: "Unique, lowercase" },
-      { name: "description", label: "Description", type: "textarea", required: true },
-      {
-        name: "traits",
-        label: "Stat Modifiers",
-        type: "json",
-        jsonSchema: { mode: "fixed-record", groups: RACE_GROUPS },
-      },
-      { name: "isActive", label: "Active", type: "boolean", defaultValue: true },
-    ],
-  },
-  {
-    key: "traits",
-    title: "Traits",
-    columns: [
-      idColumn,
-      { key: "name", label: "Name", render: (v) => <span className="font-medium text-white">{v}</span> },
-      { key: "slug", label: "Slug", render: (v) => <span className="text-xs text-gray-500">{v}</span> },
-      { key: "description", label: "Description", render: (v) => <span className="text-gray-400 max-w-xs truncate block">{v}</span> },
-      { key: "modifiers", label: "Modifiers", render: jsonPreview },
-      { key: "isActive", label: "Active", render: (v) => boolBadge(v) },
-    ],
-    fields: [
-      { name: "name", label: "Name", type: "text", required: true },
-      { name: "slug", label: "Slug", type: "text", required: true, hint: "Unique, lowercase" },
-      { name: "description", label: "Description", type: "textarea", required: true },
-      {
-        name: "modifiers",
-        label: "Modifiers",
-        type: "json",
-        jsonSchema: { mode: "fixed-record", groups: TRAIT_GROUPS },
-        hint: "Todos em percentual (%)",
       },
       { name: "isActive", label: "Active", type: "boolean", defaultValue: true },
     ],

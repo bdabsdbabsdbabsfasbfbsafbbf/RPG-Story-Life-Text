@@ -11,7 +11,6 @@ import { getGameLimits } from "../../core/gameLimits";
 
 const registerSchema = z.object({
   username: z.string().min(3).max(20).regex(/^[a-zA-Z0-9_]+$/),
-  displayName: z.string().min(1).max(30),
   email: z.string().email().optional(),
   password: z.string().min(6).max(100),
 });
@@ -43,7 +42,7 @@ export function createAuthModule(app: Express): void {
       const user = await prisma.user.create({
         data: {
           username: data.username,
-          displayName: data.displayName,
+          displayName: data.username,
           email: data.email,
           passwordHash,
         },
@@ -116,8 +115,6 @@ export function createAuthModule(app: Express): void {
           id: true, name: true, level: true, classId: true,
           experience: true, currentHp: true, currentMana: true,
           class: { select: { name: true, slug: true, icon: true } },
-          race: { select: { name: true } },
-          trait: { select: { name: true } },
         },
       });
 
@@ -159,8 +156,6 @@ export function createAuthModule(app: Express): void {
               id: true, name: true, level: true, classId: true,
               experience: true, currentHp: true, currentMana: true,
               class: { select: { name: true, slug: true, icon: true } },
-              race: { select: { name: true } },
-              trait: { select: { name: true } },
             },
           },
         },
@@ -203,8 +198,6 @@ export function createAuthModule(app: Express): void {
               id: true, name: true, level: true, classId: true,
               experience: true, currentHp: true, currentMana: true,
               class: { select: { name: true, slug: true, icon: true } },
-              race: { select: { name: true } },
-              trait: { select: { name: true } },
             },
           },
         },

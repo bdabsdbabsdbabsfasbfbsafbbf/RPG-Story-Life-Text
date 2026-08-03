@@ -101,18 +101,6 @@ export const adminApi = {
     update: (id: string, data: any) => api.put(`/admin/effects/${id}`, data),
     delete: (id: string) => api.delete(`/admin/effects/${id}`),
   },
-  races: {
-    list: () => api.get("/admin/races"),
-    create: (data: any) => api.post("/admin/races", data),
-    update: (id: string, data: any) => api.put(`/admin/races/${id}`, data),
-    delete: (id: string) => api.delete(`/admin/races/${id}`),
-  },
-  traits: {
-    list: () => api.get("/admin/traits"),
-    create: (data: any) => api.post("/admin/traits", data),
-    update: (id: string, data: any) => api.put(`/admin/traits/${id}`, data),
-    delete: (id: string) => api.delete(`/admin/traits/${id}`),
-  },
   stats: () => api.get("/admin/stats"),
   users: {
     list: () => api.get("/admin/users"),

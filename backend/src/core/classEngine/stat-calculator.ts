@@ -70,8 +70,6 @@ export interface StatsInput {
   };
   resource?: Record<string, any>;
   passives: PassiveDef[]; // apenas passivas desbloqueadas pelo rank
-  raceTraits?: Record<string, any>;
-  traitModifiers?: Record<string, any>;
   equipmentStats?: Array<Record<string, any>>;
 }
 
@@ -116,16 +114,6 @@ export function computeStats(input: StatsInput): DerivedStats {
   stats.magicDefense += flatPassiveMods(input.passives, "magicDefense");
   stats.speed += flatPassiveMods(input.passives, "speed");
 
-  if (input.raceTraits) {
-    stats.hp = plus(stats as any, input.raceTraits, "hp");
-    stats.mana = plus(stats as any, input.raceTraits, "mana");
-    stats.attack = plus(stats as any, input.raceTraits, "attack");
-    stats.defense = plus(stats as any, input.raceTraits, "defense");
-    stats.magic = plus(stats as any, input.raceTraits, "magic");
-    stats.magicDefense = plus(stats as any, input.raceTraits, "magicDefense");
-    stats.speed = plus(stats as any, input.raceTraits, "speed");
-  }
-
   if (input.equipmentStats) {
     for (const eq of input.equipmentStats) {
       stats.hp = plus(stats as any, eq, "hp");
@@ -150,7 +138,7 @@ export function computeStats(input: StatsInput): DerivedStats {
   stats.threatPerAttack = num(scaling.threatPerAttack, 1);
   stats.aggroPerHit = num(scaling.aggroPerHit, 1);
 
-  // Amplificadores vindos de passivas/traços
+  // Amplificadores vindos de passivas
   stats.damagePercent += flatPassiveMods(input.passives, "damagePercent");
   stats.magicDamagePercent += flatPassiveMods(input.passives, "magicDamagePercent");
   stats.healingPercent += flatPassiveMods(input.passives, "healingPercent");
@@ -158,12 +146,6 @@ export function computeStats(input: StatsInput): DerivedStats {
   stats.overhealPercent += flatPassiveMods(input.passives, "overhealPercent");
   stats.manaCostReduction += flatPassiveMods(input.passives, "manaCostReduction");
   stats.cooldownReduction += flatPassiveMods(input.passives, "cooldownReduction");
-
-  if (input.traitModifiers) {
-    stats.critChance += pickFrom(input.traitModifiers, "critChance");
-    stats.dodge += pickFrom(input.traitModifiers, "dodge");
-    stats.cooldownReduction += pickFrom(input.traitModifiers, "cooldownReduction");
-  }
 
   // Percentuais aplicados aos núcleos (passivas "percent")
   stats.hp = Math.floor(applyPercent(stats.hp, percentPassiveMods(input.passives, "hp")));

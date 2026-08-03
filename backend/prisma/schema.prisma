@@ -25,8 +25,6 @@ model User {
   isOnline      Boolean  @default(false)
   isBanned      Boolean  @default(false)
   role          String   @default("player")
-  raceRerolls   Int      @default(3)
-  traitRerolls  Int      @default(3)
   characters    Character[] @relation()
   guildMembers  GuildMember[] @relation()
   inventory     Inventory[] @relation()
@@ -50,8 +48,6 @@ model Character {
   userId        String
   name          String
   classId       String
-  raceId        String?
-  traitId       String?
   level         Int      @default(1)
   experience    BigInt   @default(0)
   currentHp     Int      @default(100)
@@ -62,8 +58,6 @@ model Character {
 
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   class         GameClass @relation(fields: [classId], references: [id])
-  race          Race?    @relation(fields: [raceId], references: [id])
-  trait         Trait?   @relation(fields: [traitId], references: [id])
   equipment     Equipment? @relation()
   activeEffects ActiveEffect[] @relation()
   activeCooldowns ActiveCooldown[] @relation()
@@ -71,34 +65,6 @@ model Character {
 
   @@index([userId])
   @@index([classId])
-  @@index([raceId])
-  @@index([traitId])
-}
-
-model Race {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  slug        String   @unique
-  description String
-  rarity      String   @default("comum") // comum, incomum, rara, epica, lendaria
-  traits      Json     @default("{}") // stat modifiers: { baseHp, baseMana, baseAttack, baseDefense, baseMagic, baseMagicDefense, baseSpeed, manaRecovery }
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  characters  Character[]
-}
-
-model Trait {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  slug        String   @unique
-  description String
-  rarity      String   @default("comum") // comum, incomum, rara, epica, lendaria
-  modifiers   Json     @default("{}") // { xpBonus, goldBonus, critBonus, dodgeBonus, cooldownReduction }
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  characters  Character[]
 }
 
 model SystemConfig {

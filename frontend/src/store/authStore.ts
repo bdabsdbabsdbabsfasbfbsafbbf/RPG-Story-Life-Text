@@ -27,7 +27,7 @@ interface AuthStore {
   refreshToken: string | null;
   error: string | null;
   login: (username: string, password: string) => Promise<void>;
-  register: (data: { username: string; displayName: string; password: string; email?: string }) => Promise<void>;
+  register: (data: { username: string; password: string; email?: string }) => Promise<void>;
   logout: () => Promise<void>;
   setAuth: (user: AuthUser, accessToken: string) => void;
   setUser: (user: AuthUser) => void;

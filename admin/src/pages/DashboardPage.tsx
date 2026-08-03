@@ -24,8 +24,6 @@ interface Stats {
   totalSkills?: number;
   totalEffects?: number;
   totalStatModels?: number;
-  totalRaces?: number;
-  totalTraits?: number;
 }
 
 function StatCard({
@@ -106,8 +104,6 @@ export default function DashboardPage() {
             <StatCard label="Skills" value={stats.totalSkills} icon={Sparkles} color="from-yellow-500 to-yellow-600" />
             <StatCard label="Effects" value={stats.totalEffects} icon={Sparkles} color="from-pink-500 to-pink-600" />
             <StatCard label="Stat Models" value={stats.totalStatModels} icon={Shield} color="from-lime-500 to-lime-600" />
-            <StatCard label="Races" value={stats.totalRaces} icon={Users} color="from-teal-500 to-teal-600" />
-            <StatCard label="Traits" value={stats.totalTraits} icon={Sparkles} color="from-orange-500 to-orange-600" />
           </div>
           <p className="text-xs text-gray-500">Data refreshed from production database.</p>
         </>

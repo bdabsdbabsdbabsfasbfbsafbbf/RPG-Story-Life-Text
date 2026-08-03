@@ -163,8 +163,6 @@ export class CombatService {
             passives: { where: { isActive: true }, orderBy: { rankRequired: "asc" } },
           },
         },
-        race: true,
-        trait: true,
         equipment: {
           include: {
             weapon: true,
@@ -231,8 +229,6 @@ export class CombatService {
       },
       resource: parseJson(gameClass.resource, {}),
       passives,
-      raceTraits: parseJson(character.race?.traits, null),
-      traitModifiers: parseJson(character.trait?.modifiers, null),
       equipmentStats,
     };
 
@@ -597,17 +593,14 @@ export class CombatService {
     const [character, limits] = await Promise.all([
       this.prisma.character.findUnique({
         where: { id: characterId },
-        include: { class: true, trait: true, classProgress: { where: { isActive: true } } },
+        include: { class: true, classProgress: { where: { isActive: true } } },
       }),
       getGameLimits(),
     ]);
     if (!character) return null;
 
-    const traitMods: any = (character.trait?.modifiers as any) ?? {};
-    const xpBonus = 1 + (Number(traitMods.xpBonus) || 0) / 100;
-    const goldBonus = 1 + (Number(traitMods.goldBonus) || 0) / 100;
-    const xpGain = Math.floor(Number(monster.xpReward || 0) * xpBonus);
-    const goldGain = Math.floor(Number(monster.goldReward || 0) * goldBonus);
+    const xpGain = Math.floor(Number(monster.xpReward || 0));
+    const goldGain = Math.floor(Number(monster.goldReward || 0));
 
     let levelUps = 0;
     let updatedCharacter = await this.prisma.character.update({

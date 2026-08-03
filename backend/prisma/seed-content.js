@@ -1,4 +1,4 @@
-// Seed content: starter classes, races, traits + promote Darkin to admin.
+// Seed content: starter classes + promote Darkin to admin.
 // Usage (with SSH tunnel on 54321):
 //   $env:DATABASE_URL = "postgresql://postgres:CpyIKdUgBfuzBkFXkdxTOxnjwwPGORle@127.0.0.1:54321/railway"
 //   node prisma/seed-content.js
@@ -121,124 +121,6 @@ const starterClasses = [
     dodgeScaling: 0.02,
     cooldownScaling: 0.06,
     manaEfficiency: 0.95,
-  },
-];
-
-const races = [
-  {
-    name: "Humano",
-    slug: "humano",
-    rarity: "comum",
-    description: "Versátil e adaptável, o Humano se destaca por equilibrar todos os atributos com leve vantagem em resistência.",
-    traits: { baseHp: 15, baseMana: 10, baseAttack: 3, baseDefense: 3, baseMagic: 3, baseMagicDefense: 3, baseSpeed: 2, manaRecovery: 0.5 },
-  },
-  {
-    name: "Elfo",
-    slug: "elfo",
-    rarity: "incomum",
-    description: "Gracioso e ágil, o Elfo canaliza magia com facilidade e se move com velocidade sobrenatural.",
-    traits: { baseHp: -10, baseMana: 35, baseAttack: 2, baseDefense: -2, baseMagic: 8, baseMagicDefense: 4, baseSpeed: 6, manaRecovery: 2.0 },
-  },
-  {
-    name: "Anão",
-    slug: "anao",
-    rarity: "incomum",
-    description: "Robusto e teimoso, o Anão aguenta golpes que derrubariam outros e é imune à maioria dos medos.",
-    traits: { baseHp: 45, baseMana: -15, baseAttack: 4, baseDefense: 10, baseMagic: -3, baseMagicDefense: 8, baseSpeed: -3, manaRecovery: -0.5 },
-  },
-  {
-    name: "Orc",
-    slug: "orc",
-    rarity: "incomum",
-    description: "Guerreiro nato, o Orc transforma fúria em poder bruto, causando dano devastador a cada golpe.",
-    traits: { baseHp: 30, baseMana: -20, baseAttack: 12, baseDefense: 4, baseMagic: -5, baseMagicDefense: -2, baseSpeed: -1, manaRecovery: -1.0 },
-  },
-  {
-    name: "Draconato",
-    slug: "draconato",
-    rarity: "rara",
-    description: "Herdeiro do sangue dos dragões, resiste a magias e inspira temor com sua presença imponente.",
-    traits: { baseHp: 20, baseMana: 15, baseAttack: 6, baseDefense: 6, baseMagic: 6, baseMagicDefense: 6, baseSpeed: 0, manaRecovery: 1.0 },
-  },
-  {
-    name: "Fada",
-    slug: "fada",
-    rarity: "rara",
-    description: "Diminuta e encantadora, a Fada é imune ao cansaço, esquiva-se de quase tudo e encanta a todos.",
-    traits: { baseHp: -25, baseMana: 50, baseAttack: -2, baseDefense: -4, baseMagic: 10, baseMagicDefense: 2, baseSpeed: 10, manaRecovery: 3.0 },
-  },
-  {
-    name: "Vampiro",
-    slug: "vampiro",
-    rarity: "rara",
-    description: "Imortal e sedutor, o Vampiro drena a vitalidade dos inimigos e recupera mana à noite.",
-    traits: { baseHp: 25, baseMana: 25, baseAttack: 8, baseDefense: 2, baseMagic: 8, baseMagicDefense: 5, baseSpeed: 4, manaRecovery: 2.5 },
-  },
-  {
-    name: "Meio-Demônio",
-    slug: "meio-demonio",
-    rarity: "lendaria",
-    description: "Forjado no fogo, o Meio-Demônio troca a vida por poder e sua magia ardente queima qualquer adversário.",
-    traits: { baseHp: -5, baseMana: 20, baseAttack: 9, baseDefense: -2, baseMagic: 12, baseMagicDefense: -2, baseSpeed: 3, manaRecovery: 1.5 },
-  },
-];
-
-const traits = [
-  {
-    name: "Sanguinário",
-    slug: "sanguinario",
-    rarity: "incomum",
-    description: "Seu ímpeto em combate aumenta os acertos críticos em 8% e o dano crítico em 15%.",
-    modifiers: { critBonus: 8, critDamageBonus: 15 },
-  },
-  {
-    name: "Sortudo",
-    slug: "sortudo",
-    rarity: "rara",
-    description: "A sorte favorece os audazes: +10% de esquiva e maior chance de encontrar tesouros.",
-    modifiers: { dodgeBonus: 10, luckBonus: 10 },
-  },
-  {
-    name: "Gênio",
-    slug: "genio",
-    rarity: "rara",
-    description: "Mente brilhante: reduz o cooldown de todas as habilidades em 10%.",
-    modifiers: { cooldownReduction: 10 },
-  },
-  {
-    name: "Ambicioso",
-    slug: "ambicioso",
-    rarity: "comum",
-    description: "Sua ganância rende +15% de ouro em todas as recompensas.",
-    modifiers: { goldBonus: 15 },
-  },
-  {
-    name: "Erudito",
-    slug: "erudito",
-    rarity: "incomum",
-    description: "Viciado em conhecimento: +15% de experiência de todas as fontes.",
-    modifiers: { xpBonus: 15 },
-  },
-  {
-    name: "Imortal",
-    slug: "imortal",
-    rarity: "epica",
-    description: "Difícil de derrubar: regenera 2% da vida máxima a cada rodada de combate.",
-    modifiers: { regenPercent: 2, maxHpBonus: 8 },
-  },
-  {
-    name: "Veloz",
-    slug: "veloz",
-    rarity: "incomum",
-    description: "Mais rápido que a sombra: +8 de velocidade e ataque 10% mais ágil.",
-    modifiers: { speedBonus: 8, attackSpeedBonus: 10 },
-  },
-  {
-    name: "Sombrio",
-    slug: "sombrio",
-    rarity: "epica",
-    description: "A escuridão o fortalece: +10% de dano em inimigos com menos da metade da vida.",
-    modifiers: { executeBonus: 10, darkResistance: 10 },
   },
 ];
 
@@ -675,25 +557,6 @@ async function main() {
     console.log("  class:", cls.slug);
   }
 
-  console.log("Seeding races...");
-  for (const race of races) {
-    await prisma.race.upsert({
-      where: { slug: race.slug },
-      update: { ...race, isActive: true },
-      create: { ...race, isActive: true },
-    });
-    console.log("  race:", race.slug);
-  }
-
-  console.log("Seeding traits...");
-  for (const trait of traits) {
-    await prisma.trait.upsert({
-      where: { slug: trait.slug },
-      update: { ...trait, isActive: true },
-      create: { ...trait, isActive: true },
-    });
-    console.log("  trait:", trait.slug);
-  }
 
   console.log("Promoting Darkin to admin...");
   const darkin = await prisma.user.updateMany({
@@ -704,13 +567,11 @@ async function main() {
 
   await seedWorld();
 
-  const [classes, raceCount, traitCount, users] = await Promise.all([
+  const [classes, users] = await Promise.all([
     prisma.gameClass.count(),
-    prisma.race.count(),
-    prisma.trait.count(),
-    prisma.user.findMany({ select: { username: true, role: true, raceRerolls: true, traitRerolls: true } }),
+    prisma.user.findMany({ select: { username: true, role: true } }),
   ]);
-  console.log("DONE. classes:", classes, "| races:", raceCount, "| traits:", traitCount);
+  console.log("DONE. classes:", classes);
   console.log("users:", JSON.stringify(users));
 }
 
@@ -720,3 +581,4 @@ main()
     process.exit(1);
   })
   .finally(() => prisma.$disconnect());
+

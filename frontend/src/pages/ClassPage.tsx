@@ -204,12 +204,6 @@ export function ClassPage() {
             </div>
             <h1 className="text-3xl font-display font-bold glow-text mb-2">{gameClass.name}</h1>
             <p className="text-gray-400 text-sm leading-relaxed">{gameClass.description}</p>
-            {character.race?.name && (
-              <p className="text-xs text-gray-500 mt-2">
-                {character.name} • {character.race.name}
-                {character.trait?.name ? ` • Trait: ${character.trait.name}` : ""}
-              </p>
-            )}
             <p className="text-[11px] text-gray-600 mt-1">
               Troque de classe pelo Inventário.
             </p>

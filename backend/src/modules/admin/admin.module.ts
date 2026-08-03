@@ -139,7 +139,7 @@ export function createAdminModule(app: Express): void {
   // Stats
   app.get("/api/admin/stats", requireAdmin, async (_req: Request, res: Response, next: NextFunction) => {
     try {
-      const [totalUsers, totalCharacters, totalGuilds, totalClasses, totalItems, totalMonsters, totalMaps, totalQuests, totalSkills, totalEffects, totalStatModels, totalRaces, totalTraits, activePlayers] = await Promise.all([
+      const [totalUsers, totalCharacters, totalGuilds, totalClasses, totalItems, totalMonsters, totalMaps, totalQuests, totalSkills, totalEffects, totalStatModels, activePlayers] = await Promise.all([
         prisma.user.count(),
         prisma.character.count(),
         prisma.guild.count(),
@@ -151,11 +151,9 @@ export function createAdminModule(app: Express): void {
         prisma.skill.count(),
         prisma.effect.count(),
         prisma.statModel.count(),
-        prisma.race.count(),
-        prisma.trait.count(),
         prisma.user.count({ where: { isOnline: true } }),
       ]);
-      res.json({ totalUsers, totalCharacters, totalGuilds, totalClasses, totalItems, totalMonsters, totalMaps, totalQuests, totalSkills, totalEffects, totalStatModels, totalRaces, totalTraits, activePlayers });
+      res.json({ totalUsers, totalCharacters, totalGuilds, totalClasses, totalItems, totalMonsters, totalMaps, totalQuests, totalSkills, totalEffects, totalStatModels, activePlayers });
     } catch (err) { next(err); }
   });
 
@@ -205,8 +203,6 @@ export function createAdminModule(app: Express): void {
           characters: {
             include: {
               class: { select: { id: true, name: true, slug: true, role: true } },
-              race: { select: { id: true, name: true } },
-              trait: { select: { id: true, name: true } },
               classProgress: {
                 include: { gameClass: { select: { id: true, name: true, slug: true } } },
                 orderBy: { isActive: "desc" },
@@ -392,8 +388,6 @@ export function createAdminModule(app: Express): void {
 
   // Json-native fields per model (Prisma Json type): accept objects directly
   const JSON_FIELDS: Record<string, string[]> = {
-    race: ["traits"],
-    trait: ["modifiers"],
     code: ["items"],
     class: ["resource"],
     skill: ["scaling", "actions", "conditions", "onConditionMet", "events"],
@@ -641,40 +635,6 @@ export function createAdminModule(app: Express): void {
 
   app.delete("/api/admin/effects/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try { await prisma.effect.delete({ where: { id: req.params.id } }); res.json({ message: "Deleted" }); } catch (err) { next(err); }
-  });
-
-  // Races CRUD
-  app.get("/api/admin/races", requireAdmin, async (_req: Request, res: Response, next: NextFunction) => {
-    try { res.json(await prisma.race.findMany({ orderBy: { name: "asc" } })); } catch (err) { next(err); }
-  });
-
-  app.post("/api/admin/races", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
-    try { res.status(201).json(await prisma.race.create({ data: normalizeBody("race", req.body) })); } catch (err) { next(err); }
-  });
-
-  app.put("/api/admin/races/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
-    try { res.json(await prisma.race.update({ where: { id: req.params.id }, data: normalizeBody("race", req.body) })); } catch (err) { next(err); }
-  });
-
-  app.delete("/api/admin/races/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
-    try { await prisma.race.delete({ where: { id: req.params.id } }); res.json({ message: "Deleted" }); } catch (err) { next(err); }
-  });
-
-  // Traits CRUD
-  app.get("/api/admin/traits", requireAdmin, async (_req: Request, res: Response, next: NextFunction) => {
-    try { res.json(await prisma.trait.findMany({ orderBy: { name: "asc" } })); } catch (err) { next(err); }
-  });
-
-  app.post("/api/admin/traits", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
-    try { res.status(201).json(await prisma.trait.create({ data: normalizeBody("trait", req.body) })); } catch (err) { next(err); }
-  });
-
-  app.put("/api/admin/traits/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
-    try { res.json(await prisma.trait.update({ where: { id: req.params.id }, data: normalizeBody("trait", req.body) })); } catch (err) { next(err); }
-  });
-
-  app.delete("/api/admin/traits/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
-    try { await prisma.trait.delete({ where: { id: req.params.id } }); res.json({ message: "Deleted" }); } catch (err) { next(err); }
   });
 
   // NPCs CRUD

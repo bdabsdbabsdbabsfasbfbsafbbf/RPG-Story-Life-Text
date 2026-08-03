@@ -46,7 +46,7 @@ export function DashboardPage() {
             <div className="flex-1">
               <h2 className="font-display font-bold text-lg">Crie seu personagem</h2>
               <p className="text-sm text-gray-400">
-                Escolha uma das 4 classes iniciais, role sua raça e trait e comece a jornada!
+                Escolha uma das classes iniciais e comece a jornada!
               </p>
             </div>
             <span className="btn-primary text-sm">Criar agora</span>
@@ -66,8 +66,6 @@ export function DashboardPage() {
               </p>
               <p className="text-xs text-gray-400 mt-0.5">
                 {character.class?.name || "Sem classe"}
-                {character.race?.name && <> • Raça: {character.race.name}</>}
-                {character.trait?.name && <> • Trait: {character.trait.name}</>}
               </p>
               {(character.experience !== undefined || character.experienceToNext) &&
                 (character.atMaxLevel ? (

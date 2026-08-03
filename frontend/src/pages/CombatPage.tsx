@@ -282,8 +282,6 @@ export function CombatPage() {
               <p className="text-xs text-gray-400">
                 Level {combat?.characterLevel || selectedCharacter?.level || user?.level || 1}
                 {selectedCharacter?.class?.name && <> • {selectedCharacter.class.name}</>}
-                {selectedCharacter?.race?.name && <> • {selectedCharacter.race.name}</>}
-                {selectedCharacter?.trait?.name && <> • {selectedCharacter.trait.name}</>}
               </p>
             </div>
             <span className="ml-auto flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/30">

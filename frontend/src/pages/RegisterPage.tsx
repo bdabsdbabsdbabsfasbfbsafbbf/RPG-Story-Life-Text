@@ -5,7 +5,7 @@ import { Sword } from "lucide-react";
 import toast from "react-hot-toast";
 
 export function RegisterPage() {
-  const [form, setForm] = useState({ username: "", displayName: "", email: "", password: "", confirmPassword: "" });
+  const [form, setForm] = useState({ username: "", email: "", password: "", confirmPassword: "" });
   const [loading, setLoading] = useState(false);
   const { register } = useAuthStore();
   const navigate = useNavigate();
@@ -20,7 +20,6 @@ export function RegisterPage() {
     try {
       await register({
         username: form.username,
-        displayName: form.displayName,
         password: form.password,
         email: form.email || undefined,
       });
@@ -41,19 +40,14 @@ export function RegisterPage() {
             <Sword size={32} className="text-white" />
           </div>
           <h1 className="text-3xl font-display font-bold glow-text">Create Account</h1>
-          <p className="text-gray-400 mt-2">Begin your legend today</p>
+          <p className="text-gray-400 mt-2">Seu nick será o nome do seu personagem</p>
         </div>
 
         <form onSubmit={handleSubmit} className="panel p-6 space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Username</label>
-              <input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} className="input-rpg" placeholder="Username" required />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Display Name</label>
-              <input value={form.displayName} onChange={(e) => setForm({ ...form, displayName: e.target.value })} className="input-rpg" placeholder="Display name" required />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Nickname</label>
+            <input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} className="input-rpg" placeholder="Seu nick (será o nome do personagem)" required />
+            <p className="text-[11px] text-gray-500 mt-1">3-20 caracteres, apenas letras, números e _.</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">Email (optional)</label>

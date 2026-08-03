@@ -242,24 +242,3 @@ export const EQUIP_GROUPS: StatGroup[] = [
   VAMP_GROUP,
   UTILITY_GROUP,
 ];
-
-export const TRAIT_GROUPS: StatGroup[] = [
-  OFFENSIVE_GROUP,
-  DEFENSIVE_GROUP,
-  CRIT_GROUP,
-  HEALING_GROUP,
-  MANA_GROUP,
-  UTILITY_GROUP,
-];
-
-export const RACE_GROUPS: StatGroup[] = [
-  CORE_GROUP,
-  {
-    label: "Recursos",
-    fields: [
-      { key: "manaRecovery", label: "Recuperação de Mana" },
-      { key: "maxHp", label: "HP Máx" },
-      { key: "maxMana", label: "Mana Máx" },
-    ],
-  },
-];
