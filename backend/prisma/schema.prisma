@@ -395,6 +395,7 @@ model Enchantment {
   items            Item[]
   userEnchantments UserEnchantment[]
   shopProducts     ShopProduct[]
+  shopItems        ShopItem[]
 
   @@index([category])
   @@index([rarity])
@@ -566,19 +567,21 @@ model Npc {
 }
 
 model ShopItem {
-  id            String    @id @default(uuid())
+  id            String       @id @default(uuid())
   npcId         String
-  itemId        String
+  itemId        String? // vende um Item (null quando vende encantamento)
+  enchantmentId String? // vende um Enchantment direto (userEnchantment)
   price         BigInt
-  currency      String    @default("gold")
-  stock         Int       @default(-1)
-  rotationDays  Int       @default(0)
+  currency      String       @default("gold")
+  stock         Int          @default(-1)
+  rotationDays  Int          @default(0)
   classId       String? // classe restrita (null = qualquer classe)
-  requiredLevel Int       @default(0)
-  createdAt     DateTime  @default(now())
-  npc           Npc       @relation(fields: [npcId], references: [id])
-  item          Item      @relation(fields: [itemId], references: [id])
-  class         GameClass? @relation(fields: [classId], references: [id])
+  requiredLevel Int          @default(0)
+  createdAt     DateTime     @default(now())
+  npc           Npc          @relation(fields: [npcId], references: [id])
+  item          Item?        @relation(fields: [itemId], references: [id])
+  enchantment   Enchantment? @relation(fields: [enchantmentId], references: [id])
+  class         GameClass?   @relation(fields: [classId], references: [id])
 
   @@index([npcId])
 }

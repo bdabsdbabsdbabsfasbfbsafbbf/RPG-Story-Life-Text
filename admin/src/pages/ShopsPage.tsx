@@ -24,6 +24,7 @@ interface Option {
 export default function ShopsPage() {
   const [npcs, setNpcs] = useState<Npc[]>([]);
   const [items, setItems] = useState<Option[]>([]);
+  const [enchantments, setEnchantments] = useState<Option[]>([]);
   const [classes, setClasses] = useState<Option[]>([]);
   const [maps, setMaps] = useState<Option[]>([]);
   const [selected, setSelected] = useState<Npc | null>(null);
@@ -42,17 +43,19 @@ export default function ShopsPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const [npcsRes, itemsRes, mapsRes, classesRes] = await Promise.all([
+      const [npcsRes, itemsRes, mapsRes, classesRes, enchantmentsRes] = await Promise.all([
         adminApi.npcs.list(),
         adminApi.items.list(),
         adminApi.maps.list(),
         adminApi.classes.list(),
+        adminApi.enchantments.list(),
       ]);
       const npcList = Array.isArray(npcsRes.data) ? npcsRes.data : [];
       setNpcs(npcList);
       setItems(Array.isArray(itemsRes.data) ? itemsRes.data : []);
       setMaps(Array.isArray(mapsRes.data) ? mapsRes.data : []);
       setClasses(Array.isArray(classesRes.data) ? classesRes.data : []);
+      setEnchantments(Array.isArray(enchantmentsRes.data) ? enchantmentsRes.data : []);
       if (selected) {
         const updated = npcList.find((n: any) => n.id === selected.id);
         if (updated) setSelected(updated);
@@ -78,12 +81,13 @@ export default function ShopsPage() {
   const selectedShopItems = useMemo(() => selected?.shopItems ?? [], [selected]);
   const selectedMapNpcs = useMemo(() => selected?.mapNpcs ?? [], [selected]);
 
-  const itemName = (id: string) => items.find((i) => i.id === id)?.name ?? id;
+  const itemName = (id: string | null) => (id ? items.find((i) => i.id === id)?.name ?? id : null);
+  const enchantmentName = (id: string | null) => (id ? enchantments.find((e) => e.id === id)?.name ?? id : null);
   const className = (id: string | null) => classes.find((c) => c.id === id)?.name ?? null;
   const mapName = (id: string) => maps.find((m) => m.id === id)?.name ?? id;
 
   const resetItemForm = () => {
-    setItemForm({ itemId: "", price: 0, currency: "gold", stock: -1, rotationDays: 0, classId: "", requiredLevel: 0 });
+    setItemForm({ itemId: "", enchantmentId: "", price: 0, currency: "gold", stock: -1, rotationDays: 0, classId: "", requiredLevel: 0 });
     setEditingItem(null);
   };
 
@@ -96,6 +100,7 @@ export default function ShopsPage() {
     setEditingItem(s);
     setItemForm({
       itemId: s.itemId ?? "",
+      enchantmentId: s.enchantmentId ?? "",
       price: Number(s.price) || 0,
       currency: s.currency ?? "gold",
       stock: Number(s.stock) ?? -1,
@@ -116,15 +121,16 @@ export default function ShopsPage() {
 
   const handleItemSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!selected || !itemForm.itemId) {
-      toast.error("Escolha um item");
+    if (!selected || (!itemForm.itemId && !itemForm.enchantmentId)) {
+      toast.error("Escolha um item ou um encantamento");
       return;
     }
     setSavingItem(true);
     try {
       const payload = {
         npcId: selected.id,
-        itemId: itemForm.itemId,
+        itemId: itemForm.enchantmentId ? null : itemForm.itemId || null,
+        enchantmentId: itemForm.enchantmentId || null,
         price: Number(itemForm.price) || 0,
         currency: itemForm.currency || "gold",
         stock: Number(itemForm.stock) ?? -1,
@@ -149,7 +155,8 @@ export default function ShopsPage() {
   };
 
   const handleDeleteItem = async (s: any) => {
-    if (!window.confirm(`Remover "${itemName(s.itemId)}" da loja?`)) return;
+    const label = s.enchantmentId ? enchantmentName(s.enchantmentId) : itemName(s.itemId);
+    if (!window.confirm(`Remover "${label ?? "item"}" da loja?`)) return;
     try {
       await adminApi.shopItems.delete(s.id);
       toast.success("Removido");
@@ -267,10 +274,29 @@ export default function ShopsPage() {
               <form onSubmit={handleItemSubmit} className="p-4 border-b border-dark-700 grid grid-cols-2 sm:grid-cols-6 gap-3 items-end">
                 <div className="col-span-2 sm:col-span-2">
                   <label className={labelClass}>Item *</label>
-                  <select value={itemForm.itemId ?? ""} onChange={(e) => setItemForm({ ...itemForm, itemId: e.target.value })} className={inputClass}>
+                  <select
+                    value={itemForm.itemId ?? ""}
+                    disabled={!!itemForm.enchantmentId}
+                    onChange={(e) => setItemForm({ ...itemForm, itemId: e.target.value })}
+                    className={`${inputClass} ${itemForm.enchantmentId ? "opacity-40" : ""}`}
+                  >
                     <option value="">Selecionar item...</option>
                     {items.map((i) => (
                       <option key={i.id} value={i.id}>{i.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="col-span-2 sm:col-span-2">
+                  <label className={labelClass}>ou Encantamento</label>
+                  <select
+                    value={itemForm.enchantmentId ?? ""}
+                    disabled={!!itemForm.itemId}
+                    onChange={(e) => setItemForm({ ...itemForm, enchantmentId: e.target.value })}
+                    className={`${inputClass} ${itemForm.itemId ? "opacity-40" : ""}`}
+                  >
+                    <option value="">Nenhum (vender item)</option>
+                    {enchantments.map((e) => (
+                      <option key={e.id} value={e.id}>{e.name}</option>
                     ))}
                   </select>
                 </div>
@@ -334,7 +360,16 @@ export default function ShopsPage() {
                   <tbody>
                     {selectedShopItems.map((s) => (
                       <tr key={s.id} className="border-b border-dark-700 hover:bg-dark-800/50">
-                        <td className="py-2.5 px-4 font-medium text-white">{itemName(s.itemId)}</td>
+                        <td className="py-2.5 px-4 font-medium text-white">
+                          {s.enchantmentId ? (
+                            <span className="flex items-center gap-1.5">
+                              <span className="text-purple-300">{enchantmentName(s.enchantmentId) ?? "Encantamento"}</span>
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-500/15 text-purple-300">encantamento</span>
+                            </span>
+                          ) : (
+                            itemName(s.itemId) ?? "-"
+                          )}
+                        </td>
                         <td className="py-2.5 px-4 font-mono text-xs">{String(s.price)}</td>
                         <td className="py-2.5 px-4 text-gray-400">{s.currency}</td>
                         <td className="py-2.5 px-4">

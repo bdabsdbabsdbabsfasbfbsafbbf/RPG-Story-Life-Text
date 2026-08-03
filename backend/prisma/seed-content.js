@@ -175,6 +175,7 @@ const enchantments = [
 ];
 
 const monsters = [
+  { name: "Dummy de Treino", description: "Um boneco de madeira usado para treinar golpes na vila. Não revida.", level: 1, hp: 300, mana: 0, attack: 0, defense: 5, magic: 0, magicDefense: 5, speed: 1, xpReward: 0, goldReward: 0, attackSpeed: 99999 },
   { name: "Rato da Floresta", description: "Um roedor feroz que invade acampamentos.", level: 1, hp: 30, mana: 0, attack: 6, defense: 2, magic: 0, magicDefense: 2, speed: 10, xpReward: 20, goldReward: 8, attackSpeed: 2000, drops: [{ item: "Poção de Vida", chance: 30, min: 1, max: 2 }] },
   { name: "Slime Verde", description: "Gosma gelatinosa comum nas florestas.", level: 1, hp: 25, mana: 0, attack: 5, defense: 3, magic: 0, magicDefense: 2, speed: 5, xpReward: 15, goldReward: 5, attackSpeed: 2500, drops: [{ item: "Poção de Mana", chance: 25, min: 1, max: 1 }] },
   { name: "Lobo Cinzento", description: "Um predador veloz que caça em matilha.", level: 2, hp: 45, mana: 0, attack: 9, defense: 4, magic: 0, magicDefense: 3, speed: 14, xpReward: 35, goldReward: 15, attackSpeed: 1800, skills: JSON.stringify([{ name: "Mordida Feroz", slug: "mordida-feroz", description: "Uma mordida poderosa que causa dano extra.", kind: "attack", trigger: "active", target: "enemy", cooldown: 5000, manaCost: 0, rankRequired: 1, actions: [{ action: "damage", amount: 12, scaling: [{ stat: "attack", factor: 1.2 }], damageType: "physical" }] }]), drops: [{ item: "Poção de Vida", chance: 40, min: 1, max: 2 }, { item: "Espada de Ferro", chance: 8, min: 1, max: 1 }] },
@@ -237,6 +238,14 @@ const shopOffers = [
   { npc: "Aurelia", item: "Adaga Serrilhada", price: 140, class: "assassino" },
   { npc: "Aurelia", item: "Cajado Arcano", price: 160, class: "mago" },
   { npc: "Aurelia", item: "Armadura de Couro", price: 120, requiredLevel: 3 },
+  { npc: "Aurelia", enchantment: "titan", price: 5000 },
+  { npc: "Aurelia", enchantment: "mage", price: 5000 },
+  { npc: "Aurelia", enchantment: "guardian", price: 4500 },
+  { npc: "Aurelia", enchantment: "hunter", price: 4000 },
+  { npc: "Aurelia", enchantment: "sage", price: 4500 },
+  { npc: "Aurelia", enchantment: "fortune", price: 3500 },
+  { npc: "Aurelia", enchantment: "swift", price: 6000 },
+  { npc: "Aurelia", enchantment: "colossus", price: 12000 },
 ];
 
 const quests = [
@@ -442,14 +451,6 @@ const shopProducts = [
   { slug: "vip-30d-cash", name: "VIP — 30 dias (R$)", description: "VIP por 30 dias comprado com dinheiro real.", type: "vip", currency: "money", price: 4000, vipDays: 30, icon: "Crown", sortOrder: 12 },
   { slug: "pass-premium", name: "Passe Premium", description: "Ativa o Passe Premium da temporada atual e libera as recompensas premium dos tiers.", type: "pass_premium", currency: "diamond", price: 600, icon: "Trophy", sortOrder: 20 },
   { slug: "pass-premium-cash", name: "Passe Premium (R$)", description: "Ativa o Passe Premium da temporada atual comprando com dinheiro real.", type: "pass_premium", currency: "money", price: 3000, icon: "Trophy", sortOrder: 21 },
-  { slug: "enc-titan", name: "Encantamento: Titã", description: "Strength +15 — compatível com Arma, Armadura, Anel e Colar.", type: "enchantment", currency: "gold", price: 5000, enchantmentSlug: "titan", icon: "Dumbbell", sortOrder: 30 },
-  { slug: "enc-mage", name: "Encantamento: Mago", description: "Intellect +15 — compatível com Arma, Capa, Anel e Colar.", type: "enchantment", currency: "gold", price: 5000, enchantmentSlug: "mage", icon: "Sparkles", sortOrder: 31 },
-  { slug: "enc-guardian", name: "Encantamento: Guardião", description: "Endurance +12 — compatível com Elmo, Armadura e Colar.", type: "enchantment", currency: "gold", price: 4500, enchantmentSlug: "guardian", icon: "Shield", sortOrder: 32 },
-  { slug: "enc-hunter", name: "Encantamento: Caçador", description: "Dexterity +10 — compatível com Arma, Elmo, Capa e Anel.", type: "enchantment", currency: "gold", price: 4000, enchantmentSlug: "hunter", icon: "Crosshair", sortOrder: 33 },
-  { slug: "enc-sage", name: "Encantamento: Sábio", description: "Wisdom +12 — compatível com Elmo, Capa e Colar.", type: "enchantment", currency: "gold", price: 4500, enchantmentSlug: "sage", icon: "BookOpen", sortOrder: 34 },
-  { slug: "enc-fortune", name: "Encantamento: Fortuna", description: "Luck +8 — compatível com Anel, Capa e Colar.", type: "enchantment", currency: "gold", price: 3500, enchantmentSlug: "fortune", icon: "Clover", sortOrder: 35 },
-  { slug: "enc-swift", name: "Encantamento: Ventania", description: "Dexterity +6, Luck +2 — compatível com Arma, Capa e Anel (item rank 2+).", type: "enchantment", currency: "gold", price: 6000, enchantmentSlug: "swift", icon: "Wind", sortOrder: 36 },
-  { slug: "enc-colossus", name: "Encantamento: Colosso", description: "Strength +30 — compatível com Arma e Armadura (item rank 3+).", type: "enchantment", currency: "gold", price: 12000, enchantmentSlug: "colossus", icon: "Mountain", sortOrder: 37 },
 ];
 
 async function upsertItem(item) {
@@ -647,7 +648,7 @@ async function seedWorld() {
   // Map monsters
   for (const [mapSlug, names] of Object.entries({
     "floresta-sombria": ["Rato da Floresta", "Slime Verde", "Lobo Cinzento", "Goblin Saqueador", "Goblin Bruxo"],
-    arcadia: ["Rato da Floresta", "Slime Verde"],
+    arcadia: ["Dummy de Treino"],
     "caverna-do-dragao": ["Golem de Pedra", "Dragão Sombrio"],
   })) {
     for (const name of names) {
@@ -659,6 +660,20 @@ async function seedWorld() {
           data: { mapId: mapMap[mapSlug].id, monsterId: monsterMap[name].id, spawnRate: 100, minLevel: 1, maxLevel: 10 },
         });
         console.log(`  mapMonster: ${mapSlug} -> ${name}`);
+      }
+    }
+  }
+  // Arcádia: remove monstros que não sejam o Dummy de Treino
+  {
+    const dummy = monsterMap["Dummy de Treino"];
+    const arcadiaMonsters = await prisma.mapMonster.findMany({
+      where: { mapId: mapMap.arcadia.id },
+      select: { id: true, monsterId: true },
+    });
+    for (const mm of arcadiaMonsters) {
+      if (mm.monsterId !== dummy.id) {
+        await prisma.mapMonster.delete({ where: { id: mm.id } });
+        console.log("  mapMonster removed: arcadia ->", mm.monsterId);
       }
     }
   }
@@ -685,24 +700,37 @@ async function seedWorld() {
   console.log("Seeding shop...");
   for (const offer of shopOffers) {
     const npc = npcMap[offer.npc];
-    const item = itemMap[offer.item];
-    if (!npc || !item) continue;
+    if (!npc) continue;
     const cls = offer.class ? await prisma.gameClass.findUnique({ where: { slug: offer.class } }) : null;
+    let item = null;
+    let enchantment = null;
+    if (offer.item) {
+      item = itemMap[offer.item];
+      if (!item) continue;
+    }
+    if (offer.enchantment) {
+      enchantment = await prisma.enchantment.findUnique({ where: { slug: offer.enchantment } });
+      if (!enchantment) continue;
+    }
+    const where = offer.item
+      ? { npcId: npc.id, itemId: item.id, enchantmentId: null }
+      : { npcId: npc.id, itemId: null, enchantmentId: enchantment.id };
     const data = {
       npcId: npc.id,
-      itemId: item.id,
+      itemId: item?.id ?? null,
+      enchantmentId: enchantment?.id ?? null,
       price: BigInt(offer.price),
       currency: "gold",
       classId: cls?.id ?? null,
       requiredLevel: offer.requiredLevel || 0,
     };
-    const existing = await prisma.shopItem.findFirst({ where: { npcId: npc.id, itemId: item.id } });
+    const existing = await prisma.shopItem.findFirst({ where });
     if (existing) {
       await prisma.shopItem.update({ where: { id: existing.id }, data: { classId: data.classId, requiredLevel: data.requiredLevel } });
-      console.log("  shop (updated):", offer.npc, "->", offer.item, cls ? `[${cls.name}]` : "");
+      console.log("  shop (updated):", offer.npc, "->", offer.item ?? offer.enchantment, cls ? `[${cls.name}]` : "");
     } else {
       await prisma.shopItem.create({ data });
-      console.log("  shop:", offer.npc, "->", offer.item, cls ? `[${cls.name}]` : "");
+      console.log("  shop:", offer.npc, "->", offer.item ?? offer.enchantment, cls ? `[${cls.name}]` : "");
     }
   }
 
@@ -832,6 +860,8 @@ async function seedWorld() {
   await seedWorld();
 
   console.log("Seeding shop products...");
+  const removedEnchantments = await prisma.shopProduct.deleteMany({ where: { type: "enchantment" } });
+  if (removedEnchantments.count > 0) console.log("  removed legacy enchantment products:", removedEnchantments.count);
   for (const product of shopProducts) {
     const { enchantmentSlug, ...productData } = product;
     const created = await prisma.shopProduct.upsert({
@@ -859,7 +889,7 @@ async function seedWorld() {
       id: "patch-notes-v1",
       title: "Atualização 1.0 — Raids e Skills de Monstros",
       content:
-        "Bem-vindo à Temporada 1!\n• Novo mapa de Raid: Caverna do Dragão (tentativas limitadas com reset diário)\n• Monstros agora usam skills especiais (sopro de fogo, veneno, fúria...)\n• Loja com encantamentos por ouro\n• Sistema de classes reformulado",
+        "Bem-vindo à Temporada 1!\n• Novo mapa de Raid: Caverna do Dragão (tentativas limitadas com reset diário)\n• Monstros agora usam skills especiais (sopro de fogo, veneno, fúria...)\n• Encantamentos à venda na loja da Aurelia (por ouro)\n• Sistema de classes reformulado",
       version: "1.0",
       isActive: true,
     },

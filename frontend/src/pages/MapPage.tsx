@@ -13,7 +13,7 @@ interface NpcDetail {
   id: string;
   name: string;
   type: string;
-  shopItems?: { id: string; price: string | number; classId?: string | null; requiredLevel?: number; class?: { name: string; slug: string } | null; item: { id: string; name: string; description: string; type: string; rarity: string } }[];
+  shopItems?: { id: string; price: string | number; itemId?: string | null; enchantmentId?: string | null; classId?: string | null; requiredLevel?: number; class?: { name: string; slug: string } | null; item: { id: string; name: string; description: string; type: string; rarity: string } | null; enchantment?: { name: string; slug: string; description: string } | null }[];
   quests?: { id: string; title: string; description: string; requiredLevel: number; requiredRank: number; requiredQuestIds?: string | null; xpReward: string | number; goldReward: string | number }[];
 }
 
@@ -98,11 +98,15 @@ export function MapPage() {
     }
   };
 
-  const buyItem = async (itemId: string) => {
+  const buyItem = async (offer: { item?: { id: string } | null; enchantment?: { name: string } | null; enchantmentId?: string | null; itemId?: string | null; price: string | number }) => {
     if (!npc) return;
-    setBuyingItemId(itemId);
+    const isEnchantment = !!offer.enchantmentId;
+    setBuyingItemId(isEnchantment ? offer.enchantmentId! : offer.itemId!);
     try {
-      const { data } = await npcApi.buy(npc.id, { itemId, quantity: 1 });
+      const payload = isEnchantment
+        ? { enchantmentId: offer.enchantmentId!, quantity: 1 }
+        : { itemId: offer.itemId!, quantity: 1 };
+      const { data } = await npcApi.buy(npc.id, payload);
       toast.success(`${data.quantity}x ${data.item} comprado (${data.totalPrice} gold)`);
     } catch (err: any) {
       toast.error(err.response?.data?.error || "Purchase failed");
@@ -347,39 +351,47 @@ export function MapPage() {
             {npc.type === "vendor" && (
               <div className="space-y-2">
                 {npc.shopItems && npc.shopItems.length > 0 ? (
-                  npc.shopItems.map((offer) => (
-                    <div key={offer.id} className="card p-3 flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-dark-700 flex items-center justify-center">
-                        <ShoppingBag size={16} className="text-cyan-400" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium">{offer.item.name}</p>
-                        <p className="text-[11px] text-gray-500 line-clamp-1">{offer.item.description}</p>
-                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                          {offer.class && (
-                            <span className="text-[10px] px-1.5 py-0.5 bg-purple-500/15 text-purple-300 rounded-md flex items-center gap-1">
-                              <Shield size={9} /> Classe: {offer.class.name}
-                            </span>
-                          )}
-                          {Number(offer.requiredLevel) > 0 && (
-                            <span className="text-[10px] px-1.5 py-0.5 bg-yellow-500/15 text-yellow-300 rounded-md">
-                              Nv. {offer.requiredLevel}+
-                            </span>
-                          )}
+                  npc.shopItems.map((offer) => {
+                    const isEnchantment = !!offer.enchantmentId;
+                    const label = isEnchantment ? offer.enchantment?.name ?? "Encantamento" : offer.item?.name ?? "-";
+                    const description = isEnchantment ? offer.enchantment?.description ?? "" : offer.item?.description ?? "";
+                    return (
+                      <div key={offer.id} className="card p-3 flex items-center gap-3">
+                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${isEnchantment ? "bg-purple-500/20" : "bg-dark-700"}`}>
+                          <ShoppingBag size={16} className={isEnchantment ? "text-purple-400" : "text-cyan-400"} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium">
+                            {label}
+                            {isEnchantment && <span className="text-[10px] ml-1.5 px-1.5 py-0.5 rounded-full bg-purple-500/15 text-purple-300 align-middle">encantamento</span>}
+                          </p>
+                          <p className="text-[11px] text-gray-500 line-clamp-1">{description}</p>
+                          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                            {offer.class && (
+                              <span className="text-[10px] px-1.5 py-0.5 bg-purple-500/15 text-purple-300 rounded-md flex items-center gap-1">
+                                <Shield size={9} /> Classe: {offer.class.name}
+                              </span>
+                            )}
+                            {Number(offer.requiredLevel) > 0 && (
+                              <span className="text-[10px] px-1.5 py-0.5 bg-yellow-500/15 text-yellow-300 rounded-md">
+                                Nv. {offer.requiredLevel}+
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-sm text-yellow-400">{Number(offer.price).toLocaleString()} gold</p>
+                          <button
+                            onClick={() => buyItem(offer)}
+                            disabled={buyingItemId === (isEnchantment ? offer.enchantmentId : offer.itemId)}
+                            className="btn-secondary text-xs px-3 py-1 mt-1 disabled:opacity-50"
+                          >
+                            {buyingItemId === (isEnchantment ? offer.enchantmentId : offer.itemId) ? "..." : "Comprar"}
+                          </button>
                         </div>
                       </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-sm text-yellow-400">{Number(offer.price).toLocaleString()} gold</p>
-                        <button
-                          onClick={() => buyItem(offer.item.id)}
-                          disabled={buyingItemId === offer.item.id}
-                          className="btn-secondary text-xs px-3 py-1 mt-1 disabled:opacity-50"
-                        >
-                          {buyingItemId === offer.item.id ? "..." : "Comprar"}
-                        </button>
-                      </div>
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
                   <p className="text-sm text-gray-500">Esta loja está vazia.</p>
                 )}

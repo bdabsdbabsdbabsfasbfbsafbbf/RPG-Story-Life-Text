@@ -384,7 +384,8 @@ export const crudConfigs: CrudConfig[] = [
         type: "select",
         required: true,
         defaultValue: "diamond_pack",
-        options: ["diamond_pack", "vip", "pass_premium", "enchantment"],
+        options: ["diamond_pack", "vip", "pass_premium"],
+        hint: "Encantamentos são vendidos no shop de NPC (página Shops).",
       },
       {
         name: "currency",
@@ -398,7 +399,6 @@ export const crudConfigs: CrudConfig[] = [
       { name: "price", label: "Preço", type: "number", defaultValue: 0, hint: "Em diamantes, centavos (moeda real) ou ouro" },
       { name: "diamondAmount", label: "Diamantes entregues (diamond_pack)", type: "number", defaultValue: 0 },
       { name: "vipDays", label: "Dias VIP (tipo vip)", type: "number", defaultValue: 0 },
-      { name: "enchantmentId", label: "Encantamento (tipo enchantment)", type: "text", placeholder: "ID do encantamento" },
       { name: "icon", label: "Ícone", type: "text" },
       { name: "sortOrder", label: "Sort Order", type: "number", defaultValue: 0 },
       { name: "isActive", label: "Active", type: "boolean", defaultValue: true },

@@ -129,7 +129,7 @@ export const shopApi = {
 
 export const npcApi = {
   get: (id: string) => api.get(`/npcs/${id}`),
-  buy: (id: string, data: { itemId: string; quantity?: number }) =>
+  buy: (id: string, data: { itemId?: string; enchantmentId?: string; quantity?: number }) =>
     api.post(`/npcs/${id}/buy`, data),
 };
 

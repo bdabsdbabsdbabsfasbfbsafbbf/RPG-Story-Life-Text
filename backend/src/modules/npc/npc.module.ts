@@ -15,7 +15,7 @@ export function createNpcModule(app: Express): void {
         where,
         include: {
           mapNpcs: { include: { map: { select: { name: true, slug: true } } } },
-          shopItems: { include: { item: true, class: true } },
+          shopItems: { include: { item: true, enchantment: true, class: true } },
           quests: true,
         },
       });
@@ -30,7 +30,7 @@ export function createNpcModule(app: Express): void {
       const npc = await prisma.npc.findUnique({
         where: { id: req.params.id },
         include: {
-          shopItems: { include: { item: true, class: true } },
+          shopItems: { include: { item: true, enchantment: true, class: true } },
           quests: true,
           mapNpcs: { include: { map: true } },
         },
@@ -49,7 +49,7 @@ export function createNpcModule(app: Express): void {
     try {
       const shop = await prisma.shopItem.findMany({
         where: { npcId: req.params.id },
-        include: { item: true, class: true },
+        include: { item: true, enchantment: true, class: true },
       });
       res.json(shop);
     } catch (err) {
@@ -57,17 +57,22 @@ export function createNpcModule(app: Express): void {
     }
   });
 
-  // Buy an item from the NPC vendor (debita gold e adiciona ao inventário)
+  // Buy an item (ou encantamento) do NPC vendor (debita gold e adiciona ao inventário/coleção)
   app.post("/api/npcs/:id/buy", authenticate, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { itemId, quantity = 1 } = req.body;
-      if (!itemId) throw new AppError(400, "itemId required");
+      const { itemId, enchantmentId, quantity = 1 } = req.body;
+      if (!itemId && !enchantmentId) throw new AppError(400, "itemId ou enchantmentId required");
       const qty = Math.max(1, Math.floor(Number(quantity) || 1));
 
-      const shopOffer = await prisma.shopItem.findFirst({
-        where: { npcId: req.params.id, itemId },
-        include: { item: true, class: true },
-      });
+      const shopOffer = enchantmentId
+        ? await prisma.shopItem.findFirst({
+            where: { npcId: req.params.id, enchantmentId },
+            include: { item: true, enchantment: true, class: true },
+          })
+        : await prisma.shopItem.findFirst({
+            where: { npcId: req.params.id, itemId },
+            include: { item: true, enchantment: true, class: true },
+          });
       if (!shopOffer) throw new AppError(404, "Item not sold by this NPC");
 
       const user = await prisma.user.findUnique({
@@ -104,23 +109,31 @@ export function createNpcModule(app: Express): void {
           where: { id: user.id },
           data: { gold: { decrement: totalPrice } },
         });
-        const existing = await tx.inventory.findFirst({
-          where: { userId: user.id, itemId, slotIndex: null },
-        });
-        if (existing) {
-          await tx.inventory.update({
-            where: { id: existing.id },
-            data: { quantity: { increment: qty } },
+        if (shopOffer.enchantmentId) {
+          await tx.userEnchantment.upsert({
+            where: { userId_enchantmentId: { userId: user.id, enchantmentId: shopOffer.enchantmentId } },
+            create: { userId: user.id, enchantmentId: shopOffer.enchantmentId, quantity: qty },
+            update: { quantity: { increment: qty } },
           });
-        } else {
-          await tx.inventory.create({
-            data: { userId: user.id, itemId, quantity: qty },
+        } else if (shopOffer.itemId) {
+          const existing = await tx.inventory.findFirst({
+            where: { userId: user.id, itemId: shopOffer.itemId, slotIndex: null },
           });
+          if (existing) {
+            await tx.inventory.update({
+              where: { id: existing.id },
+              data: { quantity: { increment: qty } },
+            });
+          } else {
+            await tx.inventory.create({
+              data: { userId: user.id, itemId: shopOffer.itemId, quantity: qty },
+            });
+          }
         }
       });
 
       res.json({
-        item: shopOffer.item.name,
+        item: shopOffer.enchantment?.name ?? shopOffer.item?.name ?? "Compra",
         quantity: qty,
         totalPrice,
         goldLeft: Math.max(0, Number(user.gold) - totalPrice),
