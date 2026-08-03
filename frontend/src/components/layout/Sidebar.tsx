@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard, Map, Sword, Backpack, ScrollText,
-  Settings, Shield, MessageCircle, BookOpen, Trophy,
+  Settings, Shield, MessageCircle, BookOpen, Trophy, ShoppingBag,
 } from "lucide-react";
 import { questsApi } from "../../services/api";
 import { useAuthStore } from "../../store/authStore";
@@ -40,6 +40,7 @@ export function Sidebar({ isOpen }: SidebarProps) {
     { to: "/classes", icon: Sword, label: "Classes" },
     { to: "/inventory", icon: Backpack, label: "Inventory" },
     { to: "/season", icon: Trophy, label: "Season" },
+    { to: "/shop", icon: ShoppingBag, label: "Loja" },
     ...(hasActiveQuest ? [{ to: "/quests", icon: ScrollText, label: "Quests" }] : []),
   ];
 

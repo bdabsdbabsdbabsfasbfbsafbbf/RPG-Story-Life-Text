@@ -127,6 +127,8 @@ export interface GameClass {
   role: string;
   combatType: string;
   rankMax: number;
+  requiredLevel?: number;
+  requiredVip?: boolean;
   resource: Record<string, any>;
   isStarter: boolean;
   isActive: boolean;
@@ -510,6 +512,8 @@ export interface User {
   level?: number;
   gold?: number;
   diamonds?: number;
+  vipUntil?: string | null;
+  vipOwned?: boolean;
   experience?: number;
   isOnline?: boolean;
   createdAt?: string;

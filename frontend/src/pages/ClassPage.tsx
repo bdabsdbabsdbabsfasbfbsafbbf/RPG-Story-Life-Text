@@ -7,7 +7,7 @@ import {
   Shield, Sword, Zap, Star, Clock, Droplets, Heart, Swords,
   ShieldCheck, Sparkles, Lock, ChevronRight, X, MapPin,
   UserPlus, Activity, Footprints, ShieldHalf, Flame, HeartPulse, Skull,
-  Ban, Crosshair, Scan, Wind, Gauge, Siren, Target, Percent, Brain,
+  Ban, Crosshair, Scan, Wind, Gauge, Siren, Target, Percent, Brain, Crown,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -185,6 +185,11 @@ export function ClassPage() {
             <div className="flex items-center gap-3 mb-2 flex-wrap">
               <span className="text-xs px-2 py-1 bg-dark-700 rounded-md capitalize">{gameClass.role}</span>
               <span className="text-xs px-2 py-1 bg-dark-700 rounded-md capitalize">{gameClass.combatType}</span>
+              {gameClass.requiredVip && (
+                <span className="text-xs px-2 py-1 bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 rounded-md flex items-center gap-1">
+                  <Crown size={11} /> Exclusiva VIP
+                </span>
+              )}
             </div>
             <h1 className="text-3xl font-display font-bold glow-text mb-2">{gameClass.name}</h1>
             <p className="text-gray-400 text-sm leading-relaxed">{gameClass.description}</p>

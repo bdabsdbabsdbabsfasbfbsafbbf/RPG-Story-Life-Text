@@ -13,6 +13,8 @@ export interface AuthUser {
   level?: number;
   gold?: number;
   diamonds?: number;
+  vipUntil?: string | null;
+  vipOwned?: boolean;
   experience?: number;
   isOnline?: boolean;
   createdAt?: string;

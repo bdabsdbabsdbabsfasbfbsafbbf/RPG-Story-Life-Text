@@ -45,7 +45,7 @@ const starterClasses = [
     rarity: "common",
     difficulty: "medium",
     role: "mage",
-    statModel: "powerCaster",
+    statModel: "caster",
     unlockMethod: "auto",
     requiredLevel: 1,
     baseHp: 90,
@@ -74,7 +74,7 @@ const starterClasses = [
     rarity: "common",
     difficulty: "hard",
     role: "assassin",
-    statModel: "physicalDPS",
+    statModel: "dps",
     unlockMethod: "auto",
     requiredLevel: 1,
     baseHp: 110,
@@ -315,6 +315,21 @@ const classSkills = [
       { name: "Sacrifício", slug: "sacrificio", description: "Suas curas podem exceder a vida máxima em até 10%.", rankRequired: 7, sortOrder: 3, statModifiers: { percent: { overhealPercent: 10 } } },
     ],
   },
+  {
+    class: "senhor-das-sombras",
+    skills: [
+      { name: "Corte Sombrio", slug: "corte-sombrio", description: "Um corte veloz tingido de sombras. Usado automaticamente.", kind: "attack", trigger: "auto", target: "enemy", cooldown: 2000, manaCost: 0, rankRequired: 1, sortOrder: 1, actions: [{ action: "damage", amount: 8, scaling: [{ stat: "attack", factor: 1.05 }], damageType: "physical" }] },
+      { name: "Lâmina da Penumbra", slug: "lamina-da-penumbra", description: "Fere o inimigo com uma lâmina sombria que causa sangramento.", kind: "attack", trigger: "active", target: "enemy", cooldown: 3500, manaCost: 10, rankRequired: 1, sortOrder: 2, actions: [{ action: "damage", amount: 13, scaling: [{ stat: "attack", factor: 1.15 }], damageType: "physical" }, { action: "applyEffect", effect: "sangramento", target: "enemy", stacks: 1 }] },
+      { name: "Manto Sombrio", slug: "manto-sombrio", description: "Envolve-se em sombras, aumentando a esquiva e a defesa.", kind: "buff", trigger: "active", target: "self", cooldown: 12000, manaCost: 10, rankRequired: 3, sortOrder: 3, actions: [{ action: "applyEffect", effect: "passo-das-sombras", target: "self", stacks: 1 }, { action: "applyEffect", effect: "armadura-arcana", target: "self", stacks: 1 }] },
+      { name: "Garra Corrosiva", slug: "garra-corrosiva", description: "Golpeia com garras envenenadas, causando veneno corrosivo.", kind: "attack", trigger: "active", target: "enemy", cooldown: 8000, manaCost: 14, rankRequired: 5, sortOrder: 4, actions: [{ action: "damage", amount: 16, scaling: [{ stat: "attack", factor: 1.35 }], damageType: "physical" }, { action: "applyEffect", effect: "veneno-corrosivo", target: "enemy", stacks: 1 }] },
+      { name: "Tempestade das Sombras", slug: "tempestade-das-sombras", description: "Libera toda a escuridão acumulada em um golpe devastador.", kind: "attack", trigger: "ultimate", target: "enemy", cooldown: 30000, manaCost: 28, rankRequired: 8, sortOrder: 5, actions: [{ action: "damage", amount: 55, scaling: [{ stat: "attack", factor: 1.7 }], damageType: "physical" }, { action: "applyEffect", effect: "furia-do-guerreiro", target: "self", stacks: 2 }] },
+    ],
+    passives: [
+      { name: "Sombra Persistente", slug: "sombra-persistente", description: "Chance de crítico +5%.", rankRequired: 1, sortOrder: 1, statModifiers: { flat: { critChance: 5 } } },
+      { name: "Abraço Noturno", slug: "abraco-noturno", description: "Vida máxima +8% e defesa +5.", rankRequired: 4, sortOrder: 2, statModifiers: { percent: { hp: 8 }, flat: { defense: 5 } } },
+      { name: "Senhor da Penumbra", slug: "senhor-da-penumbra", description: "Dano contínuo +15% e esquiva +5%.", rankRequired: 7, sortOrder: 3, statModifiers: { percent: { dotPercent: 15, dodge: 5 } } },
+    ],
+  },
 ];
 
 const redeemCodes = [
@@ -336,6 +351,40 @@ const redeemCodes = [
     items: [],
     maxUses: 500,
   },
+];
+
+// ===== Classe exclusiva VIP (desbloqueada comprando VIP; não é starter) =====
+
+const vipClasses = [
+  {
+    name: "Senhor das Sombras",
+    slug: "senhor-das-sombras",
+    description: "Classe exclusiva VIP. Um híbrido de dano e resistência que domina a escuridão, sangra e corrói seus inimigos.",
+    lore: "Apenas aqueles que apoiam o reino conhecem os segredos da penumbra.",
+    icon: "Moon",
+    element: "dark",
+    rarity: "rare",
+    difficulty: "medium",
+    role: "tank",
+    combatType: "melee",
+    statModel: "hybrid",
+    requiredLevel: 10,
+    requiredVip: true,
+    sortOrder: 6,
+  },
+];
+
+// ===== Loja: diamantes (moeda real simulada), VIP e passe premium =====
+
+const shopProducts = [
+  { slug: "diamantes-100", name: "Pacote de Diamantes — 100", description: "100 diamantes para gastar na loja.", type: "diamond_pack", currency: "money", price: 500, diamondAmount: 100, icon: "Gem", sortOrder: 1 },
+  { slug: "diamantes-550", name: "Pacote de Diamantes — 550", description: "550 diamantes (melhor custo-benefício).", type: "diamond_pack", currency: "money", price: 2500, diamondAmount: 550, icon: "Gem", sortOrder: 2 },
+  { slug: "diamantes-1300", name: "Pacote de Diamantes — 1300", description: "1300 diamantes para os colecionadores.", type: "diamond_pack", currency: "money", price: 5000, diamondAmount: 1300, icon: "Gem", sortOrder: 3 },
+  { slug: "vip-7d", name: "VIP — 7 dias", description: "VIP por 7 dias: +10% XP, +10% ouro e classe exclusiva Senhor das Sombras.", type: "vip", currency: "diamond", price: 300, vipDays: 7, icon: "Crown", sortOrder: 10 },
+  { slug: "vip-30d", name: "VIP — 30 dias", description: "VIP por 30 dias: +10% XP, +10% ouro e classe exclusiva Senhor das Sombras.", type: "vip", currency: "diamond", price: 800, vipDays: 30, icon: "Crown", sortOrder: 11 },
+  { slug: "vip-30d-cash", name: "VIP — 30 dias (R$)", description: "VIP por 30 dias comprado com dinheiro real.", type: "vip", currency: "money", price: 4000, vipDays: 30, icon: "Crown", sortOrder: 12 },
+  { slug: "pass-premium", name: "Passe Premium", description: "Ativa o Passe Premium da temporada atual e libera as recompensas premium dos tiers.", type: "pass_premium", currency: "diamond", price: 600, icon: "Trophy", sortOrder: 20 },
+  { slug: "pass-premium-cash", name: "Passe Premium (R$)", description: "Ativa o Passe Premium da temporada atual comprando com dinheiro real.", type: "pass_premium", currency: "money", price: 3000, icon: "Trophy", sortOrder: 21 },
 ];
 
 async function upsertItem(item) {
@@ -626,9 +675,7 @@ async function seedWorld() {
     });
     console.log("  code:", created.code);
   }
-}
-
-async function main() {
+}async function main() {
   console.log("Seeding starter classes...");
   for (const cls of starterClasses) {
     const statModel = cls.statModel
@@ -658,6 +705,33 @@ async function main() {
   }
 
 
+  console.log("Seeding VIP class...");
+  for (const cls of vipClasses) {
+    const statModel = await prisma.statModel.findFirst({ where: { slug: cls.statModel } });
+    const data = {
+      name: cls.name,
+      slug: cls.slug,
+      description: cls.description,
+      icon: cls.icon,
+      role: cls.role,
+      combatType: cls.combatType || "melee",
+      rankMax: cls.rankMax || 10,
+      requiredLevel: cls.requiredLevel || 1,
+      requiredVip: true,
+      resource: cls.resource || {},
+      statModelId: statModel?.id ?? null,
+      isStarter: false,
+      isActive: true,
+      sortOrder: cls.sortOrder || 5,
+    };
+    await prisma.gameClass.upsert({
+      where: { slug: cls.slug },
+      update: data,
+      create: data,
+    });
+    console.log("  class:", cls.slug);
+  }
+
   console.log("Promoting Darkin to admin...");
   const darkin = await prisma.user.updateMany({
     where: { username: "Darkin" },
@@ -666,6 +740,16 @@ async function main() {
   console.log("  users updated:", darkin.count);
 
   await seedWorld();
+
+  console.log("Seeding shop products...");
+  for (const product of shopProducts) {
+    const created = await prisma.shopProduct.upsert({
+      where: { slug: product.slug },
+      update: { ...product },
+      create: { ...product },
+    });
+    console.log("  product:", created.slug);
+  }
 
   const [classes, users] = await Promise.all([
     prisma.gameClass.count(),

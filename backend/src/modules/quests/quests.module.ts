@@ -5,6 +5,7 @@ import { AppError } from "../../core/middleware/errorHandler";
 import { addItemsToInventory, clampGold } from "../../core/progression";
 import { getGameLimits } from "../../core/gameLimits";
 import { grantPassXp } from "../seasons/seasons.module";
+import { isVipActive, VIP_XP_BONUS, VIP_GOLD_BONUS } from "../../core/progression";
 
 export function createQuestsModule(app: Express): void {
   app.get("/api/quests", async (req: Request, res: Response, next: NextFunction) => {
@@ -142,9 +143,15 @@ export function createQuestsModule(app: Express): void {
       const limits = await getGameLimits();
       const user = await prisma.user.findUnique({
         where: { id: req.user!.userId },
-        select: { gold: true },
+        select: { gold: true, vipUntil: true },
       });
-      const goldGain = clampGold(user?.gold ?? 0n, Number(progress.quest.goldReward), BigInt(limits.maxGold));
+      let questXp = Number(progress.quest.xpReward);
+      let questGold = Number(progress.quest.goldReward);
+      if (isVipActive(user)) {
+        questXp = Math.floor(questXp * (1 + VIP_XP_BONUS));
+        questGold = Math.floor(questGold * (1 + VIP_GOLD_BONUS));
+      }
+      const goldGain = clampGold(user?.gold ?? 0n, questGold, BigInt(limits.maxGold));
 
       await prisma.$transaction(async (tx) => {
         await tx.questProgress.update({
@@ -155,7 +162,7 @@ export function createQuestsModule(app: Express): void {
         await tx.user.update({
           where: { id: req.user!.userId },
           data: {
-            experience: { increment: Number(progress.quest.xpReward) },
+            experience: { increment: questXp },
             gold: { increment: goldGain },
           },
         });

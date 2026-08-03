@@ -1,5 +1,5 @@
 import { User } from "../../types";
-import { Menu, MessageSquare, LogOut, ChevronLeft, ChevronRight } from "lucide-react";
+import { Menu, MessageSquare, LogOut, ChevronLeft, ChevronRight, Crown } from "lucide-react";
 
 interface TopBarProps {
   user: User | null;
@@ -23,6 +23,12 @@ export function TopBar({ user, sidebarOpen, onToggleSidebar, onToggleChat, onLog
       {user && (
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 text-sm">
+            {user.vipUntil && new Date(user.vipUntil).getTime() > Date.now() && (
+              <div className="flex items-center gap-1 px-2 py-1 bg-yellow-500/10 border border-yellow-500/30 rounded-md">
+                <Crown size={13} className="text-yellow-400" />
+                <span className="text-yellow-400 text-xs font-bold uppercase">VIP</span>
+              </div>
+            )}
             <div className="flex items-center gap-1 px-2 py-1 bg-yellow-500/10 rounded-md">
               <span className="text-yellow-400 font-mono">{(user.gold ?? 0).toLocaleString()}</span>
               <span className="text-yellow-500">G</span>

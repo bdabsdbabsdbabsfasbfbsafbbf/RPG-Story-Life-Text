@@ -19,6 +19,8 @@ model User {
   level         Int      @default(1)
   gold          BigInt   @default(0)
   diamonds      Int      @default(0)
+  vipUntil      DateTime?
+  vipOwned      Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   lastLoginAt   DateTime @default(now())
@@ -37,6 +39,7 @@ model User {
   userAchievements UserAchievement[] @relation()
   partyMembers  PartyMember[] @relation()
   redeemRedemptions RedeemRedemption[]
+  shopOrders    ShopOrder[] @relation()
 
   @@index([discordId])
   @@index([username])
@@ -117,6 +120,7 @@ model GameClass {
   combatType      String   @default("melee") // melee, ranged, caster
   rankMax         Int      @default(10)
   requiredLevel   Int      @default(1) // nível mínimo do personagem para equipar essa classe
+  requiredVip     Boolean  @default(false) // classe exclusiva para quem já foi/é VIP
   statModelId     String?
   resource        Json     @default("{}") // { manaRegenPerTick?, manaOnHit?, manaOnKill? }
   isStarter       Boolean  @default(false)
@@ -940,4 +944,41 @@ model RedeemRedemption {
   user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@unique([codeId, userId])
   @@index([userId])
+}
+
+model ShopProduct {
+  id            String   @id @default(uuid())
+  slug          String   @unique
+  name          String
+  description   String
+  type          String   @default("diamond_pack") // diamond_pack | vip | pass_premium
+  currency      String   @default("diamond") // diamond | money
+  price         Int      @default(0) // custo em diamantes ou centavos (moeda real)
+  diamondAmount Int      @default(0) // diamantes entregues (diamond_pack)
+  vipDays       Int      @default(0) // dias de VIP entregues (vip)
+  icon          String?
+  isActive      Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  orders        ShopOrder[] @relation()
+
+  @@index([type])
+}
+
+model ShopOrder {
+  id         String       @id @default(uuid())
+  userId     String
+  productId  String?
+  type       String
+  amount     Int          @default(0) // diamantes/dias entregues
+  price      Int          @default(0)
+  currency   String       @default("diamond")
+  status     String       @default("paid") // paid | pending | refunded
+  createdAt  DateTime     @default(now())
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product    ShopProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([productId])
 }

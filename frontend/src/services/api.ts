@@ -110,6 +110,12 @@ export const adminApi = {
   importContent: (data: any) => api.post("/admin/import", data),
 };
 
+export const shopApi = {
+  list: () => api.get("/shop"),
+  purchase: (productId: string) => api.post(`/shop/purchase/${productId}`),
+  orders: () => api.get("/shop/orders"),
+};
+
 export const npcApi = {
   get: (id: string) => api.get(`/npcs/${id}`),
   buy: (id: string, data: { itemId: string; quantity?: number }) =>

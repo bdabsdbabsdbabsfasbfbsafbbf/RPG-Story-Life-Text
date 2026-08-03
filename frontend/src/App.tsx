@@ -16,6 +16,7 @@ import { SettingsPage } from './pages/SettingsPage';
 import { CodexPage } from './pages/CodexPage';
 import { SupportPage } from './pages/SupportPage';
 import { SeasonPage } from './pages/SeasonPage';
+import { ShopPage } from './pages/ShopPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const accessToken = useAuthStore((s) => s.accessToken);
@@ -56,6 +57,7 @@ export default function App() {
         <Route path="codex" element={<CharacterGate><CodexPage /></CharacterGate>} />
         <Route path="support" element={<CharacterGate><SupportPage /></CharacterGate>} />
         <Route path="season" element={<CharacterGate><SeasonPage /></CharacterGate>} />
+        <Route path="shop" element={<CharacterGate><ShopPage /></CharacterGate>} />
       </Route>
     </Routes>
   );

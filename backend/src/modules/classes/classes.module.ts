@@ -229,6 +229,18 @@ export function createClassesModule(app: Express): void {
         return;
       }
 
+      // Classe exclusiva VIP: só quem já comprou VIP (mesmo após expirar) pode usar
+      if (gameClass.requiredVip) {
+        const user = await prisma.user.findUnique({
+          where: { id: req.user!.userId },
+          select: { vipOwned: true },
+        });
+        if (!user?.vipOwned) {
+          res.status(403).json({ error: "Classe exclusiva para VIP" });
+          return;
+        }
+      }
+
       // Upsert CharacterClass progress entry
       await prisma.characterClass.upsert({
         where: {

@@ -14,6 +14,7 @@ import { createCharacterModule } from "./modules/characters/character.module";
 import { createRedeemModule } from "./modules/redeem/redeem.module";
 import { createContentModule } from "./modules/content/content.module";
 import { createSeasonsModule } from "./modules/seasons/seasons.module";
+import { createShopModule } from "./modules/shop/shop.module";
 
 export function registerModules(app: Express): void {
   createAuthModule(app);
@@ -30,5 +31,6 @@ export function registerModules(app: Express): void {
   createRedeemModule(app);
   createContentModule(app);
   createSeasonsModule(app);
+  createShopModule(app);
   createAdminModule(app);
 }

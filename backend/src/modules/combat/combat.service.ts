@@ -7,6 +7,7 @@ import { Battle, TICK_MS } from "../../core/classEngine/battle";
 import { SkillDef, PassiveDef, EffectDef, ActiveEffectRuntime } from "../../core/classEngine/types";
 import { StatsInput } from "../../core/classEngine/stat-calculator";
 import { grantPassXp } from "../seasons/seasons.module";
+import { isVipActive, VIP_XP_BONUS, VIP_GOLD_BONUS } from "../../core/progression";
 
 function parseJson(value: any, fallback: any = null): any {
   if (value === null || value === undefined) return fallback;
@@ -703,8 +704,18 @@ export class CombatService {
 
     // Chefes concedem o dobro de XP/ouro/XP de classe
     const mult = monster.isBoss ? 2 : 1;
-    const xpGain = Math.floor(Number(monster.xpReward || 0)) * mult;
-    const goldGain = Math.floor(Number(monster.goldReward || 0)) * mult;
+    let xpGain = Math.floor(Number(monster.xpReward || 0)) * mult;
+    let goldGain = Math.floor(Number(monster.goldReward || 0)) * mult;
+
+    // VIP ativo: +10% XP e +10% ouro (bônus balanceado)
+    const userForVip = await this.prisma.user.findUnique({
+      where: { id: character.userId },
+      select: { vipUntil: true },
+    });
+    if (isVipActive(userForVip)) {
+      xpGain = Math.floor(xpGain * (1 + VIP_XP_BONUS));
+      goldGain = Math.floor(goldGain * (1 + VIP_GOLD_BONUS));
+    }
 
     const levelResult = await applyCharacterXp(this.prisma, characterId, xpGain, limits);
     const levelUps = levelResult.levelUps;

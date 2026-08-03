@@ -31,7 +31,7 @@ export function InventoryPage() {
   const [listPrice, setListPrice] = useState(0);
   const [listQty, setListQty] = useState(1);
   const { selectedCharacter } = useGameStore();
-  const { setUser } = useAuthStore();
+  const { user, setUser } = useAuthStore();
 
   useEffect(() => {
     classesApi.list()
@@ -176,18 +176,21 @@ export function InventoryPage() {
               .filter((c) => !classes.some((p) => p.gameClass?.id === c.id))
               .map((c) => {
                 const lockedLevel = c.requiredLevel > 1 && (selectedCharacter?.level ?? 0) < c.requiredLevel;
+                const lockedVip = !!c.requiredVip && !(user?.vipOwned ?? false);
+                const locked = lockedLevel || lockedVip;
                 return (
                   <div key={c.id} className="card-hover p-3 flex items-center justify-between gap-3 opacity-70">
                     <div className="min-w-0">
                       <p className="font-medium text-sm truncate flex items-center gap-1.5">
-                        {lockedLevel ? <Lock size={12} className="text-gray-500" /> : null}
+                        {locked ? <Lock size={12} className="text-gray-500" /> : null}
                         {c.name}
+                        {c.requiredVip && <span className="text-[9px] uppercase tracking-wide text-yellow-400 bg-yellow-500/10 border border-yellow-500/30 px-1.5 py-0.5 rounded">VIP</span>}
                       </p>
                       <p className="text-[11px] text-gray-500 capitalize">{c.role}</p>
                     </div>
-                    {lockedLevel ? (
+                    {locked ? (
                       <span className="text-xs text-yellow-500 px-2 py-1 shrink-0 whitespace-nowrap">
-                        Requer Lv.{c.requiredLevel}
+                        {lockedVip ? "Exclusivo VIP" : `Requer Lv.${c.requiredLevel}`}
                       </span>
                     ) : (
                       <button

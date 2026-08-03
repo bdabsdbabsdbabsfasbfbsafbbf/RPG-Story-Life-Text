@@ -1,6 +1,15 @@
 import { Prisma } from "@prisma/client";
 import { GameLimits } from "./gameLimits";
 
+// ===== VIP (bônus balanceados: +10% XP e +10% ouro) =====
+
+export function isVipActive(user: { vipUntil?: Date | null } | null | undefined): boolean {
+  return !!user?.vipUntil && user.vipUntil.getTime() > Date.now();
+}
+
+export const VIP_XP_BONUS = 0.1;
+export const VIP_GOLD_BONUS = 0.1;
+
 // ===== Nível do personagem (limiares lineares vindos das game limits) =====
 
 export function xpToNextLevel(level: number, limits: GameLimits): number {
