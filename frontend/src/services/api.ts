@@ -53,6 +53,10 @@ export const classesApi = {
     api.post(`/characters/${characterId}/class`, { classId }),
 };
 
+export const contentApi = {
+  get: () => api.get("/content"),
+};
+
 export const itemsApi = {
   list: (params?: any) => api.get("/items", { params }),
 };

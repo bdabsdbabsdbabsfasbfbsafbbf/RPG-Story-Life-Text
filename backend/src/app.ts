@@ -12,6 +12,7 @@ import { createEventsModule } from "./modules/events/events.module";
 import { createAdminModule } from "./modules/admin/admin.module";
 import { createCharacterModule } from "./modules/characters/character.module";
 import { createRedeemModule } from "./modules/redeem/redeem.module";
+import { createContentModule } from "./modules/content/content.module";
 
 export function registerModules(app: Express): void {
   createAuthModule(app);
@@ -26,5 +27,6 @@ export function registerModules(app: Express): void {
   createNpcModule(app);
   createEventsModule(app);
   createRedeemModule(app);
+  createContentModule(app);
   createAdminModule(app);
 }

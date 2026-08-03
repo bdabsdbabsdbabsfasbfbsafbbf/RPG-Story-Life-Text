@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { classesApi, itemsApi } from "../services/api";
+import { contentApi } from "../services/api";
 import { BookOpen, Sword, Package } from "lucide-react";
 import type { GameClass, Item } from "../types";
 
@@ -13,10 +13,15 @@ export function CodexPage() {
   const [expanded, setExpanded] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([classesApi.list(), itemsApi.list().catch(() => ({ data: [] }))])
-      .then(([c, i]) => {
-        setClasses(c.data);
-        setItems(i.data);
+    contentApi
+      .get()
+      .then(({ data }) => {
+        setClasses(data.classes ?? []);
+        setItems(data.items ?? []);
+      })
+      .catch(() => {
+        setClasses([]);
+        setItems([]);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -84,7 +89,7 @@ export function CodexPage() {
             <div key={item.id} className="card p-4">
               <div className="flex items-center justify-between mb-1">
                 <h3 className="font-display font-semibold">{item.name}</h3>
-                <span className="text-[11px] px-2 py-0.5 rounded-full bg-green-600/20 text-green-300 capitalize">{item.rarity}</span>
+                <span className={`chip-rarity chip-rarity-${item.rarity}`}>{item.rarity}</span>
               </div>
               <p className="text-xs text-gray-400 line-clamp-3">{item.description}</p>
               <div className="text-xs text-gray-500 mt-2">Tipo: {item.type}</div>

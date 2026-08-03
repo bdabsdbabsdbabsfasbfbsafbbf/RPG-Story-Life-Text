@@ -4,6 +4,7 @@ import { authenticate } from "../../core/middleware/auth";
 import { AppError } from "../../core/middleware/errorHandler";
 import { getGameLimits } from "../../core/gameLimits";
 import { computeStats } from "../../core/classEngine/stat-calculator";
+import { addItemsToInventory, classXpToNextRank, xpToNextLevel } from "../../core/progression";
 
 function parseJson(value: any, fallback: any): any {
   if (!value) return fallback;
@@ -129,26 +130,7 @@ export function createCharacterModule(app: Express): void {
 
         const kit = STARTER_KITS[gameClass.slug];
         if (kit && kit.length > 0) {
-          const items = await tx.item.findMany({
-            where: { name: { in: kit.map((k) => k.itemName) }, isActive: true },
-          });
-          for (const entry of kit) {
-            const item = items.find((i) => i.name.toLowerCase() === entry.itemName.toLowerCase());
-            if (!item) continue;
-            const existing = await tx.inventory.findFirst({
-              where: { userId: req.user!.userId, itemId: item.id, slotIndex: null },
-            });
-            if (existing) {
-              await tx.inventory.update({
-                where: { id: existing.id },
-                data: { quantity: { increment: entry.quantity } },
-              });
-            } else {
-              await tx.inventory.create({
-                data: { userId: req.user!.userId, itemId: item.id, quantity: entry.quantity },
-              });
-            }
-          }
+          await addItemsToInventory(tx, req.user!.userId, kit);
         }
 
         return created;
@@ -176,10 +158,12 @@ export function createCharacterModule(app: Express): void {
       });
       if (!character) return res.json(null);
       const limits = await getGameLimits();
-      const xpToNext = character.level * limits.xpPerLevel;
+      const xpToNext = xpToNextLevel(character.level, limits);
+      const rankXpToNext = classXpToNextRank(character.classProgress?.[0]?.rank ?? 1);
       res.json({
         ...character,
         xpToNext: Number(xpToNext),
+        rankXpToNext: Number(rankXpToNext),
         experience: Number(character.experience),
         atMaxLevel: character.level >= limits.maxLevel,
       });
@@ -210,7 +194,7 @@ export function createCharacterModule(app: Express): void {
 
       if (progress.rank >= maxRank) throw new AppError(400, `Already at max rank (${maxRank})`);
 
-      const xpNeeded = progress.rank * 150;
+      const xpNeeded = classXpToNextRank(progress.rank);
       if (Number(progress.experience) < xpNeeded) {
         throw new AppError(400, `Need ${xpNeeded} class XP to reach rank ${progress.rank + 1}`);
       }
@@ -219,7 +203,7 @@ export function createCharacterModule(app: Express): void {
         where: { id: progress.id },
         data: { rank: { increment: 1 }, experience: { decrement: BigInt(xpNeeded) } },
       });
-      res.json({ rank: updated.rank, experience: Number(updated.experience), xpToNext: updated.rank * 150 });
+      res.json({ rank: updated.rank, experience: Number(updated.experience), xpToNext: classXpToNextRank(updated.rank) });
     } catch (err) {
       next(err);
     }

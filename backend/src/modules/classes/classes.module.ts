@@ -2,6 +2,7 @@ import { Express, Request, Response, NextFunction } from "express";
 import { prisma } from "../../core/database";
 import { authenticate } from "../../core/middleware/auth";
 import { computeStats } from "../../core/classEngine/stat-calculator";
+import { applyClassXp, classXpToNextRank } from "../../core/progression";
 
 function parseJson(value: any, fallback: any = null): any {
   if (value === null || value === undefined) return fallback;
@@ -14,7 +15,7 @@ function parseJson(value: any, fallback: any = null): any {
 }
 
 // Stats de exibição (nível 1) calculados a partir do StatModel da classe.
-function displayStats(gameClass: any): any {
+export function displayStats(gameClass: any): any {
   const statModel = gameClass.statModel || {};
   const stats = computeStats({
     level: 1,
@@ -147,7 +148,11 @@ export function createClassesModule(app: Express): void {
         res.status(403).json({ error: "Not your character" });
         return;
       }
-      res.json({ ...character, class: character.class ? { ...character.class, stats: displayStats(character.class) } : null });
+      res.json({
+        ...character,
+        class: character.class ? { ...character.class, stats: displayStats(character.class) } : null,
+        rankXpToNext: classXpToNextRank(character.classProgress?.[0]?.rank ?? 1),
+      });
     } catch (err) {
       next(err);
     }
@@ -275,24 +280,9 @@ export function createClassesModule(app: Express): void {
         return;
       }
 
-      const { classExpForRank } = require("../../core/utils/experience");
-      let newXp = Number(progress.experience) + xpAmount;
-      let newRank = progress.rank;
+      const result = await applyClassXp(prisma, progress.id, Number(xpAmount) || 0, maxRank);
 
-      while (newRank < maxRank) {
-        const needed = classExpForRank(newRank);
-        if (newXp >= needed) {
-          newXp -= needed;
-          newRank++;
-        } else break;
-      }
-
-      const updated = await prisma.characterClass.update({
-        where: { id: progress.id },
-        data: { experience: BigInt(newXp), rank: newRank },
-      });
-
-      res.json({ rank: updated.rank, experience: Number(updated.experience), didLevelUp: newRank > progress.rank });
+      res.json({ rank: result.rank, experience: result.experience, didLevelUp: result.rankUps > 0 });
     } catch (err) {
       next(err);
     }

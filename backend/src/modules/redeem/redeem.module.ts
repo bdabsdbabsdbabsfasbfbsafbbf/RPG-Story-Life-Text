@@ -2,6 +2,7 @@ import { Express, Request, Response, NextFunction } from "express";
 import { prisma } from "../../core/database";
 import { authenticate } from "../../core/middleware/auth";
 import { AppError } from "../../core/middleware/errorHandler";
+import { addItemsToInventory } from "../../core/progression";
 
 export function createRedeemModule(app: Express): void {
   // Redeem a promo code: gold, diamonds, xp and/or items
@@ -80,22 +81,9 @@ export function createRedeemModule(app: Express): void {
           const name = typeof entry?.itemName === "string" ? entry.itemName : "";
           const quantity = Number(entry?.quantity) || 1;
           if (!name) continue;
-          const item = await tx.item.findFirst({ where: { name, isActive: true } });
-          if (item) {
-            const existing = await tx.inventory.findFirst({
-              where: { userId: req.user!.userId, itemId: item.id, slotIndex: null },
-            });
-            if (existing) {
-              await tx.inventory.update({
-                where: { id: existing.id },
-                data: { quantity: { increment: quantity } },
-              });
-            } else {
-              await tx.inventory.create({
-                data: { userId: req.user!.userId, itemId: item.id, quantity },
-              });
-            }
-            grantedItems.push({ name: item.name, quantity });
+          const granted = await addItemsToInventory(tx, req.user!.userId, [{ itemName: name, quantity }]);
+          if (granted.granted.length > 0) {
+            grantedItems.push(granted.granted[0]);
             continue;
           }
 

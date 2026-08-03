@@ -82,7 +82,7 @@ export function ClassPage() {
 
   const rank = progress?.rank ?? 1;
   const rankXp = progress?.experience ?? 0;
-  const xpToNextRank = rank * 150;
+  const xpToNextRank = (data as any).rankXpToNext ?? rank * 150;
   const maxRank = gameClass.rankMax ?? 10;
   const canRankUp = rank < maxRank && rankXp >= xpToNextRank;
 

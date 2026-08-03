@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import Redis from "ioredis";
 import { CooldownManager } from "./cooldown.manager";
 import { getGameLimits } from "../../core/gameLimits";
+import { applyCharacterXp, clampGold, grantClassXp } from "../../core/progression";
 import { Battle, TICK_MS } from "../../core/classEngine/battle";
 import { SkillDef, PassiveDef, EffectDef, ActiveEffectRuntime } from "../../core/classEngine/types";
 import { StatsInput } from "../../core/classEngine/stat-calculator";
@@ -602,23 +603,8 @@ export class CombatService {
     const xpGain = Math.floor(Number(monster.xpReward || 0));
     const goldGain = Math.floor(Number(monster.goldReward || 0));
 
-    let levelUps = 0;
-    let updatedCharacter = await this.prisma.character.update({
-      where: { id: characterId },
-      data: { experience: { increment: xpGain } },
-      select: { id: true, level: true, experience: true },
-    });
-    while (
-      updatedCharacter.level < limits.maxLevel &&
-      updatedCharacter.experience >= BigInt(updatedCharacter.level * limits.xpPerLevel)
-    ) {
-      updatedCharacter = await this.prisma.character.update({
-        where: { id: characterId },
-        data: { level: { increment: 1 } },
-        select: { id: true, level: true, experience: true },
-      });
-      levelUps++;
-    }
+    const levelResult = await applyCharacterXp(this.prisma, characterId, xpGain, limits);
+    const levelUps = levelResult.levelUps;
 
     await this.prisma.character.update({
       where: { id: characterId },
@@ -627,10 +613,7 @@ export class CombatService {
 
     let classXpGain = 0;
     if (character.classProgress && character.classProgress.length > 0) {
-      await this.prisma.characterClass.update({
-        where: { id: character.classProgress[0].id },
-        data: { experience: { increment: xpGain } },
-      });
+      await grantClassXp(this.prisma, character.classProgress[0].id, xpGain);
       classXpGain = xpGain;
     }
 
@@ -638,10 +621,7 @@ export class CombatService {
       where: { id: character.userId },
     });
     if (user) {
-      const maxGold = BigInt(limits.maxGold);
-      const newGold = user.gold + BigInt(goldGain);
-      const clampedGold = newGold > maxGold ? maxGold : newGold;
-      const actualGoldGain = clampedGold > user.gold ? Number(clampedGold - user.gold) : 0;
+      const actualGoldGain = clampGold(user.gold, goldGain, BigInt(limits.maxGold));
       await this.prisma.user.update({
         where: { id: user.id },
         data: {

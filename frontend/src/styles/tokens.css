@@ -1,0 +1,76 @@
+/* Design tokens — cores canônicas do jogo (raridade, dano, cura). */
+
+:root {
+  --rarity-common: #9ca3af;
+  --rarity-uncommon: #4ade80;
+  --rarity-rare: #60a5fa;
+  --rarity-epic: #c084fc;
+  --rarity-legendary: #fb923c;
+  --rarity-mythic: #f87171;
+  --rarity-artifact: #fbbf24;
+
+  --color-damage: #f87171;
+  --color-heal: #4ade80;
+}
+
+.chip-rarity {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  line-height: 1.4;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  text-transform: capitalize;
+  white-space: nowrap;
+  background: rgba(156, 163, 175, 0.18);
+  color: var(--rarity-common);
+}
+
+.chip-rarity-uncommon {
+  background: rgba(74, 222, 128, 0.18);
+  color: var(--rarity-uncommon);
+}
+
+.chip-rarity-rare {
+  background: rgba(96, 165, 250, 0.18);
+  color: var(--rarity-rare);
+}
+
+.chip-rarity-epic {
+  background: rgba(192, 132, 252, 0.18);
+  color: var(--rarity-epic);
+}
+
+.chip-rarity-legendary {
+  background: rgba(251, 146, 60, 0.18);
+  color: var(--rarity-legendary);
+}
+
+.chip-rarity-mythic {
+  background: rgba(248, 113, 113, 0.18);
+  color: var(--rarity-mythic);
+}
+
+.chip-rarity-artifact {
+  background: rgba(251, 191, 36, 0.18);
+  color: var(--rarity-artifact);
+}
+
+.text-rarity-common { color: var(--rarity-common); }
+.text-rarity-uncommon { color: var(--rarity-uncommon); }
+.text-rarity-rare { color: var(--rarity-rare); }
+.text-rarity-epic { color: var(--rarity-epic); }
+.text-rarity-legendary { color: var(--rarity-legendary); }
+.text-rarity-mythic { color: var(--rarity-mythic); }
+.text-rarity-artifact { color: var(--rarity-artifact); }
+
+.border-rarity-common { border-color: var(--rarity-common); }
+.border-rarity-uncommon { border-color: var(--rarity-uncommon); }
+.border-rarity-rare { border-color: var(--rarity-rare); }
+.border-rarity-epic { border-color: var(--rarity-epic); }
+.border-rarity-legendary { border-color: var(--rarity-legendary); }
+.border-rarity-mythic { border-color: var(--rarity-mythic); }
+.border-rarity-artifact { border-color: var(--rarity-artifact); }
+
+.text-damage { color: var(--color-damage); }
+.text-heal { color: var(--color-heal); }

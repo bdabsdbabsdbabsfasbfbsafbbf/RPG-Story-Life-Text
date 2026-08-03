@@ -8,6 +8,7 @@ import { config } from "../../core/config";
 import { authenticate, AuthPayload } from "../../core/middleware/auth";
 import { AppError } from "../../core/middleware/errorHandler";
 import { getGameLimits } from "../../core/gameLimits";
+import { xpToNextLevel } from "../../core/progression";
 
 const registerSchema = z.object({
   username: z.string().min(3).max(20).regex(/^[a-zA-Z0-9_]+$/),
@@ -127,7 +128,7 @@ export function createAuthModule(app: Express): void {
           characters: characters.map((c: any) => ({
             ...c,
             experience: Number(c.experience),
-            experienceToNext: c.level * limits.xpPerLevel,
+            experienceToNext: xpToNextLevel(c.level, limits),
             atMaxLevel: c.level >= limits.maxLevel,
           })),
         },

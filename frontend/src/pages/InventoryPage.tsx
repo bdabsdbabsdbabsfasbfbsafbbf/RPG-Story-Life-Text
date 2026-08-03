@@ -10,15 +10,6 @@ const rarityOrder: Record<string, number> = {
   common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4, mythic: 5, artifact: 6,
 };
 
-const rarityColors: Record<string, string> = {
-  common: "text-gray-400 border-gray-600",
-  uncommon: "text-green-400 border-green-500/30",
-  rare: "text-blue-400 border-blue-500/30",
-  epic: "text-purple-400 border-purple-500/30",
-  legendary: "text-orange-400 border-orange-500/30",
-  mythic: "text-red-400 border-red-500/30",
-};
-
 interface UnlockedClass {
   id: string;
   rank: number;
@@ -157,7 +148,7 @@ export function InventoryPage() {
           <button
             key={inv.id}
             onClick={() => setSelectedItem(inv)}
-            className={`card-hover text-left relative ${rarityColors[inv.item.rarity] || "border-dark-600"}`}
+            className={`card-hover text-left relative border-rarity-${inv.item.rarity || "common"} border`}
           >
             {inv.isEquipped && (
               <div className="absolute top-2 right-2 px-1.5 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded font-bold">
@@ -176,7 +167,7 @@ export function InventoryPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm truncate">{inv.item.name}</p>
-                <p className={`text-xs capitalize ${rarityColors[inv.item.rarity]?.split(" ")[0] || "text-gray-400"}`}>
+                <p className={`text-xs capitalize text-rarity-${inv.item.rarity || "common"}`}>
                   {inv.item.rarity}
                 </p>
                 <p className="text-xs text-gray-500 capitalize">{inv.item.type} {inv.item.level > 1 ? `• Lv.${inv.item.level}` : ""}</p>
@@ -209,7 +200,7 @@ export function InventoryPage() {
               </div>
               <div className="flex-1">
                 <h3 className="text-lg font-display font-bold">{selectedItem.item.name}</h3>
-                <p className={`text-sm capitalize ${rarityColors[selectedItem.item.rarity]?.split(" ")[0] || "text-gray-400"}`}>
+                <p className={`text-sm capitalize text-rarity-${selectedItem.item.rarity || "common"}`}>
                   {selectedItem.item.rarity} {selectedItem.item.type}
                 </p>
                 <p className="text-sm text-gray-400 mt-1">{selectedItem.item.description}</p>

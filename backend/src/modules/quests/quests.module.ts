@@ -2,6 +2,8 @@ import { Express, Request, Response, NextFunction } from "express";
 import { prisma } from "../../core/database";
 import { authenticate } from "../../core/middleware/auth";
 import { AppError } from "../../core/middleware/errorHandler";
+import { addItemsToInventory, clampGold } from "../../core/progression";
+import { getGameLimits } from "../../core/gameLimits";
 
 export function createQuestsModule(app: Express): void {
   app.get("/api/quests", async (req: Request, res: Response, next: NextFunction) => {
@@ -98,6 +100,13 @@ export function createQuestsModule(app: Express): void {
       if (progress.status !== "completed") throw new AppError(400, "Quest not completed");
       if (progress.claimedAt) throw new AppError(400, "Rewards already claimed");
 
+      const limits = await getGameLimits();
+      const user = await prisma.user.findUnique({
+        where: { id: req.user!.userId },
+        select: { gold: true },
+      });
+      const goldGain = clampGold(user?.gold ?? 0n, Number(progress.quest.goldReward), BigInt(limits.maxGold));
+
       await prisma.$transaction(async (tx) => {
         await tx.questProgress.update({
           where: { id: progress.id },
@@ -108,7 +117,7 @@ export function createQuestsModule(app: Express): void {
           where: { id: req.user!.userId },
           data: {
             experience: { increment: Number(progress.quest.xpReward) },
-            gold: { increment: Number(progress.quest.goldReward) },
+            gold: { increment: goldGain },
           },
         });
 
@@ -119,36 +128,7 @@ export function createQuestsModule(app: Express): void {
         } catch {
           rewards = [];
         }
-        if (Array.isArray(rewards) && rewards.length > 0) {
-          const names = rewards
-            .map((r) => (typeof r?.itemName === "string" ? r.itemName : ""))
-            .filter(Boolean);
-          if (names.length > 0) {
-            const items = await tx.item.findMany({
-              where: { name: { in: names }, isActive: true },
-            });
-            for (const reward of rewards) {
-              const item = items.find(
-                (i) => i.name.toLowerCase() === String(reward.itemName).toLowerCase()
-              );
-              if (!item) continue;
-              const quantity = Math.max(1, Math.floor(Number(reward.quantity) || 1));
-              const existing = await tx.inventory.findFirst({
-                where: { userId: req.user!.userId, itemId: item.id, slotIndex: null },
-              });
-              if (existing) {
-                await tx.inventory.update({
-                  where: { id: existing.id },
-                  data: { quantity: { increment: quantity } },
-                });
-              } else {
-                await tx.inventory.create({
-                  data: { userId: req.user!.userId, itemId: item.id, quantity },
-                });
-              }
-            }
-          }
-        }
+        await addItemsToInventory(tx, req.user!.userId, rewards);
       });
 
       res.json({ message: "Rewards claimed" });
