@@ -1,7 +1,6 @@
 # Proposta de Reprojeto — RPG Story Life
 
-> Documento de análise e proposta. Aguarda aprovação antes de virar plano de trabalho.
-> Contexto: inspirado em AQW (classe como "armadura"), mas original e 100% data-driven.
+> Documento de análise e proposta. **STATUS: Fases 0–5 entregues (commits no main, deploy automático via Railway).**
 
 ---
 
@@ -102,6 +101,20 @@
 | **5 — Sazonal e polimento** | Season/Pass/Tiers com recompensas; onboarding tutorial; admin simulator + presets | Produto "completo" editável |
 
 Cada fase termina com: backend + frontend compilando, `db push` aplicado, commit + push (deploy automático).
+
+### Entrega por fase (commits no `main`)
+
+| Fase | Commit | O que entrou |
+|---|---|---|
+| 0 | `ce18720` | `progression.ts` unificado, `GET /api/content`, tokens de raridade |
+| 1 | `8a1c439` | `CombatSession` persistida + `combat:resume` + floaters/cooldown/glow/log colorido |
+| 2 | `92d3fa1` | Drops por chance (`DropItem`), chefes ×2, quests encadeadas, seed reescrito |
+| 3 | `75792d0` | Unlock de classe por nível (servidor + UI bloqueada no inventário) |
+| 4 | `f04282a` | Venda de drops: quick-sell por ouro + anúncio no mercado (quantidade parcial) |
+| 5 | `a130013` | Season pass (XP em combate/quest, claim de tiers), onboarding tutorial, admin export/import de conteúdo |
+
+- Banco prod: `GameClass.requiredLevel`, `Quest.requiredRank`, `CombatSession`, temporada ativa "Temporada 1" (10 tiers) e classe "Beta Tester" (requer Lv.5) criados via `prisma db push`/scripts.
+- Sessões de combate expiram após 15 min; drops valem gold via `POST /api/market/sell-now`.
 
 ---
 
