@@ -150,4 +150,22 @@ export const adminApi = {
     update: (id: string, data: any) => api.put(`/admin/mapmonsters/${id}`, data),
     delete: (id: string) => api.delete(`/admin/mapmonsters/${id}`),
   },
+  enchantments: {
+    list: () => api.get("/admin/enchantments"),
+    create: (data: any) => api.post("/admin/enchantments", data),
+    update: (id: string, data: any) => api.put(`/admin/enchantments/${id}`, data),
+    delete: (id: string) => api.delete(`/admin/enchantments/${id}`),
+  },
+  shopProducts: {
+    list: () => api.get("/admin/shop-products"),
+    create: (data: any) => api.post("/admin/shop-products", data),
+    update: (id: string, data: any) => api.put(`/admin/shop-products/${id}`, data),
+    delete: (id: string) => api.delete(`/admin/shop-products/${id}`),
+  },
+  patchNotes: {
+    list: () => api.get("/admin/patch-notes"),
+    create: (data: any) => api.post("/admin/patch-notes", data),
+    update: (id: string, data: any) => api.put(`/admin/patch-notes/${id}`, data),
+    delete: (id: string) => api.delete(`/admin/patch-notes/${id}`),
+  },
 };

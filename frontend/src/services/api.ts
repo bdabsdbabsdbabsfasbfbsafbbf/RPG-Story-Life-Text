@@ -55,6 +55,7 @@ export const classesApi = {
 
 export const contentApi = {
   get: () => api.get("/content"),
+  patchNotes: () => api.get("/patch-notes"),
 };
 
 export const itemsApi = {
@@ -130,4 +131,8 @@ export const npcApi = {
   get: (id: string) => api.get(`/npcs/${id}`),
   buy: (id: string, data: { itemId: string; quantity?: number }) =>
     api.post(`/npcs/${id}/buy`, data),
+};
+
+export const raidApi = {
+  status: () => api.get("/raid/status"),
 };

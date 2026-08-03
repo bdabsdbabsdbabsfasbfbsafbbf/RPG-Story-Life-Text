@@ -18,6 +18,9 @@ import {
   Contact,
   ShoppingBag,
   Footprints,
+  Sparkles,
+  ShoppingCart,
+  Newspaper,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -32,6 +35,7 @@ const navItems: NavItem[] = [
   { to: '/classes', icon: <Sword size={18} />, label: 'Classes' },
   { to: '/skills', icon: <Zap size={18} />, label: 'Skills' },
   { to: '/items', icon: <Box size={18} />, label: 'Items' },
+  { to: '/enchantments', icon: <Sparkles size={18} />, label: 'Encantamentos' },
   { to: '/monsters', icon: <Skull size={18} />, label: 'Monsters' },
   { to: '/map-monsters', icon: <Footprints size={18} />, label: 'Map Monsters' },
   { to: '/maps', icon: <Map size={18} />, label: 'Maps' },
@@ -39,6 +43,8 @@ const navItems: NavItem[] = [
   { to: '/effects', icon: <Activity size={18} />, label: 'Effects' },
   { to: '/npcs', icon: <Contact size={18} />, label: 'NPCs' },
   { to: '/shops', icon: <ShoppingBag size={18} />, label: 'Shops' },
+  { to: '/shopProducts', icon: <ShoppingCart size={18} />, label: 'Loja do Game' },
+  { to: '/patchNotes', icon: <Newspaper size={18} />, label: 'Patch Notes' },
   { to: '/statModels', icon: <Gauge size={18} />, label: 'Stat Models' },
   { to: '/users', icon: <Users size={18} />, label: 'Users' },
   { to: '/codes', icon: <Ticket size={18} />, label: 'Redeem Codes' },

@@ -52,4 +52,18 @@ export function createContentModule(app: Express): void {
       next(err);
     }
   });
+
+  // Patch notes ativos (avisos de atualização exibidos no Dashboard)
+  app.get("/api/patch-notes", async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const notes = await prisma.patchNote.findMany({
+        where: { isActive: true },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+      });
+      res.json(notes);
+    } catch (err) {
+      next(err);
+    }
+  });
 }

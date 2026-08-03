@@ -177,9 +177,22 @@ const enchantments = [
 const monsters = [
   { name: "Rato da Floresta", description: "Um roedor feroz que invade acampamentos.", level: 1, hp: 30, mana: 0, attack: 6, defense: 2, magic: 0, magicDefense: 2, speed: 10, xpReward: 20, goldReward: 8, attackSpeed: 2000, drops: [{ item: "Poção de Vida", chance: 30, min: 1, max: 2 }] },
   { name: "Slime Verde", description: "Gosma gelatinosa comum nas florestas.", level: 1, hp: 25, mana: 0, attack: 5, defense: 3, magic: 0, magicDefense: 2, speed: 5, xpReward: 15, goldReward: 5, attackSpeed: 2500, drops: [{ item: "Poção de Mana", chance: 25, min: 1, max: 1 }] },
-  { name: "Lobo Cinzento", description: "Um predador veloz que caça em matilha.", level: 2, hp: 45, mana: 0, attack: 9, defense: 4, magic: 0, magicDefense: 3, speed: 14, xpReward: 35, goldReward: 15, attackSpeed: 1800, drops: [{ item: "Poção de Vida", chance: 40, min: 1, max: 2 }, { item: "Espada de Ferro", chance: 8, min: 1, max: 1 }] },
-  { name: "Goblin Saqueador", description: "Pequeno, covarde e perigoso com sua adaga.", level: 3, hp: 60, mana: 10, attack: 12, defense: 5, magic: 2, magicDefense: 3, speed: 12, xpReward: 60, goldReward: 25, attackSpeed: 1600, drops: [{ item: "Poção de Vida", chance: 30, min: 1, max: 1 }, { item: "Adaga Serrilhada", chance: 10, min: 1, max: 1 }] },
-  { name: "Goblin Bruxo", description: "O chefe goblin que comanda a floresta com magia negra. Derrotá-lo concede recompensas em dobro.", level: 4, hp: 130, mana: 30, attack: 16, defense: 7, magic: 9, magicDefense: 6, speed: 10, xpReward: 200, goldReward: 80, attackSpeed: 1500, isBoss: true, drops: [{ item: "Cajado Arcano", chance: 25, min: 1, max: 1 }, { item: "Poção de Vida", chance: 50, min: 2, max: 3 }] },
+  { name: "Lobo Cinzento", description: "Um predador veloz que caça em matilha.", level: 2, hp: 45, mana: 0, attack: 9, defense: 4, magic: 0, magicDefense: 3, speed: 14, xpReward: 35, goldReward: 15, attackSpeed: 1800, skills: JSON.stringify([{ name: "Mordida Feroz", slug: "mordida-feroz", description: "Uma mordida poderosa que causa dano extra.", kind: "attack", trigger: "active", target: "enemy", cooldown: 5000, manaCost: 0, rankRequired: 1, actions: [{ action: "damage", amount: 12, scaling: [{ stat: "attack", factor: 1.2 }], damageType: "physical" }] }]), drops: [{ item: "Poção de Vida", chance: 40, min: 1, max: 2 }, { item: "Espada de Ferro", chance: 8, min: 1, max: 1 }] },
+  { name: "Goblin Saqueador", description: "Pequeno, covarde e perigoso com sua adaga.", level: 3, hp: 60, mana: 10, attack: 12, defense: 5, magic: 2, magicDefense: 3, speed: 12, xpReward: 60, goldReward: 25, attackSpeed: 1600, skills: JSON.stringify([{ name: "Adaga Envenenada", slug: "adaga-envenenada", description: "Ataca com uma adaga coberta de veneno corrosivo.", kind: "attack", trigger: "active", target: "enemy", cooldown: 6000, manaCost: 5, rankRequired: 1, actions: [{ action: "damage", amount: 10, scaling: [{ stat: "attack", factor: 1 }], damageType: "physical" }, { action: "applyEffect", effect: "veneno-corrosivo", target: "enemy", stacks: 1 }] }]), drops: [{ item: "Poção de Vida", chance: 30, min: 1, max: 1 }, { item: "Adaga Serrilhada", chance: 10, min: 1, max: 1 }] },
+  { name: "Goblin Bruxo", description: "O chefe goblin que comanda a floresta com magia negra. Derrotá-lo concede recompensas em dobro.", level: 4, hp: 130, mana: 30, attack: 16, defense: 7, magic: 9, magicDefense: 6, speed: 10, xpReward: 200, goldReward: 80, attackSpeed: 1500, isBoss: true, skills: JSON.stringify([
+    { name: "Bola de Fogo", slug: "bola-de-fogo-goblin", description: "Lança uma esfera de fogo que queima o alvo.", kind: "attack", trigger: "active", target: "enemy", cooldown: 6000, manaCost: 10, rankRequired: 1, actions: [{ action: "damage", amount: 14, scaling: [{ stat: "magic", factor: 1.1 }], damageType: "magic" }, { action: "applyEffect", effect: "chama-arcana", target: "enemy", stacks: 1 }] },
+    { name: "Fúria Goblin", slug: "furia-goblin", description: "O goblin entra em fúria, aumentando seu ataque.", kind: "buff", trigger: "active", target: "self", cooldown: 12000, manaCost: 10, rankRequired: 1, actions: [{ action: "applyEffect", effect: "furia-do-guerreiro", target: "self", stacks: 1 }] },
+  ]), drops: [{ item: "Cajado Arcano", chance: 25, min: 1, max: 1 }, { item: "Poção de Vida", chance: 50, min: 2, max: 3 }] },
+  { name: "Golem de Pedra", description: "Uma criatura colossal de rocha que guarda a entrada da Caverna do Dragão. Sua pele é quase impenetrável.", level: 8, hp: 400, mana: 20, attack: 28, defense: 18, magic: 4, magicDefense: 12, speed: 6, xpReward: 800, goldReward: 300, attackSpeed: 2000, isElite: true, skills: JSON.stringify([
+    { name: "Esmagamento", slug: "esmagamento", description: "O golem ergue os punhos e esmaga o chão, causando grande dano físico.", kind: "attack", trigger: "active", target: "enemy", cooldown: 7000, manaCost: 0, rankRequired: 1, actions: [{ action: "damage", amount: 30, scaling: [{ stat: "attack", factor: 1.3 }], damageType: "physical" }] },
+    { name: "Pele de Rocha", slug: "pele-de-rocha", description: "O golem endurece a pele, aumentando sua defesa.", kind: "buff", trigger: "active", target: "self", cooldown: 15000, manaCost: 0, rankRequired: 1, actions: [{ action: "applyEffect", effect: "armadura-arcana", target: "self", stacks: 2 }] },
+  ]), drops: [{ item: "Cota de Malha", chance: 20, min: 1, max: 1 }, { item: "Poção de Vida", chance: 60, min: 2, max: 4 }] },
+  { name: "Dragão Sombrio", description: "O temido Dragão Sombrio, senhor da Caverna do Dragão. Derrotá-lo é a maior honra de um aventureiro.", level: 12, hp: 1500, mana: 100, attack: 45, defense: 25, magic: 30, magicDefense: 22, speed: 12, xpReward: 5000, goldReward: 2000, attackSpeed: 1400, isBoss: true, skills: JSON.stringify([
+    { name: "Sopro de Fogo", slug: "sopro-de-fogo", description: "O dragão cospe fogo, causando dano mágico massivo e queimando o alvo.", kind: "attack", trigger: "active", target: "enemy", cooldown: 8000, manaCost: 20, rankRequired: 1, actions: [{ action: "damage", amount: 40, scaling: [{ stat: "magic", factor: 1.2 }], damageType: "magic" }, { action: "applyEffect", effect: "chama-arcana", target: "enemy", stacks: 2 }] },
+    { name: "Garra Sombria", slug: "garra-sombria", description: "Um corte com garras afiadas que faz o alvo sangrar.", kind: "attack", trigger: "active", target: "enemy", cooldown: 5000, manaCost: 10, rankRequired: 1, actions: [{ action: "damage", amount: 30, scaling: [{ stat: "attack", factor: 1.2 }], damageType: "physical" }, { action: "applyEffect", effect: "sangramento", target: "enemy", stacks: 2 }] },
+    { name: "Escamas de Ferro", slug: "escamas-de-ferro", description: "O dragão endurece as escamas, aumentando muito sua defesa.", kind: "buff", trigger: "active", target: "self", cooldown: 18000, manaCost: 15, rankRequired: 1, actions: [{ action: "applyEffect", effect: "armadura-arcana", target: "self", stacks: 3 }] },
+    { name: "Fúria do Dragão", slug: "furia-do-dragao", description: "O dragão se enfurece, aumentando seu ataque.", kind: "buff", trigger: "active", target: "self", cooldown: 25000, manaCost: 20, rankRequired: 1, actions: [{ action: "applyEffect", effect: "furia-do-guerreiro", target: "self", stacks: 3 }] },
+  ]), drops: [{ item: "Machado de Batalha", chance: 30, min: 1, max: 1 }, { item: "Cajado Arcano", chance: 30, min: 1, max: 1 }, { item: "Poção de Vida", chance: 100, min: 3, max: 5 }] },
 ];
 
 const maps = [
@@ -198,6 +211,17 @@ const maps = [
     region: "Reino de Arcádia",
     requiredLevel: 1,
     sortOrder: 2,
+  },
+  {
+    name: "Caverna do Dragão",
+    slug: "caverna-do-dragao",
+    description: "Uma masmorra letal guardada por um Golem de Pedra e dominada pelo Dragão Sombrio. Raid com tentativas limitadas que resetam periodicamente — derrote o boss para ganhar recompensas épicas!",
+    region: "Reino de Arcádia",
+    requiredLevel: 8,
+    type: "raid",
+    raidResetHours: 24,
+    maxRaidAttempts: 3,
+    sortOrder: 3,
   },
 ];
 
@@ -624,6 +648,7 @@ async function seedWorld() {
   for (const [mapSlug, names] of Object.entries({
     "floresta-sombria": ["Rato da Floresta", "Slime Verde", "Lobo Cinzento", "Goblin Saqueador", "Goblin Bruxo"],
     arcadia: ["Rato da Floresta", "Slime Verde"],
+    "caverna-do-dragao": ["Golem de Pedra", "Dragão Sombrio"],
   })) {
     for (const name of names) {
       const existing = await prisma.mapMonster.findFirst({
@@ -815,6 +840,21 @@ async function seedWorld() {
     }
     console.log("  product:", created.slug);
   }
+
+  console.log("Seeding patch notes...");
+  await prisma.patchNote.upsert({
+    where: { id: "patch-notes-v1" },
+    update: {},
+    create: {
+      id: "patch-notes-v1",
+      title: "Atualização 1.0 — Raids e Skills de Monstros",
+      content:
+        "Bem-vindo à Temporada 1!\n• Novo mapa de Raid: Caverna do Dragão (tentativas limitadas com reset diário)\n• Monstros agora usam skills especiais (sopro de fogo, veneno, fúria...)\n• Loja com encantamentos por ouro\n• Sistema de classes reformulado",
+      version: "1.0",
+      isActive: true,
+    },
+  });
+  console.log("  patch note: v1");
 
   const [classes, users] = await Promise.all([
     prisma.gameClass.count(),

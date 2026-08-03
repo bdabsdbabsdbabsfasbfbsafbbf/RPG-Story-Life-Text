@@ -27,7 +27,7 @@ function asActionArray(value: any): any[] {
 
 function parseSkill(s: any): SkillDef {
   return {
-    id: s.id,
+    id: s.id || s.slug || `monster-skill-${Math.random().toString(36).slice(2, 8)}`,
     name: s.name,
     slug: s.slug || s.id,
     description: s.description || "",
@@ -128,6 +128,7 @@ interface ActiveCombat {
   monsterId: string;
   monster: any;
   skills: SkillDef[];
+  monsterSkills: SkillDef[];
   state: "active" | "won" | "lost" | "fled";
   characterHp: number;
   characterMana: number;
@@ -193,6 +194,9 @@ export class CombatService {
     const effects: EffectDef[] = effectRows.map(parseEffect);
 
     const skills: SkillDef[] = (gameClass.skills || []).map(parseSkill);
+    const monsterSkills: SkillDef[] = (parseJson(monster.skills, []) || [])
+      .slice(0, 4)
+      .map(parseSkill);
     const passives: PassiveDef[] = (gameClass.passives || [])
       .filter((p: any) => (p.rankRequired ?? 1) <= rank)
       .map(parsePassive);
@@ -235,6 +239,7 @@ export class CombatService {
       passives,
       effects,
       monster,
+      monsterSkills,
       classResource: parseJson(gameClass.resource, {}),
       onEnd: (state) => {
         const entry = this.activeCombats.get(battle.id);
@@ -245,10 +250,10 @@ export class CombatService {
       },
     });
 
-    return { character, gameClass, monster, rank, skills, battle };
+    return { character, gameClass, monster, rank, skills, monsterSkills, battle };
   }
 
-  private buildEntry(battle: Battle, character: any, monster: any, skills: SkillDef[]): ActiveCombat {
+  private buildEntry(battle: Battle, character: any, monster: any, skills: SkillDef[], monsterSkills: SkillDef[]): ActiveCombat {
     return {
       battle,
       characterId: character.id,
@@ -257,6 +262,7 @@ export class CombatService {
       monsterId: monster.id,
       monster,
       skills,
+      monsterSkills,
       state: "active",
       characterHp: battle.player.hp,
       characterMana: battle.player.mana,
@@ -281,6 +287,7 @@ export class CombatService {
       monsterMaxHp: entry.monster.hp,
       resumed,
       skills: skills.map((s) => serializeSkillForClient(s, battle.getSkillModifiersFor(s.slug))),
+      monsterSkills: entry.monsterSkills.map((s) => serializeSkillForClient(s, null)),
       stats: {
         hp: stats.hp,
         mana: stats.mana,
@@ -354,12 +361,50 @@ export class CombatService {
       }
     }
 
-    const { character, monster, skills, battle } = await this.loadCombatContext(characterId, monsterId);
-    const entry = this.buildEntry(battle, character, monster, skills);
+    // Raid: valida tentativas e consome uma (mapas tipo raid com boss)
+    const raidInfo = await this.consumeRaidAttempt(characterId, monsterId);
+
+    const { character, monster, skills, monsterSkills, battle } = await this.loadCombatContext(characterId, monsterId);
+    const entry = this.buildEntry(battle, character, monster, skills, monsterSkills);
+    if (raidInfo) (entry as any).raidMapId = raidInfo.mapId;
     this.activeCombats.set(battle.id, entry);
     this.persistSession(entry).catch(() => {});
 
     return this.buildStartedPayload(battle, entry, skills, character);
+  }
+
+  // Valida limite de tentativas de raid. Retorna { mapId } quando o monstro pertence a um mapa raid.
+  private async consumeRaidAttempt(characterId: string, monsterId: string): Promise<{ mapId: string } | null> {
+    const link = await this.prisma.mapMonster.findFirst({
+      where: { monsterId, map: { type: "raid", isActive: true } },
+      include: { map: true },
+    });
+    if (!link) return null;
+
+    const map = link.map;
+    const character = await this.prisma.character.findUnique({ where: { id: characterId } });
+    if (!character) throw new Error("Personagem não encontrado");
+
+    const resetMs = (map.raidResetHours || 24) * 60 * 60 * 1000;
+    const lastReset = character.lastRaidResetAt ? new Date(character.lastRaidResetAt).getTime() : 0;
+    const elapsed = Date.now() - lastReset;
+    const expired = elapsed > resetMs;
+    const attemptsUsed = expired ? 0 : (character.raidAttempts ?? 0);
+    const maxAttempts = map.maxRaidAttempts ?? 3;
+
+    if (attemptsUsed >= maxAttempts) {
+      const hoursLeft = Math.ceil((resetMs - elapsed) / (60 * 60 * 1000));
+      throw new Error(`Tentativas de raid esgotadas! Novas tentativas em ${hoursLeft}h.`);
+    }
+
+    await this.prisma.character.update({
+      where: { id: characterId },
+      data: {
+        raidAttempts: attemptsUsed + 1,
+        lastRaidResetAt: expired ? new Date() : character.lastRaidResetAt ?? new Date(),
+      },
+    });
+    return { mapId: map.id };
   }
 
   // Retoma uma batalha salva (após refresh/reconexão). Retorna null se não houver.
@@ -385,9 +430,9 @@ export class CombatService {
       return null;
     }
 
-    const { character, monster, skills, battle } = context;
+    const { character, monster, skills, monsterSkills, battle } = context;
     battle.restoreState(session.battleState as any);
-    const entry = this.buildEntry(battle, character, monster, skills);
+    const entry = this.buildEntry(battle, character, monster, skills, monsterSkills);
     this.activeCombats.set(battle.id, entry);
     this.persistSession(entry).catch(() => {});
 
@@ -741,6 +786,17 @@ export class CombatService {
     }
 
     await this.updateQuestKillProgress(character.userId, monster);
+
+    // Raid: registra clear se o monstro pertence a um mapa raid
+    const raidLink = await this.prisma.mapMonster.findFirst({
+      where: { monsterId: monster.id, map: { type: "raid" } },
+    });
+    if (raidLink) {
+      await this.prisma.character.update({
+        where: { id: characterId },
+        data: { raidClears: { increment: 1 } },
+      });
+    }
 
     // XP para o passe de temporada (1/5 do XP do monstro)
     await grantPassXp(this.prisma, character.userId, Math.floor(xpGain / 5));

@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { mapsApi, npcApi, questsApi } from "../services/api";
+import { mapsApi, npcApi, questsApi, raidApi } from "../services/api";
 import { Map as MapType } from "../types";
 import { getSocket } from "../services/socket";
 import {
   ArrowLeft, Skull, Store, ScrollText, Navigation, Shield, Map as MapIcon,
-  X, ShoppingBag, CheckCircle2, Clock, Gift, Lock,
+  X, ShoppingBag, CheckCircle2, Clock, Gift, Lock, Swords,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -22,15 +22,40 @@ interface QuestProgressEntry {
   status: "active" | "completed" | "claimed";
 }
 
+interface RaidStatusEntry {
+  map: MapType;
+  attemptsUsed: number;
+  maxAttempts: number;
+  resetsInMs: number;
+}
+
+function formatRaidReset(ms: number): string {
+  if (ms <= 0) return "pronto";
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
 export function MapPage() {
   const { slug } = useParams<{ slug: string }>();
   const [map, setMap] = useState<MapType | null>(null);
   const [maps, setMaps] = useState<MapType[]>([]);
+  const [raidStatus, setRaidStatus] = useState<Record<string, RaidStatusEntry>>({});
   const [loading, setLoading] = useState(true);
   const [npc, setNpc] = useState<NpcDetail | null>(null);
   const [npcLoading, setNpcLoading] = useState(false);
   const [questProgress, setQuestProgress] = useState<QuestProgressEntry[]>([]);
   const [buyingItemId, setBuyingItemId] = useState<string | null>(null);
+
+  useEffect(() => {
+    raidApi.status().then(({ data }) => {
+      if (Array.isArray(data)) {
+        const mapById: Record<string, RaidStatusEntry> = {};
+        for (const entry of data) mapById[entry.map.id] = entry;
+        setRaidStatus(mapById);
+      }
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!slug) {
@@ -125,28 +150,48 @@ export function MapPage() {
         </div>
         {maps.length === 0 && <p className="text-gray-500 text-sm">Nenhum mapa disponível.</p>}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {maps.map((m) => (
-            <Link key={m.id} to={`/map/${m.slug}`} className="card-hover block p-5">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <h3 className="font-display font-bold text-lg">{m.name}</h3>
-                  <p className="text-xs text-gray-400 mt-1 line-clamp-2">{m.description}</p>
+          {maps.map((m) => {
+            const raid = raidStatus[m.id];
+            const isRaid = m.type === "raid";
+            return (
+              <Link key={m.id} to={`/map/${m.slug}`} className="card-hover block p-5">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h3 className="font-display font-bold text-lg">{m.name}</h3>
+                    <p className="text-xs text-gray-400 mt-1 line-clamp-2">{m.description}</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    {isRaid && (
+                      <span className="text-[10px] px-2 py-0.5 bg-red-500/15 text-red-400 rounded-md font-bold tracking-wider flex items-center gap-1">
+                        <Swords size={10} /> RAID
+                      </span>
+                    )}
+                    <span className="text-xs px-2 py-1 bg-yellow-500/10 text-yellow-400 rounded-md whitespace-nowrap">Lv.{m.requiredLevel}+</span>
+                  </div>
                 </div>
-                <span className="text-xs px-2 py-1 bg-yellow-500/10 text-yellow-400 rounded-md whitespace-nowrap">Lv.{m.requiredLevel}+</span>
-              </div>
-              <div className="flex items-center gap-3 mt-3 text-xs text-gray-500">
-                <span className="px-2 py-0.5 bg-dark-700 rounded-md capitalize">{m.region}</span>
-                <span className="flex items-center gap-1"><Skull size={12} /> {m.monsters?.length || 0} monstros</span>
-                <span className="flex items-center gap-1"><ScrollText size={12} /> {m.npcs?.length || 0} NPCs</span>
-              </div>
-            </Link>
-          ))}
+                {isRaid && raid && (
+                  <div className="mt-2 flex items-center gap-2 text-xs">
+                    <span className="text-red-400">Tentativas: {raid.attemptsUsed}/{raid.maxAttempts}</span>
+                    <span className="text-gray-500">• Reset em {formatRaidReset(raid.resetsInMs)}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-3 mt-3 text-xs text-gray-500">
+                  <span className="px-2 py-0.5 bg-dark-700 rounded-md capitalize">{m.region}</span>
+                  <span className="flex items-center gap-1"><Skull size={12} /> {m.monsters?.length || 0} monstros</span>
+                  <span className="flex items-center gap-1"><ScrollText size={12} /> {m.npcs?.length || 0} NPCs</span>
+                </div>
+              </Link>
+            );
+          })}
         </div>
       </div>
     );
   }
 
   if (!map) return <div className="text-center py-12 text-gray-400">Map not found</div>;
+
+  const raid = raidStatus[map.id];
+  const isRaid = map.type === "raid";
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -155,7 +200,14 @@ export function MapPage() {
           <ArrowLeft size={20} />
         </Link>
         <div>
-          <h1 className="text-2xl font-display font-bold">{map.name}</h1>
+          <h1 className="text-2xl font-display font-bold flex items-center gap-2">
+            {map.name}
+            {isRaid && (
+              <span className="text-[10px] px-2 py-0.5 bg-red-500/15 text-red-400 rounded-md font-bold tracking-wider flex items-center gap-1">
+                <Swords size={10} /> RAID
+              </span>
+            )}
+          </h1>
           <p className="text-sm text-gray-400">{map.description}</p>
         </div>
         <div className="ml-auto flex items-center gap-2">
@@ -163,6 +215,34 @@ export function MapPage() {
           <span className="text-xs px-2 py-1 bg-yellow-500/10 text-yellow-400 rounded-md">Lv.{map.requiredLevel}+</span>
         </div>
       </div>
+
+      {isRaid && (
+        <div className={`panel p-4 border ${raid && raid.attemptsUsed >= raid.maxAttempts ? "border-red-500/40 bg-red-500/5" : "border-red-500/20 bg-red-500/5"}`}>
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Swords size={18} className="text-red-400" />
+              <p className="font-display font-semibold text-sm">Tentativas de raid</p>
+            </div>
+            {raid ? (
+              <>
+                <span className="text-sm text-red-300 font-mono">
+                  {raid.attemptsUsed} / {raid.maxAttempts} usadas
+                </span>
+                <span className="text-xs text-gray-400">
+                  Reset em <span className="text-purple-300 font-mono">{formatRaidReset(raid.resetsInMs)}</span>
+                </span>
+                {raid.attemptsUsed >= raid.maxAttempts && (
+                  <span className="text-xs px-2 py-1 bg-red-500/20 text-red-300 rounded-md">
+                    Tentativas esgotadas — volte após o reset!
+                  </span>
+                )}
+              </>
+            ) : (
+              <span className="text-xs text-gray-500">Status indisponível</span>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">

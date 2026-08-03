@@ -29,6 +29,7 @@ export interface BattleOptions {
   passives: PassiveDef[];
   effects: EffectDef[];
   monster: any;
+  monsterSkills?: SkillDef[];
   classResource: Record<string, any>;
   onEnd: (state: "won" | "lost") => void;
   syncPlayerEffects: (effects: ActiveEffectRuntime[]) => Promise<void>;
@@ -84,6 +85,8 @@ export class Battle {
   private skillHandlers: EventHandler[] = [];
   private messages: BattleLogLine[] = [];
   private effectsDirty = false;
+  private monsterSkills: SkillDef[];
+  private monsterSkillCooldowns: Map<string, number> = new Map();
 
   private opts: BattleOptions;
 
@@ -98,6 +101,7 @@ export class Battle {
     this.skills = opts.skills;
     this.passives = opts.passives;
     this.effects = opts.effects;
+    this.monsterSkills = opts.monsterSkills || [];
 
     const baseStats = computeStats(opts.statsInput);
     this.player = {
@@ -420,6 +424,35 @@ export class Battle {
   }
 
   // ============ Ataque do monstro ============
+  private monsterSkillReady(skill: SkillDef): boolean {
+    const readyAt = this.monsterSkillCooldowns.get(skill.id);
+    if (!readyAt) return true;
+    return Date.now() >= readyAt;
+  }
+
+  private monsterUseSkill(): boolean {
+    if (this.monsterSkills.length === 0) return false;
+    const ready = this.monsterSkills.filter((s) => this.monsterSkillReady(s));
+    if (ready.length === 0) return false;
+    const skill = ready[Math.floor(Math.random() * ready.length)];
+    const cd = Math.max(1000, Math.floor(skill.cooldown || 2500));
+    this.monsterSkillCooldowns.set(skill.id, Date.now() + cd);
+
+    this.pushMessage(`${this.monster.name} usou ${skill.name}!`);
+    const result = emptyResult();
+    const ctx = this.buildActionContext(this.monster, this.player, result, skill.slug);
+    executeActions(skill.actions, ctx, result);
+    this.collectResult(result, `[${skill.name}]`);
+    if (result.hit) this.fire("onHit", { actor: this.monster, target: this.player, skillId: skill.id });
+    if (result.isCritical) this.fire("onCrit", { actor: this.monster, target: this.player, skillId: skill.id });
+    if (this.player.hp <= 0 && this.state === "active") {
+      this.player.hp = 0;
+      this.state = "lost";
+    }
+    this.effectsDirty = true;
+    return true;
+  }
+
   monsterAttack(): void {
     if (entityHasKind(this.monster, "stun")) return;
     const pStats = this.effectivePlayerStats();
@@ -527,7 +560,9 @@ export class Battle {
     // Ataque do monstro
     if (this.state === "active" && !entityHasKind(this.monster, "stun") && now - this.monster.lastAttackAt >= mStats.attackSpeedMs) {
       this.monster.lastAttackAt = now;
-      this.monsterAttack();
+      if (!this.monsterUseSkill()) {
+        this.monsterAttack();
+      }
     }
 
     // Efeitos: ticks + expiração + perda de stacks
@@ -691,6 +726,7 @@ export class Battle {
         effects: serializeRuntime(this.monster.effects),
       },
       cooldowns: Array.from(this.cooldowns.entries()),
+      monsterSkillCooldowns: Array.from(this.monsterSkillCooldowns.entries()),
       channeling: this.channeling ? { skillId: this.channeling.skill.id, until: this.channeling.until } : null,
       summons: this.summons,
     };
@@ -738,6 +774,11 @@ export class Battle {
     this.cooldowns = new Map(
       Array.isArray(save.cooldowns)
         ? (save.cooldowns as [string, number][]).map(([id, at]) => [id, Number(at)])
+        : []
+    );
+    this.monsterSkillCooldowns = new Map(
+      Array.isArray(save.monsterSkillCooldowns)
+        ? (save.monsterSkillCooldowns as [string, number][]).map(([id, at]) => [id, Number(at)])
         : []
     );
     if (save.channeling) {

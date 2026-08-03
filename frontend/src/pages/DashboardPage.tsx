@@ -1,26 +1,40 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
-import { mapsApi } from "../services/api";
-import { Map as MapType } from "../types";
-import { Sword, Map, Users, ScrollText, TrendingUp, Zap, Shield, Star, UserPlus } from "lucide-react";
+import { contentApi } from "../services/api";
+import { ScrollText, Sword, Trophy, Zap, TrendingUp, Skull } from "lucide-react";
+
+interface PatchNote {
+  id: string;
+  title: string;
+  content: string;
+  version: string | null;
+  isActive: boolean;
+  createdAt: string;
+}
 
 export function DashboardPage() {
   const { user } = useAuthStore();
-  const [maps, setMaps] = useState<MapType[]>([]);
+  const [notes, setNotes] = useState<PatchNote[]>([]);
 
   useEffect(() => {
-    mapsApi.list().then(({ data }) => setMaps(data)).catch(() => {});
+    contentApi.patchNotes().then(({ data }) => setNotes(Array.isArray(data) ? data : [])).catch(() => {});
   }, []);
 
   const hasCharacter = !!user?.characters && user.characters.length > 0;
   const character = hasCharacter ? user!.characters![0] : null;
   const classSlug = character?.class?.slug;
 
-  const statCards = [
-    { label: "Level do personagem", value: character?.level ?? user?.level ?? 1, icon: Star, color: "from-purple-500 to-purple-600" },
-    { label: "Gold", value: (user?.gold ?? 0).toLocaleString(), icon: TrendingUp, color: "from-yellow-500 to-yellow-600" },
-    { label: "Diamonds", value: user?.diamonds || 0, icon: Zap, color: "from-cyan-500 to-cyan-600" },
+  const pvpKills = (character as any)?.pvpKills ?? 0;
+  const gold = Number(user?.gold ?? 0);
+  const diamonds = user?.diamonds ?? 0;
+  const level = character?.level ?? user?.level ?? 1;
+
+  const rankCards = [
+    { label: "Level", value: level.toLocaleString(), icon: Trophy, color: "from-purple-500 to-purple-600" },
+    { label: "Gold", value: gold.toLocaleString(), icon: TrendingUp, color: "from-yellow-500 to-yellow-600" },
+    { label: "Diamantes", value: diamonds.toLocaleString(), icon: Zap, color: "from-cyan-500 to-cyan-600" },
+    { label: "Kills PvP", value: pvpKills.toLocaleString(), icon: Skull, color: "from-red-500 to-orange-500" },
   ];
 
   return (
@@ -41,7 +55,7 @@ export function DashboardPage() {
         <Link to="/character/create" className="card-hover block border-purple-500/40 bg-gradient-to-r from-purple-600/10 to-blue-600/10 p-6">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center shrink-0">
-              <UserPlus size={24} className="text-white" />
+              <Sword size={24} className="text-white" />
             </div>
             <div className="flex-1">
               <h2 className="font-display font-bold text-lg">Crie seu personagem</h2>
@@ -57,7 +71,7 @@ export function DashboardPage() {
       {hasCharacter && character && (
         <div className="panel p-4 border-cyan-500/30 bg-cyan-500/5">
           <div className="flex items-center gap-3">
-            <Shield size={20} className="text-cyan-400" />
+            <Sword size={20} className="text-cyan-400" />
             <div className="flex-1">
               <p className="text-sm text-gray-400">Selected character</p>
               <p className="font-display font-bold">
@@ -93,7 +107,7 @@ export function DashboardPage() {
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {statCards.map((card) => (
+        {rankCards.map((card) => (
           <div key={card.label} className="panel p-4 flex items-center gap-3">
             <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${card.color} flex items-center justify-center`}>
               <card.icon size={20} className="text-white" />
@@ -109,46 +123,45 @@ export function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div>
           <h2 className="text-lg font-display font-semibold mb-3 flex items-center gap-2">
-            <Map size={18} className="text-purple-400" /> Available Maps
+            <ScrollText size={18} className="text-cyan-400" /> Patch Notes
           </h2>
-          <div className="space-y-2">
-            {maps.map((map) => (
-              <Link
-                key={map.id}
-                to={`/map/${map.slug}`}
-                className="card-hover flex items-center justify-between group"
-              >
-                <div>
-                  <p className="font-medium group-hover:text-purple-300 transition-colors">{map.name}</p>
-                  <p className="text-xs text-gray-500">{map.region} • Level {map.requiredLevel}+</p>
+          {notes.length === 0 ? (
+            <div className="panel p-6 text-center">
+              <p className="text-sm text-gray-500">Sem atualizações por enquanto.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {notes.map((note) => (
+                <div key={note.id} className="panel p-4">
+                  <div className="flex items-center justify-between">
+                    <p className="font-display font-semibold text-purple-300">{note.title}</p>
+                    {note.version && (
+                      <span className="text-xs font-mono text-gray-500">v{note.version}</span>
+                    )}
+                  </div>
+                  <pre className="text-xs text-gray-400 whitespace-pre-wrap mt-2 font-sans leading-relaxed">{note.content}</pre>
+                  <p className="text-[10px] text-gray-600 mt-2">
+                    {new Date(note.createdAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                  </p>
                 </div>
-                <div className="text-xs text-gray-500">{map.npcs?.length || 0} NPCs</div>
-              </Link>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div>
           <h2 className="text-lg font-display font-semibold mb-3 flex items-center gap-2">
-            <ScrollText size={18} className="text-cyan-400" /> Quick Actions
+            <Trophy size={18} className="text-purple-400" /> Player Rank
           </h2>
           <div className="grid grid-cols-2 gap-3">
-            {[
-              { to: "/inventory", label: "Inventory", icon: Sword, color: "from-purple-500 to-blue-500" },
-              { to: "/quests", label: "Quests", icon: ScrollText, color: "from-green-500 to-emerald-500" },
-              { to: "/guild", label: "Guild", icon: Users, color: "from-cyan-500 to-teal-500" },
-              { to: "/market", label: "Market", icon: TrendingUp, color: "from-orange-500 to-red-500" },
-            ].map((action) => (
-              <Link
-                key={action.to}
-                to={action.to}
-                className="card-hover flex flex-col items-center justify-center py-6 gap-2"
-              >
-                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${action.color} flex items-center justify-center`}>
-                  <action.icon size={24} className="text-white" />
+            {rankCards.map((card) => (
+              <div key={card.label} className="card-hover flex flex-col items-center justify-center py-6 gap-2">
+                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${card.color} flex items-center justify-center`}>
+                  <card.icon size={24} className="text-white" />
                 </div>
-                <span className="text-sm font-medium">{action.label}</span>
-              </Link>
+                <span className="text-2xl font-bold font-mono">{card.value}</span>
+                <span className="text-sm text-gray-400">{card.label}</span>
+              </div>
             ))}
           </div>
         </div>

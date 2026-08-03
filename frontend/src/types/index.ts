@@ -583,10 +583,13 @@ export interface Map {
   description: string;
   region: string;
   requiredLevel: number;
+  type?: string;
+  raidResetHours?: number | null;
+  maxRaidAttempts?: number | null;
   npcs?: { id: string; npc: { id: string; name: string; type?: string } }[];
   monsters?: {
     id: string;
-    monster: { id: string; name: string; level: number; hp: number; element: string; isBoss?: boolean; isElite?: boolean };
+    monster: { id: string; name: string; level: number; hp: number; element: string; isBoss?: boolean; isElite?: boolean; skills?: string | null };
   }[];
   connections?: { id: string; toMap: { slug: string; name: string }; requiredLevel: number }[];
 }

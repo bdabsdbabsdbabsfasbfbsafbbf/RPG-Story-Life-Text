@@ -231,7 +231,7 @@ export function createAdminModule(app: Express): void {
   // Edit a user's character: level, xp, class, name
   app.put("/api/admin/users/:userId/characters/:charId", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { name, level, experience, classId } = req.body;
+      const { name, level, experience, classId, pvpKills } = req.body;
       const character = await prisma.character.findFirst({
         where: { id: req.params.charId, userId: req.params.userId },
       });
@@ -241,6 +241,7 @@ export function createAdminModule(app: Express): void {
       if (typeof name === "string" && name.trim()) data.name = name.trim().slice(0, 50);
       if (typeof level === "number" && level >= 1) data.level = Math.floor(level);
       if (typeof experience === "number" && experience >= 0) data.experience = BigInt(Math.floor(experience));
+      if (typeof pvpKills === "number" && pvpKills >= 0) data.pvpKills = Math.floor(pvpKills);
       if (typeof classId === "string") {
         const gameClass = await prisma.gameClass.findFirst({ where: { id: classId, isActive: true } });
         if (!gameClass) throw new AppError(404, "Class not found");
@@ -740,6 +741,80 @@ export function createAdminModule(app: Express): void {
 
   app.delete("/api/admin/mapmonsters/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try { await prisma.mapMonster.delete({ where: { id: req.params.id } }); res.json({ message: "Deleted" }); } catch (err) { next(err); }
+  });
+
+  // PatchNotes CRUD (avisos de atualização exibidos no Dashboard)
+  app.get("/api/admin/patch-notes", requireAdmin, async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      res.json(await prisma.patchNote.findMany({ orderBy: { createdAt: "desc" } }));
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/admin/patch-notes", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { title, content, version, isActive } = req.body;
+      if (!title || !content) throw new AppError(400, "title e content são obrigatórios");
+      res.status(201).json(await prisma.patchNote.create({
+        data: { title, content, version: version || null, isActive: isActive !== false },
+      }));
+    } catch (err) { next(err); }
+  });
+
+  app.put("/api/admin/patch-notes/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { title, content, version, isActive } = req.body;
+      res.json(await prisma.patchNote.update({
+        where: { id: req.params.id },
+        data: { title, content, version: version ?? null, isActive },
+      }));
+    } catch (err) { next(err); }
+  });
+
+  app.delete("/api/admin/patch-notes/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try { await prisma.patchNote.delete({ where: { id: req.params.id } }); res.json({ message: "Deleted" }); } catch (err) { next(err); }
+  });
+
+  // ShopProducts CRUD (loja do game: diamond packs, VIP, pass, encantamentos, itens de moeda real)
+  app.get("/api/admin/shop-products", requireAdmin, async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      res.json(await prisma.shopProduct.findMany({
+        include: { enchantment: { select: { id: true, name: true, slug: true } } },
+        orderBy: { sortOrder: "asc" },
+      }));
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/admin/shop-products", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { slug, name, description, type, currency, price, diamondAmount, vipDays, enchantmentId, icon, isActive, sortOrder } = req.body;
+      if (!slug || !name || !type) throw new AppError(400, "slug, name e type são obrigatórios");
+      res.status(201).json(await prisma.shopProduct.create({
+        data: {
+          slug, name, description: description || "", type, currency: currency || "diamond",
+          price: Number(price) || 0, diamondAmount: Number(diamondAmount) || 0,
+          vipDays: Number(vipDays) || 0, enchantmentId: enchantmentId || null,
+          icon: icon || null, isActive: isActive !== false, sortOrder: Number(sortOrder) || 0,
+        },
+      }));
+    } catch (err) { next(err); }
+  });
+
+  app.put("/api/admin/shop-products/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { slug, name, description, type, currency, price, diamondAmount, vipDays, enchantmentId, icon, isActive, sortOrder } = req.body;
+      res.json(await prisma.shopProduct.update({
+        where: { id: req.params.id },
+        data: {
+          slug, name, description, type, currency,
+          price: Number(price), diamondAmount: Number(diamondAmount), vipDays: Number(vipDays),
+          enchantmentId: enchantmentId || null, icon: icon || null, isActive, sortOrder: Number(sortOrder),
+        },
+      }));
+    } catch (err) { next(err); }
+  });
+
+  app.delete("/api/admin/shop-products/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try { await prisma.shopProduct.delete({ where: { id: req.params.id } }); res.json({ message: "Deleted" }); } catch (err) { next(err); }
   });
 
   // Backup de conteúdo: exporta todas as tabelas de conteúdo em JSON (BigInt vira string)
