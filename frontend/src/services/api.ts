@@ -136,3 +136,7 @@ export const npcApi = {
 export const raidApi = {
   status: () => api.get("/raid/status"),
 };
+
+export const leaderboardApi = {
+  list: () => api.get("/leaderboard"),
+};
