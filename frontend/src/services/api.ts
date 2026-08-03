@@ -100,6 +100,16 @@ export const marketApi = {
     api.post("/market/sell-now", data),
 };
 
+export const seasonsApi = {
+  me: () => api.get("/seasons/me"),
+  claim: (tierId: string) => api.post(`/seasons/active/claim/${tierId}`),
+};
+
+export const adminApi = {
+  exportContent: () => api.get("/admin/export"),
+  importContent: (data: any) => api.post("/admin/import", data),
+};
+
 export const npcApi = {
   get: (id: string) => api.get(`/npcs/${id}`),
   buy: (id: string, data: { itemId: string; quantity?: number }) =>

@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useAuthStore } from "../store/authStore";
-import { authApi, redeemApi } from "../services/api";
-import { Settings, User as UserIcon, Mail, Crown, Star, TrendingUp, Zap, Calendar, Ticket } from "lucide-react";
+import { authApi, redeemApi, adminApi } from "../services/api";
+import { Settings, User as UserIcon, Mail, Crown, Star, TrendingUp, Zap, Calendar, Ticket, Download, Upload } from "lucide-react";
 import toast from "react-hot-toast";
 
 export function SettingsPage() {
@@ -11,6 +11,45 @@ export function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [code, setCode] = useState("");
   const [redeeming, setRedeeming] = useState(false);
+  const [adminBusy, setAdminBusy] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const isAdmin = user?.role === "admin" || user?.role === "owner";
+
+  const handleExport = async () => {
+    setAdminBusy(true);
+    try {
+      const { data } = await adminApi.exportContent();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `content-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Backup exportado!");
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Falha ao exportar");
+    } finally {
+      setAdminBusy(false);
+    }
+  };
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAdminBusy(true);
+    try {
+      const payload = JSON.parse(await file.text());
+      const { data } = await adminApi.importContent(payload);
+      const total = Object.values(data.counts || {}).reduce((a: number, b: any) => a + b, 0);
+      toast.success(`Importado: ${total} registros!`);
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Arquivo inválido");
+    } finally {
+      setAdminBusy(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -115,6 +154,26 @@ export function SettingsPage() {
         </div>
         <p className="text-xs text-gray-500">Códigos dão gold, diamantes, XP e itens. Cada código pode ser usado uma vez.</p>
       </form>
+
+      {isAdmin && (
+        <div className="panel p-4 space-y-3">
+          <h2 className="font-display font-semibold flex items-center gap-2">
+            <Crown size={16} className="text-yellow-400" /> Admin — backup de conteúdo
+          </h2>
+          <p className="text-xs text-gray-500">
+            Exporta ou restaura todas as tabelas de conteúdo (classes, itens, monstros, mapas, quests, skills, efeitos, NPCs e drops).
+          </p>
+          <div className="flex gap-3 flex-wrap">
+            <button onClick={handleExport} disabled={adminBusy} className="btn-primary flex items-center gap-1.5 disabled:opacity-50">
+              <Download size={14} /> {adminBusy ? "Processando..." : "Exportar backup"}
+            </button>
+            <button onClick={() => fileRef.current?.click()} disabled={adminBusy} className="btn-secondary flex items-center gap-1.5 disabled:opacity-50">
+              <Upload size={14} /> Importar backup
+            </button>
+            <input ref={fileRef} type="file" accept="application/json" onChange={handleImportFile} className="hidden" />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

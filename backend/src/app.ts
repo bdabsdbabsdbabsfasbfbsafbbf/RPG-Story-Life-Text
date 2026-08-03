@@ -13,6 +13,7 @@ import { createAdminModule } from "./modules/admin/admin.module";
 import { createCharacterModule } from "./modules/characters/character.module";
 import { createRedeemModule } from "./modules/redeem/redeem.module";
 import { createContentModule } from "./modules/content/content.module";
+import { createSeasonsModule } from "./modules/seasons/seasons.module";
 
 export function registerModules(app: Express): void {
   createAuthModule(app);
@@ -28,5 +29,6 @@ export function registerModules(app: Express): void {
   createEventsModule(app);
   createRedeemModule(app);
   createContentModule(app);
+  createSeasonsModule(app);
   createAdminModule(app);
 }

@@ -4,6 +4,7 @@ import { authenticate } from "../../core/middleware/auth";
 import { AppError } from "../../core/middleware/errorHandler";
 import { addItemsToInventory, clampGold } from "../../core/progression";
 import { getGameLimits } from "../../core/gameLimits";
+import { grantPassXp } from "../seasons/seasons.module";
 
 export function createQuestsModule(app: Express): void {
   app.get("/api/quests", async (req: Request, res: Response, next: NextFunction) => {
@@ -167,6 +168,9 @@ export function createQuestsModule(app: Express): void {
           rewards = [];
         }
         await addItemsToInventory(tx, req.user!.userId, rewards);
+
+        // XP para o passe de temporada (1/5 do XP da quest)
+        await grantPassXp(tx, req.user!.userId, Math.floor(Number(progress.quest.xpReward) / 5));
       });
 
       res.json({ message: "Rewards claimed" });

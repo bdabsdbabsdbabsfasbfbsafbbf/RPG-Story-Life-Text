@@ -724,4 +724,79 @@ export function createAdminModule(app: Express): void {
   app.delete("/api/admin/mapmonsters/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try { await prisma.mapMonster.delete({ where: { id: req.params.id } }); res.json({ message: "Deleted" }); } catch (err) { next(err); }
   });
+
+  // Backup de conteúdo: exporta todas as tabelas de conteúdo em JSON (BigInt vira string)
+  const EXPORT_ORDER = ["statModel", "gameClass", "effect", "item", "map", "monster", "npc", "quest", "skill", "passive", "mapNpc", "mapMonster", "shopItem", "dropItem"] as const;
+  const BIGINT_FIELDS: Record<string, string[]> = {
+    item: ["buyPrice", "sellPrice"],
+    monster: ["xpReward", "goldReward"],
+    quest: ["xpReward", "goldReward"],
+    shopItem: ["price"],
+  };
+
+  const jsonSafe = (rows: any[]): any[] =>
+    rows.map((row) => {
+      const out: Record<string, any> = {};
+      for (const [k, v] of Object.entries(row)) {
+        out[k] = typeof v === "bigint" ? { $bigint: v.toString() } : v;
+      }
+      return out;
+    });
+
+  app.get("/api/admin/export", requireAdmin, async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const models: Record<string, any[]> = {};
+      for (const model of EXPORT_ORDER) {
+        models[model] = jsonSafe(await (prisma as any)[model].findMany());
+      }
+      res.json({ version: 1, exportedAt: new Date().toISOString(), models });
+    } catch (err) { next(err); }
+  });
+
+  const restoreBigInt = (model: string, row: any): any => {
+    const out: Record<string, any> = {};
+    for (const [k, v] of Object.entries(row)) {
+      if (v && typeof v === "object" && typeof (v as any).$bigint === "string") {
+        out[k] = BigInt((v as any).$bigint);
+      } else {
+        out[k] = v;
+      }
+    }
+    return out;
+  };
+
+  app.post("/api/admin/import", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { models } = req.body ?? {};
+      if (!models || typeof models !== "object") throw new AppError(400, "Payload de export inválido");
+
+      const counts: Record<string, number> = {};
+      for (const model of EXPORT_ORDER) {
+        const rows = models[model];
+        if (!Array.isArray(rows)) continue;
+        let n = 0;
+        for (const raw of rows) {
+          if (!raw || typeof raw.id !== "string") continue;
+          const data: Record<string, any> = restoreBigInt(model, raw);
+          delete data.id;
+          delete data.createdAt;
+          delete data.updatedAt;
+          await (prisma as any)[model].upsert({
+            where: { id: raw.id },
+            update: data,
+            create: { id: raw.id, ...data },
+          });
+          n++;
+        }
+        if (n > 0) counts[model] = n;
+      }
+      res.json({ message: "Conteúdo importado", counts });
+    } catch (err: any) {
+      if (err?.code === "P2003") {
+        next(new AppError(400, "Falha na importação: referência inválida — importe a versão completa do backup"));
+        return;
+      }
+      next(err);
+    }
+  });
 }

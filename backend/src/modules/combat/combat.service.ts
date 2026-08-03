@@ -6,6 +6,7 @@ import { applyCharacterXp, clampGold, grantClassXp, addItemsToInventory } from "
 import { Battle, TICK_MS } from "../../core/classEngine/battle";
 import { SkillDef, PassiveDef, EffectDef, ActiveEffectRuntime } from "../../core/classEngine/types";
 import { StatsInput } from "../../core/classEngine/stat-calculator";
+import { grantPassXp } from "../seasons/seasons.module";
 
 function parseJson(value: any, fallback: any = null): any {
   if (value === null || value === undefined) return fallback;
@@ -734,6 +735,9 @@ export class CombatService {
     }
 
     await this.updateQuestKillProgress(character.userId, monster);
+
+    // XP para o passe de temporada (1/5 do XP do monstro)
+    await grantPassXp(this.prisma, character.userId, Math.floor(xpGain / 5));
 
     // Drops por chance (DropItem): rola dropChance% e sorteia a quantidade
     const drops: { name: string; quantity: number }[] = [];

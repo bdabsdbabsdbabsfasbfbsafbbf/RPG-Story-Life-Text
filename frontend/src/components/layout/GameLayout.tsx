@@ -7,6 +7,7 @@ import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { ChatPanel } from "./ChatPanel";
 import { CombatHUD } from "../Combat/CombatHUD";
+import { OnboardingModal } from "../OnboardingModal";
 import { useGameStore } from "../../store/gameStore";
 
 export function GameLayout() {
@@ -70,6 +71,7 @@ export function GameLayout() {
       </div>
 
       {combat && combat.state === "active" && <CombatHUD combat={combat} />}
+      {user?.characters && user.characters.length > 0 && <OnboardingModal />}
     </div>
   );
 }
