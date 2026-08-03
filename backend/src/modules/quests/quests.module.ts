@@ -63,6 +63,44 @@ export function createQuestsModule(app: Express): void {
       });
       if (existing) throw new AppError(400, "Quest already accepted or completed");
 
+      // Pré-requisitos: nível, rank e quests anteriores encadeadas
+      const character = await prisma.character.findFirst({
+        where: { userId: req.user!.userId },
+        include: { classProgress: { where: { isActive: true } } },
+      });
+      if (quest.requiredLevel > 1) {
+        const level = character?.level ?? 1;
+        if (level < quest.requiredLevel) {
+          throw new AppError(403, `Requer nível ${quest.requiredLevel} para aceitar esta quest`);
+        }
+      }
+      if (quest.requiredRank > 1) {
+        const rank = character?.classProgress?.[0]?.rank ?? 1;
+        if (rank < quest.requiredRank) {
+          throw new AppError(403, `Requer rank ${quest.requiredRank} na classe para aceitar esta quest`);
+        }
+      }
+      const chainIds: string[] = (() => {
+        try {
+          const parsed = JSON.parse(quest.requiredQuestIds || "[]");
+          return Array.isArray(parsed) ? parsed.filter((q: any) => typeof q === "string") : [];
+        } catch {
+          return [];
+        }
+      })();
+      if (chainIds.length > 0) {
+        const done = await prisma.questProgress.count({
+          where: {
+            userId: req.user!.userId,
+            questId: { in: chainIds },
+            status: { in: ["completed", "claimed"] },
+          },
+        });
+        if (done < chainIds.length) {
+          throw new AppError(403, "Complete as quests anteriores para liberar esta");
+        }
+      }
+
       const progress = await prisma.questProgress.create({
         data: {
           userId: req.user!.userId,

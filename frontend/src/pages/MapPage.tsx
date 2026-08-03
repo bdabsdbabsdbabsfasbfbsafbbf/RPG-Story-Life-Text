@@ -14,7 +14,7 @@ interface NpcDetail {
   name: string;
   type: string;
   shopItems?: { id: string; price: string | number; item: { id: string; name: string; description: string; type: string; rarity: string } }[];
-  quests?: { id: string; title: string; description: string; requiredLevel: number; xpReward: string | number; goldReward: string | number }[];
+  quests?: { id: string; title: string; description: string; requiredLevel: number; requiredRank: number; requiredQuestIds?: string | null; xpReward: string | number; goldReward: string | number }[];
 }
 
 interface QuestProgressEntry {
@@ -309,6 +309,12 @@ export function MapPage() {
                               <span className="text-purple-400">+{Number(q.xpReward)} XP</span> •{" "}
                               <span className="text-yellow-400">+{Number(q.goldReward)} gold</span>
                               {q.requiredLevel > 1 && <> • <span className="text-yellow-500">Lv.{q.requiredLevel}+</span></>}
+                              {q.requiredRank > 1 && <> • <span className="text-orange-400">Rank {q.requiredRank}+</span></>}
+                              {q.requiredQuestIds && (
+                                <span className="flex items-center gap-1 text-sky-400">
+                                  <Lock size={10} /> Cadeia: complete a quest anterior
+                                </span>
+                              )}
                             </p>
                           </div>
                           <div className="shrink-0">

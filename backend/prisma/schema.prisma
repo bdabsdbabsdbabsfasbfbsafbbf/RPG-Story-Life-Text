@@ -558,6 +558,7 @@ model Quest {
   type            String
   difficulty      String
   requiredLevel   Int      @default(1)
+  requiredRank    Int      @default(1)
   giverNpcId      String?
   mapId           String?
   isRepeatable    Boolean  @default(false)

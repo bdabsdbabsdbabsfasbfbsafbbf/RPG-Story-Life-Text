@@ -142,10 +142,11 @@ const items = [
 ];
 
 const monsters = [
-  { name: "Rato da Floresta", description: "Um roedor feroz que invade acampamentos.", level: 1, hp: 30, mana: 0, attack: 6, defense: 2, magic: 0, magicDefense: 2, speed: 10, xpReward: 20, goldReward: 8, attackSpeed: 2000 },
-  { name: "Slime Verde", description: "Gosma gelatinosa comum nas florestas.", level: 1, hp: 25, mana: 0, attack: 5, defense: 3, magic: 0, magicDefense: 2, speed: 5, xpReward: 15, goldReward: 5, attackSpeed: 2500 },
-  { name: "Lobo Cinzento", description: "Um predador veloz que caça em matilha.", level: 2, hp: 45, mana: 0, attack: 9, defense: 4, magic: 0, magicDefense: 3, speed: 14, xpReward: 35, goldReward: 15, attackSpeed: 1800 },
-  { name: "Goblin Saqueador", description: "Pequeno, covarde e perigoso com sua adaga.", level: 3, hp: 60, mana: 10, attack: 12, defense: 5, magic: 2, magicDefense: 3, speed: 12, xpReward: 60, goldReward: 25, attackSpeed: 1600 },
+  { name: "Rato da Floresta", description: "Um roedor feroz que invade acampamentos.", level: 1, hp: 30, mana: 0, attack: 6, defense: 2, magic: 0, magicDefense: 2, speed: 10, xpReward: 20, goldReward: 8, attackSpeed: 2000, drops: [{ item: "Poção de Vida", chance: 30, min: 1, max: 2 }] },
+  { name: "Slime Verde", description: "Gosma gelatinosa comum nas florestas.", level: 1, hp: 25, mana: 0, attack: 5, defense: 3, magic: 0, magicDefense: 2, speed: 5, xpReward: 15, goldReward: 5, attackSpeed: 2500, drops: [{ item: "Poção de Mana", chance: 25, min: 1, max: 1 }] },
+  { name: "Lobo Cinzento", description: "Um predador veloz que caça em matilha.", level: 2, hp: 45, mana: 0, attack: 9, defense: 4, magic: 0, magicDefense: 3, speed: 14, xpReward: 35, goldReward: 15, attackSpeed: 1800, drops: [{ item: "Poção de Vida", chance: 40, min: 1, max: 2 }, { item: "Espada de Ferro", chance: 8, min: 1, max: 1 }] },
+  { name: "Goblin Saqueador", description: "Pequeno, covarde e perigoso com sua adaga.", level: 3, hp: 60, mana: 10, attack: 12, defense: 5, magic: 2, magicDefense: 3, speed: 12, xpReward: 60, goldReward: 25, attackSpeed: 1600, drops: [{ item: "Poção de Vida", chance: 30, min: 1, max: 1 }, { item: "Adaga Serrilhada", chance: 10, min: 1, max: 1 }] },
+  { name: "Goblin Bruxo", description: "O chefe goblin que comanda a floresta com magia negra. Derrotá-lo concede recompensas em dobro.", level: 4, hp: 130, mana: 30, attack: 16, defense: 7, magic: 9, magicDefense: 6, speed: 10, xpReward: 200, goldReward: 80, attackSpeed: 1500, isBoss: true, drops: [{ item: "Cajado Arcano", chance: 25, min: 1, max: 1 }, { item: "Poção de Vida", chance: 50, min: 2, max: 3 }] },
 ];
 
 const maps = [
@@ -221,80 +222,97 @@ const quests = [
     xpReward: 80,
     goldReward: 40,
   },
+  {
+    title: "O Chefe dos Goblins",
+    description: "Um Goblin Bruxo assumiu o controle da floresta. Elimine-o para provar seu valor.",
+    type: "main",
+    difficulty: "hard",
+    requiredLevel: 3,
+    requiredRank: 2,
+    requires: ["Caçada na Floresta"],
+    giverNpc: "Mestre Branko",
+    map: "floresta-sombria",
+    objectives: [{ id: "boss", type: "kill", monsterName: "Goblin Bruxo", amount: 1 }],
+    xpReward: 400,
+    goldReward: 200,
+    itemRewards: [{ itemName: "Cajado Arcano", quantity: 1 }],
+  },
 ];
 
-const buffs = [
-  { name: "Fúria do Guerreiro", description: "Aumenta o ataque.", type: "buff", duration: 15000, maxStacks: 3, statModifiers: '{"attack": 5}' },
-  { name: "Armadura Arcana", description: "Aumenta a defesa.", type: "buff", duration: 20000, maxStacks: 2, statModifiers: '{"defense": 6}' },
-  { name: "Passo das Sombras", description: "Aumenta a esquiva.", type: "buff", duration: 12000, maxStacks: 2, statModifiers: '{"dodge": 10}' },
-  { name: "Foco Arcano", description: "Aumenta a recuperação de mana.", type: "buff", duration: 20000, maxStacks: 3, statModifiers: '{"manaRecovery": 5}' },
-  { name: "Bênção da Luz", description: "Regenera vida ao longo do tempo.", type: "hot", duration: 15000, tickInterval: 3000, tickEffect: "heal", statModifiers: '{"regen": 8}' },
-  { name: "Sangramento", description: "Causa dano ao longo do tempo.", type: "dot", duration: 10000, tickInterval: 2000, tickEffect: "damage", maxStacks: 3, statModifiers: '{"damagePerTick": 4}' },
-  { name: "Chama Arcana", description: "Queima o alvo com fogo arcano.", type: "dot", duration: 12000, tickInterval: 2000, tickEffect: "damage", maxStacks: 4, statModifiers: '{"damagePerTick": 5}' },
-  { name: "Veneno Corrosivo", description: "Veneno que corrói o alvo lentamente.", type: "dot", duration: 12000, tickInterval: 2000, tickEffect: "damage", maxStacks: 5, statModifiers: '{"damagePerTick": 3}' },
+// Efeitos (buff/debuff/hot/dot) — referenciados por slug nas ações das skills
+const effects = [
+  { name: "Fúria do Guerreiro", slug: "furia-do-guerreiro", description: "Aumenta o ataque.", kind: "buff", category: "stat", duration: 15000, maxStacks: 3, refreshBehavior: "stack", statModifiers: { flat: { attack: 5 } } },
+  { name: "Armadura Arcana", slug: "armadura-arcana", description: "Aumenta a defesa.", kind: "buff", category: "stat", duration: 20000, maxStacks: 2, refreshBehavior: "stack", statModifiers: { flat: { defense: 6 } } },
+  { name: "Passo das Sombras", slug: "passo-das-sombras", description: "Aumenta a esquiva.", kind: "buff", category: "stat", duration: 12000, maxStacks: 2, refreshBehavior: "stack", statModifiers: { flat: { dodge: 10 } } },
+  { name: "Foco Arcano", slug: "foco-arcano", description: "Aumenta a recuperação de mana.", kind: "buff", category: "stat", duration: 20000, maxStacks: 3, refreshBehavior: "stack", statModifiers: { flat: { manaRegenPerTick: 5 } } },
+  { name: "Bênção da Luz", slug: "bencao-da-luz", description: "Regenera vida ao longo do tempo.", kind: "hot", category: "healing", duration: 15000, tickInterval: 3000, tickHealing: { base: 12, scaling: [{ stat: "magic", factor: 0.6 }] } },
+  { name: "Sangramento", slug: "sangramento", description: "Causa dano ao longo do tempo.", kind: "dot", category: "damage", duration: 10000, tickInterval: 2000, tickDamage: { base: 6, scaling: [{ stat: "attack", factor: 0.4 }], damageType: "physical" }, maxStacks: 3, refreshBehavior: "stack" },
+  { name: "Chama Arcana", slug: "chama-arcana", description: "Queima o alvo com fogo arcano.", kind: "dot", category: "damage", duration: 12000, tickInterval: 2000, tickDamage: { base: 7, scaling: [{ stat: "magic", factor: 0.5 }], damageType: "magic" }, maxStacks: 4, refreshBehavior: "stack" },
+  { name: "Veneno Corrosivo", slug: "veneno-corrosivo", description: "Veneno que corrói o alvo lentamente.", kind: "dot", category: "damage", duration: 12000, tickInterval: 2000, tickDamage: { base: 5, scaling: [{ stat: "attack", factor: 0.3 }], damageType: "physical" }, maxStacks: 5, refreshBehavior: "stack" },
 ];
 
 // Skill kit por classe: 1 auto + 3 ativas + 1 ultimate (rankRequired), 3 passivas em `passives`.
 // Ranks: auto=1, skill1=1, skill2=3, skill3=5, ultimate=8 | passivas: 1/4/7
+// Ações: { action: "damage"|"heal"|"applyEffect"|"mana"|..., ...params } — DSL do motor de batalha.
 const classSkills = [
   {
     class: "cavaleiro",
     skills: [
-      { name: "Ataque do Cavaleiro", description: "Golpeia o inimigo com a espada. Usado automaticamente.", type: "auto", subType: "melee", cooldown: 2000, manaCost: 0, range: 5, targetType: "enemy", baseDamage: 8, damageType: "physical", damageScaling: '{"attack": 1.0}', rankRequired: 1, sortOrder: 1 },
-      { name: "Golpe de Escudo", description: "Golpeia o inimigo com o escudo, causando dano físico.", type: "active", subType: "melee", cooldown: 3000, manaCost: 8, range: 5, targetType: "enemy", baseDamage: 12, damageType: "physical", damageScaling: '{"attack": 0.8}', buffsApplied: ["Armadura Arcana"], rankRequired: 1, sortOrder: 2 },
-      { name: "Postura Defensiva", description: "Ergue uma barreira arcana que aumenta sua defesa.", type: "active", subType: "buff", cooldown: 10000, manaCost: 10, range: 0, targetType: "self", baseDamage: 0, damageType: "physical", buffsApplied: ["Armadura Arcana"], rankRequired: 3, sortOrder: 3 },
-      { name: "Grito de Guerra", description: "Berro de batalha que aumenta seu ataque.", type: "active", subType: "buff", cooldown: 15000, manaCost: 12, range: 0, targetType: "self", baseDamage: 0, damageType: "physical", buffsApplied: ["Fúria do Guerreiro"], rankRequired: 5, sortOrder: 4 },
-      { name: "Juízo Final", description: "Um golpe devastador que abala a terra.", type: "ultimate", subType: "melee", cooldown: 30000, manaCost: 25, range: 5, targetType: "enemy", baseDamage: 40, damageType: "physical", damageScaling: '{"attack": 1.5}', rankRequired: 8, sortOrder: 5 },
+      { name: "Ataque do Cavaleiro", slug: "ataque-do-cavaleiro", description: "Golpeia o inimigo com a espada. Usado automaticamente.", kind: "attack", trigger: "auto", target: "enemy", cooldown: 2000, manaCost: 0, rankRequired: 1, sortOrder: 1, actions: [{ action: "damage", amount: 6, scaling: [{ stat: "attack", factor: 1 }], damageType: "physical" }] },
+      { name: "Golpe de Escudo", slug: "golpe-de-escudo", description: "Golpeia o inimigo com o escudo, causando dano físico e erguendo uma barreira.", kind: "attack", trigger: "active", target: "enemy", cooldown: 3000, manaCost: 8, rankRequired: 1, sortOrder: 2, actions: [{ action: "damage", amount: 10, scaling: [{ stat: "attack", factor: 0.8 }], damageType: "physical" }, { action: "applyEffect", effect: "armadura-arcana", target: "self", stacks: 1 }] },
+      { name: "Postura Defensiva", slug: "postura-defensiva", description: "Ergue uma barreira arcana que aumenta sua defesa.", kind: "buff", trigger: "active", target: "self", cooldown: 10000, manaCost: 10, rankRequired: 3, sortOrder: 3, actions: [{ action: "applyEffect", effect: "armadura-arcana", target: "self", stacks: 2 }] },
+      { name: "Grito de Guerra", slug: "grito-de-guerra", description: "Berro de batalha que aumenta seu ataque.", kind: "buff", trigger: "active", target: "self", cooldown: 15000, manaCost: 12, rankRequired: 5, sortOrder: 4, actions: [{ action: "applyEffect", effect: "furia-do-guerreiro", target: "self", stacks: 2 }] },
+      { name: "Juízo Final", slug: "juizo-final", description: "Um golpe devastador que abala a terra.", kind: "attack", trigger: "ultimate", target: "enemy", cooldown: 30000, manaCost: 25, rankRequired: 8, sortOrder: 5, actions: [{ action: "damage", amount: 40, scaling: [{ stat: "attack", factor: 1.5 }], damageType: "physical" }] },
     ],
     passives: [
-      { name: "Bastião", description: "Vida máxima +10% e defesa +5.", rankRequired: 1, statModifiers: '{"maxHpPercent": 10, "defense": 5}', effectType: "stat" },
-      { name: "Muralha de Ferro", description: "Defesa +8 e resistência mágica +5.", rankRequired: 4, statModifiers: '{"defense": 8, "magicDefense": 5}', effectType: "stat" },
-      { name: "Espírito Inabalável", description: "Vida máxima +8% e recupera 1% da vida por rodada.", rankRequired: 7, statModifiers: '{"maxHpPercent": 8, "regenPercent": 1}', effectType: "stat" },
+      { name: "Bastião", slug: "bastiao", description: "Vida máxima +10% e defesa +5.", rankRequired: 1, sortOrder: 1, statModifiers: { percent: { hp: 10 }, flat: { defense: 5 } } },
+      { name: "Muralha de Ferro", slug: "muralha-de-ferro", description: "Defesa +8 e resistência mágica +5.", rankRequired: 4, sortOrder: 2, statModifiers: { flat: { defense: 8, magicDefense: 5 } } },
+      { name: "Espírito Inabalável", slug: "espirito-inabalavel", description: "Vida máxima +8% e recupera vida por rodada.", rankRequired: 7, sortOrder: 3, statModifiers: { percent: { hp: 8, healthRegenPerTick: 1 } } },
     ],
   },
   {
     class: "mago",
     skills: [
-      { name: "Rajada Arcana", description: "Dispara um projétil de mana. Usado automaticamente.", type: "auto", subType: "spell", cooldown: 2000, manaCost: 0, range: 8, targetType: "enemy", baseDamage: 10, damageType: "magic", damageScaling: '{"magic": 0.9}', rankRequired: 1, sortOrder: 1 },
-      { name: "Bola de Fogo", description: "Lança uma esfera de fogo que causa dano mágico e queima o alvo.", type: "active", subType: "spell", cooldown: 4000, manaCost: 15, range: 8, targetType: "enemy", baseDamage: 18, damageType: "magic", damageScaling: '{"magic": 1.2}', buffsApplied: ["Chama Arcana"], rankRequired: 1, sortOrder: 2 },
-      { name: "Foco Arcano", description: "Concentra energia arcana, aumentando a recuperação de mana.", type: "active", subType: "buff", cooldown: 12000, manaCost: 10, range: 0, targetType: "self", baseDamage: 0, damageType: "magic", buffsApplied: ["Foco Arcano"], rankRequired: 3, sortOrder: 3 },
-      { name: "Raio Arcano", description: "Um raio de energia pura que queima o alvo.", type: "active", subType: "spell", cooldown: 9000, manaCost: 20, range: 9, targetType: "enemy", baseDamage: 24, damageType: "magic", damageScaling: '{"magic": 1.5}', buffsApplied: ["Chama Arcana"], rankRequired: 5, sortOrder: 4 },
-      { name: "Meteoro", description: "Invoca um meteoro que esmaga os inimigos.", type: "ultimate", subType: "aoe", cooldown: 30000, manaCost: 30, range: 10, targetType: "area", baseDamage: 50, damageType: "magic", damageScaling: '{"magic": 1.8}', rankRequired: 8, sortOrder: 5 },
+      { name: "Rajada Arcana", slug: "rajada-arcana", description: "Dispara um projétil de mana. Usado automaticamente.", kind: "attack", trigger: "auto", target: "enemy", cooldown: 2000, manaCost: 0, rankRequired: 1, sortOrder: 1, actions: [{ action: "damage", amount: 8, scaling: [{ stat: "magic", factor: 0.9 }], damageType: "magic" }] },
+      { name: "Bola de Fogo", slug: "bola-de-fogo", description: "Lança uma esfera de fogo que causa dano mágico e queima o alvo.", kind: "attack", trigger: "active", target: "enemy", cooldown: 4000, manaCost: 15, rankRequired: 1, sortOrder: 2, actions: [{ action: "damage", amount: 16, scaling: [{ stat: "magic", factor: 1.2 }], damageType: "magic" }, { action: "applyEffect", effect: "chama-arcana", target: "enemy", stacks: 1 }] },
+      { name: "Foco Arcano", slug: "foco-arcano", description: "Concentra energia arcana, aumentando a recuperação de mana.", kind: "buff", trigger: "active", target: "self", cooldown: 12000, manaCost: 10, rankRequired: 3, sortOrder: 3, actions: [{ action: "applyEffect", effect: "foco-arcano", target: "self", stacks: 2 }] },
+      { name: "Raio Arcano", slug: "raio-arcano", description: "Um raio de energia pura que queima o alvo.", kind: "attack", trigger: "active", target: "enemy", cooldown: 9000, manaCost: 20, rankRequired: 5, sortOrder: 4, actions: [{ action: "damage", amount: 22, scaling: [{ stat: "magic", factor: 1.5 }], damageType: "magic" }, { action: "applyEffect", effect: "chama-arcana", target: "enemy", stacks: 1 }] },
+      { name: "Meteoro", slug: "meteoro", description: "Invoca um meteoro que esmaga os inimigos.", kind: "attack", trigger: "ultimate", target: "enemy", cooldown: 30000, manaCost: 30, rankRequired: 8, sortOrder: 5, actions: [{ action: "damage", amount: 50, scaling: [{ stat: "magic", factor: 1.8 }], damageType: "magic" }] },
     ],
     passives: [
-      { name: "Chama Interior", description: "Poder mágico +8.", rankRequired: 1, statModifiers: '{"magic": 8}', effectType: "stat" },
-      { name: "Fluxo Arcano", description: "Recuperação de mana +5 e poder mágico +4.", rankRequired: 4, statModifiers: '{"manaRecovery": 5, "magic": 4}', effectType: "stat" },
-      { name: "Dominância Elemental", description: "Dano mágico +12% e redução de custo de mana 10%.", rankRequired: 7, statModifiers: '{"magicDamagePercent": 12, "manaCostReduction": 10}', effectType: "stat" },
+      { name: "Chama Interior", slug: "chama-interior", description: "Poder mágico +8.", rankRequired: 1, sortOrder: 1, statModifiers: { flat: { magic: 8 } } },
+      { name: "Fluxo Arcano", slug: "fluxo-arcano", description: "Recuperação de mana +5 e poder mágico +4.", rankRequired: 4, sortOrder: 2, statModifiers: { flat: { manaRegenPerTick: 5, magic: 4 } } },
+      { name: "Dominância Elemental", slug: "dominancia-elemental", description: "Dano mágico +12% e redução de custo de mana 10%.", rankRequired: 7, sortOrder: 3, statModifiers: { percent: { magicDamagePercent: 12, manaCostReduction: 10 } } },
     ],
   },
   {
     class: "assassino",
     skills: [
-      { name: "Corte Rápido", description: "Um corte veloz com as lâminas. Usado automaticamente.", type: "auto", subType: "melee", cooldown: 2000, manaCost: 0, range: 5, targetType: "enemy", baseDamage: 9, damageType: "physical", damageScaling: '{"attack": 1.0}', rankRequired: 1, sortOrder: 1 },
-      { name: "Golpe Sombrio", description: "Um ataque rápido vindo das sombras que causa sangramento.", type: "active", subType: "melee", cooldown: 3500, manaCost: 10, range: 5, targetType: "enemy", baseDamage: 14, damageType: "physical", damageScaling: '{"attack": 1.1}', buffsApplied: ["Sangramento"], rankRequired: 1, sortOrder: 2 },
-      { name: "Passo Sombrio", description: "Desliza entre as sombras, aumentando sua esquiva.", type: "active", subType: "buff", cooldown: 12000, manaCost: 8, range: 0, targetType: "self", baseDamage: 0, damageType: "physical", buffsApplied: ["Passo das Sombras"], rankRequired: 3, sortOrder: 3 },
-      { name: "Lâmina Envenenada", description: "Envenena as lâminas e fere o alvo com veneno corrosivo.", type: "active", subType: "melee", cooldown: 8000, manaCost: 14, range: 5, targetType: "enemy", baseDamage: 18, damageType: "physical", damageScaling: '{"attack": 1.3}', buffsApplied: ["Veneno Corrosivo"], rankRequired: 5, sortOrder: 4 },
-      { name: "Execução", description: "Um golpe mortal que termina inimigos feridos.", type: "ultimate", subType: "melee", cooldown: 25000, manaCost: 20, range: 5, targetType: "enemy", baseDamage: 45, damageType: "physical", damageScaling: '{"attack": 1.6}', rankRequired: 8, sortOrder: 5 },
+      { name: "Corte Rápido", slug: "corte-rapido", description: "Um corte veloz com as lâminas. Usado automaticamente.", kind: "attack", trigger: "auto", target: "enemy", cooldown: 2000, manaCost: 0, rankRequired: 1, sortOrder: 1, actions: [{ action: "damage", amount: 7, scaling: [{ stat: "attack", factor: 1 }], damageType: "physical" }] },
+      { name: "Golpe Sombrio", slug: "golpe-sombrio", description: "Um ataque rápido vindo das sombras que causa sangramento.", kind: "attack", trigger: "active", target: "enemy", cooldown: 3500, manaCost: 10, rankRequired: 1, sortOrder: 2, actions: [{ action: "damage", amount: 12, scaling: [{ stat: "attack", factor: 1.1 }], damageType: "physical" }, { action: "applyEffect", effect: "sangramento", target: "enemy", stacks: 1 }] },
+      { name: "Passo Sombrio", slug: "passo-sombrio", description: "Desliza entre as sombras, aumentando sua esquiva.", kind: "buff", trigger: "active", target: "self", cooldown: 12000, manaCost: 8, rankRequired: 3, sortOrder: 3, actions: [{ action: "applyEffect", effect: "passo-das-sombras", target: "self", stacks: 2 }] },
+      { name: "Lâmina Envenenada", slug: "lamina-envenenada", description: "Envenena as lâminas e fere o alvo com veneno corrosivo.", kind: "attack", trigger: "active", target: "enemy", cooldown: 8000, manaCost: 14, rankRequired: 5, sortOrder: 4, actions: [{ action: "damage", amount: 15, scaling: [{ stat: "attack", factor: 1.3 }], damageType: "physical" }, { action: "applyEffect", effect: "veneno-corrosivo", target: "enemy", stacks: 1 }] },
+      { name: "Execução", slug: "execucao", description: "Um golpe mortal que termina inimigos feridos.", kind: "attack", trigger: "ultimate", target: "enemy", cooldown: 25000, manaCost: 20, rankRequired: 8, sortOrder: 5, actions: [{ action: "damage", amount: 45, scaling: [{ stat: "attack", factor: 1.6 }], damageType: "physical" }] },
     ],
     passives: [
-      { name: "Sangue Frio", description: "Chance de crítico +5%.", rankRequired: 1, statModifiers: '{"critChance": 5}', effectType: "stat" },
-      { name: "Sombra da Morte", description: "Dano crítico +15% e chance de crítico +3%.", rankRequired: 4, statModifiers: '{"critDamage": 15, "critChance": 3}', effectType: "stat" },
-      { name: "Veneno Lento", description: "Dano dos seus efeitos de dano contínuo +20%.", rankRequired: 7, statModifiers: '{"dotDamagePercent": 20}', effectType: "stat" },
+      { name: "Sangue Frio", slug: "sangue-frio", description: "Chance de crítico +5%.", rankRequired: 1, sortOrder: 1, statModifiers: { flat: { critChance: 5 } } },
+      { name: "Sombra da Morte", slug: "sombra-da-morte", description: "Dano crítico +15% e chance de crítico +3%.", rankRequired: 4, sortOrder: 2, statModifiers: { flat: { critDamage: 15, critChance: 3 } } },
+      { name: "Veneno Lento", slug: "veneno-lento", description: "Dano dos seus efeitos de dano contínuo +20%.", rankRequired: 7, sortOrder: 3, statModifiers: { percent: { dotPercent: 20 } } },
     ],
   },
   {
     class: "suporte",
     skills: [
-      { name: "Luz Sagrada", description: "Dispara um feixe de luz que fere o inimigo. Usado automaticamente.", type: "auto", subType: "spell", cooldown: 2000, manaCost: 0, range: 8, targetType: "enemy", baseDamage: 7, damageType: "magic", damageScaling: '{"magic": 0.7}', rankRequired: 1, sortOrder: 1 },
-      { name: "Toque Curativo", description: "Cura o aliado alvo com luz divina.", type: "active", subType: "heal", cooldown: 4000, manaCost: 12, range: 8, targetType: "ally", baseDamage: 0, healingBase: 25, damageType: "magic", damageScaling: '{"magic": 0.9}', rankRequired: 1, sortOrder: 2 },
-      { name: "Palavra de Poder", description: "Encanta um aliado, aumentando seu ataque.", type: "active", subType: "buff", cooldown: 10000, manaCost: 10, range: 8, targetType: "ally", baseDamage: 0, damageType: "magic", buffsApplied: ["Fúria do Guerreiro"], rankRequired: 3, sortOrder: 3 },
-      { name: "Bênção da Luz", description: "Abençoa o aliado, regenerando vida ao longo do tempo.", type: "active", subType: "hot", cooldown: 15000, manaCost: 15, range: 8, targetType: "ally", baseDamage: 0, damageType: "magic", buffsApplied: ["Bênção da Luz"], rankRequired: 5, sortOrder: 4 },
-      { name: "Milagre", description: "Uma cura massiva que restaura grande parte da vida.", type: "ultimate", subType: "heal", cooldown: 30000, manaCost: 30, range: 10, targetType: "area", baseDamage: 0, healingBase: 80, damageType: "magic", damageScaling: '{"magic": 1.5}', rankRequired: 8, sortOrder: 5 },
+      { name: "Luz Sagrada", slug: "luz-sagrada", description: "Dispara um feixe de luz que fere o inimigo. Usado automaticamente.", kind: "attack", trigger: "auto", target: "enemy", cooldown: 2000, manaCost: 0, rankRequired: 1, sortOrder: 1, actions: [{ action: "damage", amount: 7, scaling: [{ stat: "magic", factor: 0.7 }], damageType: "magic" }] },
+      { name: "Toque Curativo", slug: "toque-curativo", description: "Cura com luz divina.", kind: "heal", trigger: "active", target: "self", cooldown: 4000, manaCost: 12, rankRequired: 1, sortOrder: 2, actions: [{ action: "heal", amount: 25, scaling: [{ stat: "magic", factor: 0.9 }] }] },
+      { name: "Palavra de Poder", slug: "palavra-de-poder", description: "Encanta a si mesmo, aumentando seu ataque.", kind: "buff", trigger: "active", target: "self", cooldown: 10000, manaCost: 10, rankRequired: 3, sortOrder: 3, actions: [{ action: "applyEffect", effect: "furia-do-guerreiro", target: "self", stacks: 2 }] },
+      { name: "Bênção da Luz", slug: "bencao-da-luz", description: "Abençoa a si mesmo, regenerando vida ao longo do tempo.", kind: "buff", trigger: "active", target: "self", cooldown: 15000, manaCost: 15, rankRequired: 5, sortOrder: 4, actions: [{ action: "applyEffect", effect: "bencao-da-luz", target: "self", stacks: 1 }] },
+      { name: "Milagre", slug: "milagre", description: "Uma cura massiva que restaura grande parte da vida.", kind: "heal", trigger: "ultimate", target: "self", cooldown: 30000, manaCost: 30, rankRequired: 8, sortOrder: 5, actions: [{ action: "heal", amount: 80, scaling: [{ stat: "magic", factor: 1.5 }] }] },
     ],
     passives: [
-      { name: "Piedade", description: "Poder de cura +10%.", rankRequired: 1, statModifiers: '{"healingPowerPercent": 10}', effectType: "stat" },
-      { name: "Graça Divina", description: "Recuperação de mana +4 e poder de cura +8%.", rankRequired: 4, statModifiers: '{"manaRecovery": 4, "healingPowerPercent": 8}', effectType: "stat" },
-      { name: "Sacrifício", description: "Suas curas podem exceder a vida máxima em até 10%.", rankRequired: 7, statModifiers: '{"overhealPercent": 10}', effectType: "stat" },
+      { name: "Piedade", slug: "piedade", description: "Poder de cura +10%.", rankRequired: 1, sortOrder: 1, statModifiers: { percent: { healingPercent: 10 } } },
+      { name: "Graça Divina", slug: "graca-divina", description: "Recuperação de mana +4 e poder de cura +8%.", rankRequired: 4, sortOrder: 2, statModifiers: { flat: { manaRegenPerTick: 4 }, percent: { healingPercent: 8 } } },
+      { name: "Sacrifício", slug: "sacrificio", description: "Suas curas podem exceder a vida máxima em até 10%.", rankRequired: 7, sortOrder: 3, statModifiers: { percent: { overhealPercent: 10 } } },
     ],
   },
 ];
@@ -327,9 +345,28 @@ async function upsertItem(item) {
 }
 
 async function upsertMonster(monster) {
+  const { drops, ...monsterData } = monster;
   const existing = await prisma.monster.findFirst({ where: { name: monster.name } });
-  if (existing) return prisma.monster.update({ where: { id: existing.id }, data: { ...monster } });
-  return prisma.monster.create({ data: { ...monster } });
+  const created = existing
+    ? await prisma.monster.update({ where: { id: existing.id }, data: { ...monsterData } })
+    : await prisma.monster.create({ data: { ...monsterData } });
+  if (Array.isArray(drops) && drops.length > 0) {
+    await prisma.dropItem.deleteMany({ where: { monsterId: created.id } });
+    for (const drop of drops) {
+      const item = await prisma.item.findFirst({ where: { name: drop.item } });
+      if (!item) continue;
+      await prisma.dropItem.create({
+        data: {
+          monsterId: created.id,
+          itemId: item.id,
+          dropChance: drop.chance,
+          minQuantity: drop.min || 1,
+          maxQuantity: drop.max || drop.min || 1,
+        },
+      });
+    }
+  }
+  return created;
 }
 
 async function upsertMap(map) {
@@ -346,10 +383,37 @@ async function upsertNpc(npc) {
   return prisma.npc.create({ data: { ...npc } });
 }
 
-async function upsertBuff(buff) {
-  const existing = await prisma.buff.findFirst({ where: { name: buff.name } });
-  if (existing) return prisma.buff.update({ where: { id: existing.id }, data: { ...buff } });
-  return prisma.buff.create({ data: { ...buff } });
+async function upsertEffect(effect) {
+  const existing = await prisma.effect.findFirst({
+    where: { OR: [{ slug: effect.slug }, { name: effect.name }] },
+  });
+  const data = {
+    name: effect.name,
+    slug: effect.slug,
+    description: effect.description || "",
+    icon: effect.icon || null,
+    kind: effect.kind || "buff",
+    category: effect.category || "utility",
+    maxStacks: effect.maxStacks || 1,
+    duration: effect.duration || 0,
+    refreshBehavior: effect.refreshBehavior || "refresh",
+    stackLoss: effect.stackLoss || {},
+    priority: effect.priority || 0,
+    tickInterval: effect.tickInterval || 0,
+    tickDamage: effect.tickDamage || {},
+    tickHealing: effect.tickHealing || {},
+    statModifiers: effect.statModifiers || {},
+    shield: effect.shield || {},
+    reflect: effect.reflect || {},
+    hitkillChance: effect.hitkillChance ?? undefined,
+    onMaxStacks: effect.onMaxStacks || [],
+    onExpire: effect.onExpire || [],
+    onTick: effect.onTick || [],
+    exclusiveGroup: effect.exclusiveGroup || null,
+    isActive: true,
+  };
+  if (existing) return prisma.effect.update({ where: { id: existing.id }, data });
+  return prisma.effect.create({ data });
 }
 
 async function upsertQuest(quest, giverNpcId, mapId) {
@@ -359,7 +423,8 @@ async function upsertQuest(quest, giverNpcId, mapId) {
     description: quest.description,
     type: quest.type,
     difficulty: quest.difficulty,
-    requiredLevel: quest.requiredLevel,
+    requiredLevel: quest.requiredLevel || 1,
+    requiredRank: quest.requiredRank || 1,
     giverNpcId,
     mapId,
     isRepeatable: !!quest.isRepeatable,
@@ -378,38 +443,47 @@ async function upsertSkill(classId, skill) {
   const existing = await prisma.skill.findFirst({ where: { classId, name: skill.name } });
   const data = {
     name: skill.name,
+    slug: skill.slug || skill.name.toLowerCase().replace(/\s+/g, "-"),
     description: skill.description,
-    type: skill.type,
-    subType: skill.subType,
-    cooldown: skill.cooldown,
-    manaCost: skill.manaCost,
-    castTime: 0,
-    range: skill.range,
-    targetType: skill.targetType,
+    icon: skill.icon || null,
+    kind: skill.kind || "attack",
+    trigger: skill.trigger || "active",
+    target: skill.target || "enemy",
+    cooldown: skill.cooldown || 0,
+    manaCost: skill.manaCost || 0,
+    castTime: skill.castTime || 0,
+    channelMs: skill.channelMs || 0,
     rankRequired: skill.rankRequired || 1,
-    sortOrder: skill.sortOrder,
+    sortOrder: skill.sortOrder || 0,
+    scaling: skill.scaling || [],
+    actions: skill.actions || [],
+    conditions: skill.conditions || [],
+    onConditionMet: skill.onConditionMet || [],
+    events: skill.events || [],
     isActive: true,
-    baseDamage: skill.baseDamage,
-    damageType: skill.damageType,
-    damageScaling: skill.damageScaling,
-    healingBase: skill.healingBase || 0,
-    buffsApplied: skill.buffsApplied,
   };
   if (existing) return prisma.skill.update({ where: { id: existing.id }, data });
   return prisma.skill.create({ data: { ...data, classId } });
 }
 
 async function upsertPassive(classId, passive) {
-  const existing = await prisma.classPassive.findFirst({ where: { classId, name: passive.name } });
+  const existing = await prisma.passive.findFirst({ where: { classId, name: passive.name } });
   const data = {
     name: passive.name,
+    slug: passive.slug || passive.name.toLowerCase().replace(/\s+/g, "-"),
     description: passive.description,
-    rankRequired: passive.rankRequired,
-    statModifiers: passive.statModifiers,
-    effectType: passive.effectType,
+    icon: passive.icon || null,
+    rankRequired: passive.rankRequired || 1,
+    sortOrder: passive.sortOrder || 0,
+    statModifiers: passive.statModifiers || {},
+    skillModifiers: passive.skillModifiers || [],
+    effectModifiers: passive.effectModifiers || [],
+    conditions: passive.conditions || [],
+    events: passive.events || [],
+    isActive: true,
   };
-  if (existing) return prisma.classPassive.update({ where: { id: existing.id }, data });
-  return prisma.classPassive.create({ data: { ...data, classId } });
+  if (existing) return prisma.passive.update({ where: { id: existing.id }, data });
+  return prisma.passive.create({ data: { ...data, classId } });
 }
 
 async function seedWorld() {
@@ -450,7 +524,7 @@ async function seedWorld() {
 
   // Map monsters
   for (const [mapSlug, names] of Object.entries({
-    "floresta-sombria": ["Rato da Floresta", "Slime Verde", "Lobo Cinzento", "Goblin Saqueador"],
+    "floresta-sombria": ["Rato da Floresta", "Slime Verde", "Lobo Cinzento", "Goblin Saqueador", "Goblin Bruxo"],
     arcadia: ["Rato da Floresta", "Slime Verde"],
   })) {
     for (const name of names) {
@@ -500,17 +574,30 @@ async function seedWorld() {
   }
 
   console.log("Seeding quests...");
+  const questMap = {};
   for (const quest of quests) {
     const created = await upsertQuest(quest, npcMap[quest.giverNpc]?.id ?? null, mapMap[quest.map]?.id ?? null);
+    questMap[quest.title] = created;
     console.log("  quest:", created.title);
   }
+  // Encadeamento de quests (resolvido por título, em duas passadas)
+  for (const quest of quests) {
+    if (!Array.isArray(quest.requires) || quest.requires.length === 0) continue;
+    const id = questMap[quest.title]?.id;
+    if (!id) continue;
+    const reqIds = quest.requires.map((t) => questMap[t]?.id).filter(Boolean);
+    if (reqIds.length > 0) {
+      await prisma.quest.update({ where: { id }, data: { requiredQuestIds: JSON.stringify(reqIds) } });
+      console.log("  chain:", quest.title, "<-", quest.requires.join(", "));
+    }
+  }
 
-  console.log("Seeding buffs...");
-  const buffMap = {};
-  for (const buff of buffs) {
-    const created = await upsertBuff(buff);
-    buffMap[buff.name] = created;
-    console.log("  buff:", buff.name);
+  console.log("Seeding effects...");
+  const effectMap = {};
+  for (const effect of effects) {
+    const created = await upsertEffect(effect);
+    effectMap[effect.slug] = created;
+    console.log("  effect:", effect.slug);
   }
 
   console.log("Seeding skills & passives...");
@@ -521,11 +608,6 @@ async function seedWorld() {
       continue;
     }
     for (const skill of entry.skills) {
-      if (skill.buffsApplied) {
-        skill.buffsApplied = JSON.stringify(
-          skill.buffsApplied.map((name) => buffMap[name].id)
-        );
-      }
       const created = await upsertSkill(cls.id, skill);
       console.log("  skill:", entry.class, "->", created.name);
     }
@@ -549,10 +631,28 @@ async function seedWorld() {
 async function main() {
   console.log("Seeding starter classes...");
   for (const cls of starterClasses) {
+    const statModel = cls.statModel
+      ? await prisma.statModel.findFirst({ where: { slug: cls.statModel } })
+      : null;
+    const data = {
+      name: cls.name,
+      slug: cls.slug,
+      description: cls.description,
+      icon: cls.icon,
+      role: cls.role,
+      combatType: cls.combatType || "melee",
+      rankMax: cls.rankMax || 10,
+      requiredLevel: cls.requiredLevel || 1,
+      resource: cls.resource || {},
+      statModelId: statModel?.id ?? null,
+      isStarter: true,
+      isActive: true,
+      sortOrder: cls.sortOrder || 0,
+    };
     await prisma.gameClass.upsert({
       where: { slug: cls.slug },
-      update: { ...cls },
-      create: { ...cls, isActive: true, isStarter: true },
+      update: data,
+      create: data,
     });
     console.log("  class:", cls.slug);
   }

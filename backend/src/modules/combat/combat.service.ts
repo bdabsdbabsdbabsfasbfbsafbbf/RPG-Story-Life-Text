@@ -2,7 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import Redis from "ioredis";
 import { CooldownManager } from "./cooldown.manager";
 import { getGameLimits } from "../../core/gameLimits";
-import { applyCharacterXp, clampGold, grantClassXp } from "../../core/progression";
+import { applyCharacterXp, clampGold, grantClassXp, addItemsToInventory } from "../../core/progression";
 import { Battle, TICK_MS } from "../../core/classEngine/battle";
 import { SkillDef, PassiveDef, EffectDef, ActiveEffectRuntime } from "../../core/classEngine/types";
 import { StatsInput } from "../../core/classEngine/stat-calculator";
@@ -700,8 +700,10 @@ export class CombatService {
     ]);
     if (!character) return null;
 
-    const xpGain = Math.floor(Number(monster.xpReward || 0));
-    const goldGain = Math.floor(Number(monster.goldReward || 0));
+    // Chefes concedem o dobro de XP/ouro/XP de classe
+    const mult = monster.isBoss ? 2 : 1;
+    const xpGain = Math.floor(Number(monster.xpReward || 0)) * mult;
+    const goldGain = Math.floor(Number(monster.goldReward || 0)) * mult;
 
     const levelResult = await applyCharacterXp(this.prisma, characterId, xpGain, limits);
     const levelUps = levelResult.levelUps;
@@ -733,7 +735,26 @@ export class CombatService {
 
     await this.updateQuestKillProgress(character.userId, monster);
 
-    return { xpGain, goldGain, levelUps, classXpGain };
+    // Drops por chance (DropItem): rola dropChance% e sorteia a quantidade
+    const drops: { name: string; quantity: number }[] = [];
+    const dropRows = await this.prisma.dropItem.findMany({
+      where: { monsterId: monster.id, item: { isActive: true } },
+      include: { item: true },
+    });
+    const rolled: { itemName: string; quantity: number }[] = [];
+    for (const d of dropRows) {
+      if (Math.random() * 100 >= d.dropChance) continue;
+      const min = Math.max(1, d.minQuantity || 1);
+      const max = Math.max(min, d.maxQuantity || min);
+      const qty = min === max ? min : min + Math.floor(Math.random() * (max - min + 1));
+      rolled.push({ itemName: d.item.name, quantity: qty });
+      drops.push({ name: d.item.name, quantity: qty });
+    }
+    if (rolled.length > 0) {
+      await addItemsToInventory(this.prisma, character.userId, rolled);
+    }
+
+    return { xpGain, goldGain, levelUps, classXpGain, drops };
   }
 
   private async updateQuestKillProgress(userId: string, monster: any): Promise<void> {

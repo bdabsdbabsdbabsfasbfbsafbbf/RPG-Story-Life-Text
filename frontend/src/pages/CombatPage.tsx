@@ -212,6 +212,9 @@ export function CombatPage() {
       if (data.appliedBuffs?.length) log.push(`Buff aplicado: ${data.appliedBuffs.join(", ")}`);
       if (data.state === "won" && data.rewards) {
         log.push(`Recompensas: +${data.rewards.xpGain ?? 0} XP, +${data.rewards.goldGain ?? 0} gold${data.rewards.levelUps ? `, LEVEL UP x${data.rewards.levelUps}!` : ""}`);
+        if (data.rewards.drops && data.rewards.drops.length > 0) {
+          log.push(`Drops: ${data.rewards.drops.map((d) => `${d.quantity}x ${d.name}`).join(", ")}`);
+        }
       }
       setCombatLog(prev => [...prev.slice(-19), ...log]);
     });
@@ -240,7 +243,9 @@ export function CombatPage() {
       }
       if (data.state === "won") {
         const r = data.rewards;
-        setCombatLog(prev => [...prev.slice(-19), `Vitória! +${r?.xpGain ?? 0} XP, +${r?.goldGain ?? 0} gold${r?.levelUps ? `, LEVEL UP x${r.levelUps}!` : ""}`]);
+        let line = `Vitória! +${r?.xpGain ?? 0} XP, +${r?.goldGain ?? 0} gold${r?.levelUps ? `, LEVEL UP x${r.levelUps}!` : ""}`;
+        if (r?.drops && r.drops.length > 0) line += ` • Drops: ${r.drops.map((d) => `${d.quantity}x ${d.name}`).join(", ")}`;
+        setCombatLog(prev => [...prev.slice(-19), line]);
         refreshUser();
       }
     });
@@ -438,6 +443,11 @@ export function CombatPage() {
                 <p className="text-sm text-gray-300 flex items-center justify-center gap-3">
                   <span className="flex items-center gap-1"><Sparkles size={14} className="text-purple-400" /> +{combat.rewards.xpGain ?? 0} XP</span>
                   <span className="flex items-center gap-1"><Coins size={14} className="text-yellow-400" /> +{combat.rewards.goldGain ?? 0} gold</span>
+                </p>
+              )}
+              {combat.rewards?.drops && combat.rewards.drops.length > 0 && (
+                <p className="text-xs text-emerald-300">
+                  Drops: {combat.rewards.drops.map((d) => `${d.quantity}x ${d.name}`).join(", ")}
                 </p>
               )}
               <button onClick={() => navigate("/map")} className="btn-primary mt-1">Voltar ao mapa</button>
