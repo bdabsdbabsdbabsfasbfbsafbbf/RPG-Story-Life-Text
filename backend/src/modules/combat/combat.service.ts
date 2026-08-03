@@ -133,6 +133,8 @@ interface ActiveCombat {
   tickInterval: NodeJS.Timeout;
 }
 
+const SESSION_TTL_MS = 15 * 60 * 1000; // sessão de combate expira após 15 min sem atualizações
+
 export class CombatService {
   private activeCombats: Map<string, ActiveCombat> = new Map();
   private onTickListener: ((payload: any) => void) | null = null;
@@ -146,14 +148,7 @@ export class CombatService {
     this.onTickListener = listener;
   }
 
-  async startCombat(characterId: string, monsterId: string): Promise<any> {
-    const existing = Array.from(this.activeCombats.values()).find(
-      (c) => c.characterId === characterId && c.state === "active"
-    );
-    if (existing) {
-      throw new Error("Você já está em combate!");
-    }
-
+  private async loadCombatContext(characterId: string, monsterId: string): Promise<any> {
     const character = await this.prisma.character.findUnique({
       where: { id: characterId },
       include: {
@@ -253,7 +248,11 @@ export class CombatService {
       },
     });
 
-    const entry: ActiveCombat = {
+    return { character, gameClass, monster, rank, skills, battle };
+  }
+
+  private buildEntry(battle: Battle, character: any, monster: any, skills: SkillDef[]): ActiveCombat {
+    return {
       battle,
       characterId: character.id,
       characterName: character.name,
@@ -268,8 +267,9 @@ export class CombatService {
       startTime: Date.now(),
       tickInterval: setInterval(() => this.tick(battle.id), TICK_MS),
     };
-    this.activeCombats.set(battle.id, entry);
+  }
 
+  private buildStartedPayload(battle: Battle, entry: ActiveCombat, skills: SkillDef[], character: any, resumed = false): any {
     const snap = battle.snapshot();
     const stats = battle.player.stats;
 
@@ -278,10 +278,11 @@ export class CombatService {
       characterId: character.id,
       characterName: character.name,
       characterLevel: character.level,
-      monsterId: monster.id,
-      monsterName: monster.name,
-      monsterLevel: monster.level ?? 1,
-      monsterMaxHp: monster.hp,
+      monsterId: entry.monster.id,
+      monsterName: entry.monster.name,
+      monsterLevel: entry.monster.level ?? 1,
+      monsterMaxHp: entry.monster.hp,
+      resumed,
       skills: skills.map((s) => serializeSkillForClient(s, battle.getSkillModifiersFor(s.slug))),
       stats: {
         hp: stats.hp,
@@ -308,6 +309,92 @@ export class CombatService {
       playerEffects: snap.playerEffects,
       monsterEffects: snap.monsterEffects,
     };
+  }
+
+  private async persistSession(entry: ActiveCombat): Promise<void> {
+    const battleState = entry.battle.saveState();
+    await this.prisma.combatSession.upsert({
+      where: { id: entry.battle.id },
+      create: {
+        id: entry.battle.id,
+        characterId: entry.characterId,
+        monsterId: entry.monsterId,
+        state: "active",
+        battleState: battleState as any,
+        lastTickAt: new Date(),
+      },
+      update: {
+        battleState: battleState as any,
+        lastTickAt: new Date(),
+        state: "active",
+      },
+    });
+  }
+
+  private async clearSession(combatId: string): Promise<void> {
+    await this.prisma.combatSession.delete({ where: { id: combatId } }).catch(() => {});
+  }
+
+  async startCombat(characterId: string, monsterId: string): Promise<any> {
+    const existing = Array.from(this.activeCombats.values()).find(
+      (c) => c.characterId === characterId && c.state === "active"
+    );
+    if (existing) {
+      throw new Error("Você já está em combate!");
+    }
+
+    // Sessão anterior (refresh / reconexão / outra aba): retoma em vez de começar do zero
+    const session = await this.prisma.combatSession.findFirst({
+      where: { characterId, state: "active" },
+    });
+    if (session) {
+      const stale = Date.now() - new Date(session.lastTickAt).getTime() > SESSION_TTL_MS;
+      if (stale) {
+        await this.clearSession(session.id);
+      } else {
+        const resumed = await this.resumeCombat(characterId);
+        if (resumed) return resumed;
+      }
+    }
+
+    const { character, monster, skills, battle } = await this.loadCombatContext(characterId, monsterId);
+    const entry = this.buildEntry(battle, character, monster, skills);
+    this.activeCombats.set(battle.id, entry);
+    this.persistSession(entry).catch(() => {});
+
+    return this.buildStartedPayload(battle, entry, skills, character);
+  }
+
+  // Retoma uma batalha salva (após refresh/reconexão). Retorna null se não houver.
+  async resumeCombat(characterId: string): Promise<any> {
+    const inMemory = this.getCharacterCombat(characterId);
+    if (inMemory) return null;
+
+    const session = await this.prisma.combatSession.findFirst({
+      where: { characterId, state: "active" },
+    });
+    if (!session) return null;
+
+    if (Date.now() - new Date(session.lastTickAt).getTime() > SESSION_TTL_MS) {
+      await this.clearSession(session.id);
+      return null;
+    }
+
+    let context: any;
+    try {
+      context = await this.loadCombatContext(characterId, session.monsterId);
+    } catch {
+      await this.clearSession(session.id);
+      return null;
+    }
+
+    const { character, monster, skills, battle } = context;
+    battle.restoreState(session.battleState as any);
+    const entry = this.buildEntry(battle, character, monster, skills);
+    this.activeCombats.set(battle.id, entry);
+    this.persistSession(entry).catch(() => {});
+
+    return this.buildStartedPayload(battle, entry, skills, character, true);
   }
 
   private async syncPlayerEffects(characterId: string, runtimeEffects: ActiveEffectRuntime[]): Promise<void> {
@@ -363,6 +450,7 @@ export class CombatService {
     if (ended) {
       clearInterval(entry.tickInterval);
       this.activeCombats.delete(combatId);
+      this.clearSession(combatId).catch(() => {});
       if (entry.state === "won") {
         entry.battle.finish().catch(() => {});
         this.grantRewards(entry.characterId, entry.monster, entry.battle.player.maxHp, entry.battle.player.maxMana).then((rewards) => {
@@ -381,6 +469,10 @@ export class CombatService {
 
     if (this.onTickListener) {
       this.onTickListener(payload);
+    }
+
+    if (!ended) {
+      this.persistSession(entry).catch(() => {});
     }
   }
 
@@ -439,9 +531,12 @@ export class CombatService {
       entry.state = "won";
       clearInterval(entry.tickInterval);
       this.activeCombats.delete(combatId);
+      this.clearSession(combatId).catch(() => {});
       entry.battle.finish().catch(() => {});
       payload.rewards = await this.grantRewards(entry.characterId, entry.monster, entry.battle.player.maxHp, entry.battle.player.maxMana);
       payload.state = "won";
+    } else {
+      this.persistSession(entry).catch(() => {});
     }
 
     return payload;
@@ -479,6 +574,7 @@ export class CombatService {
       payload.state = "fled";
       clearInterval(entry.tickInterval);
       this.activeCombats.delete(combatId);
+      this.clearSession(combatId).catch(() => {});
       entry.battle.finish().catch(() => {});
       this.prisma.character
         .update({
@@ -501,6 +597,7 @@ export class CombatService {
         payload.state = "lost";
         clearInterval(entry.tickInterval);
         this.activeCombats.delete(combatId);
+        this.clearSession(combatId).catch(() => {});
         entry.battle.finish().catch(() => {});
         this.prisma.character
           .update({ where: { id: characterId }, data: { currentHp: 0 } })
@@ -570,7 +667,7 @@ export class CombatService {
     }
 
     const snap = entry.battle.snapshot();
-    return {
+    const payload = {
       combatId,
       characterId: entry.characterId,
       inventoryId: inv.id,
@@ -588,6 +685,9 @@ export class CombatService {
       monsterEffects: snap.monsterEffects,
       state: entry.state,
     };
+
+    this.persistSession(entry).catch(() => {});
+    return payload;
   }
 
   private async grantRewards(characterId: string, monster: any, restoreHp: number, restoreMana: number): Promise<any> {

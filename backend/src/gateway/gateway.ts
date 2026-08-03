@@ -147,6 +147,24 @@ export function createGateway(
       }
     });
 
+    socket.on("combat:resume", async () => {
+      try {
+        if (!socket.currentCharacterId) {
+          const character = await prisma.character.findFirst({
+            where: { userId: socket.userId! },
+            orderBy: { createdAt: "asc" },
+          });
+          if (!character) return;
+          socket.currentCharacterId = character.id;
+          socket.join(`character:${character.id}`);
+        }
+        const result = await combatService.resumeCombat(socket.currentCharacterId);
+        if (result) socket.emit("combat:started", sanitize(result));
+      } catch (err: any) {
+        socket.emit("combat:error", { message: err.message });
+      }
+    });
+
     socket.on("combat:useSkill", async (data: { combatId: string; skillId: string }) => {
       if (!socket.currentCharacterId) return;
       try {

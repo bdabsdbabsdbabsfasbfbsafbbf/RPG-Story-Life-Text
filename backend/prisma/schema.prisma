@@ -62,9 +62,24 @@ model Character {
   activeEffects ActiveEffect[] @relation()
   activeCooldowns ActiveCooldown[] @relation()
   classProgress CharacterClass[] @relation()
+  combatSessions CombatSession[] @relation()
 
   @@index([userId])
   @@index([classId])
+}
+
+model CombatSession {
+  id          String   @id @default(uuid())
+  characterId String
+  monsterId   String
+  state       String   @default("active") // active | won | lost
+  battleState Json
+  lastTickAt  DateTime @default(now())
+  startedAt   DateTime @default(now())
+  endedAt     DateTime?
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@index([characterId])
 }
 
 model SystemConfig {
@@ -101,6 +116,7 @@ model GameClass {
   role            String   @default("hybrid") // tank, dps, healer, support, hybrid
   combatType      String   @default("melee") // melee, ranged, caster
   rankMax         Int      @default(10)
+  requiredLevel   Int      @default(1) // nível mínimo do personagem para equipar essa classe
   statModelId     String?
   resource        Json     @default("{}") // { manaRegenPerTick?, manaOnHit?, manaOnKill? }
   isStarter       Boolean  @default(false)

@@ -16,6 +16,25 @@ interface CombatPotion {
   manaRestore: number;
 }
 
+interface Floater {
+  id: number;
+  target: "player" | "monster";
+  text: string;
+  kind: "damage" | "heal" | "crit" | "dodge";
+}
+
+function logClass(line: string): string {
+  const l = line.toLowerCase();
+  if (l.includes("crítico") || l.includes("critico")) return "text-yellow-300";
+  if (l.includes("esquivou")) return "text-sky-300";
+  if (l.includes("vitória") || l.includes("vitoria")) return "text-green-400 font-bold";
+  if (l.includes("derrota") || l.includes("erro")) return "text-red-400";
+  if (l.includes("curou") || l.includes("regenerou") || l.includes("restaurou") || l.includes("absorveu")) return "text-green-300";
+  if (l.includes("dano") || l.includes("causou") || l.includes("refletiu") || l.includes("golpe") || l.includes("aniquilou") || l.includes("letal") || l.includes("atacou")) return "text-red-300";
+  if (l.includes("expirou") || l.includes("fugiu") || l.includes("fugir") || l.includes("fuga")) return "text-gray-400";
+  return "text-gray-300";
+}
+
 function itemEffects(item: any): { heal: number; manaRestore: number } {
   let heal = 0;
   let manaRestore = 0;
@@ -51,6 +70,19 @@ export function CombatPage() {
   const [potions, setPotions] = useState<CombatPotion[]>([]);
   const [classRank, setClassRank] = useState(1);
   const rewardsRefreshed = useRef(false);
+  const resumedRef = useRef(false);
+  const combatRef = useRef<CombatUpdate | null>(null);
+  combatRef.current = combat;
+  const [floaters, setFloaters] = useState<Floater[]>([]);
+  const floaterSeq = useRef(0);
+
+  const pushFloater = (target: "player" | "monster", text: string, kind: Floater["kind"]) => {
+    const id = ++floaterSeq.current;
+    setFloaters((prev) => [...prev.slice(-5), { id, target, text, kind }]);
+    window.setTimeout(() => {
+      setFloaters((prev) => prev.filter((f) => f.id !== id));
+    }, 1000);
+  };
 
   // Refresh user data (gold/XP) after a victory without needing F5
   const refreshUser = () => {
@@ -117,23 +149,32 @@ export function CombatPage() {
 
   useEffect(() => {
     if (!monsterId) return;
-    let started = false;
-    const start = (s: any) => {
-      if (started || !s?.connected) return;
-      started = true;
-      s.emit("combat:start", { monsterId });
+    resumedRef.current = false;
+    let done = false;
+    const ensure = () => {
+      if (done) return;
+      done = true;
+      const s = getSocket();
+      if (!s || !s.connected) return;
+      // Tenta retomar uma batalha salva; senão, começa um novo combate
+      s.emit("combat:resume");
+      window.setTimeout(() => {
+        if (!resumedRef.current) {
+          s.emit("combat:start", { monsterId });
+        }
+      }, 1200);
     };
     const interval = setInterval(() => {
       const s = getSocket();
       if (!s) return;
       if (s.connected) {
         clearInterval(interval);
-        start(s);
+        ensure();
         return;
       }
       s.once("connect", () => {
         clearInterval(interval);
-        start(s);
+        ensure();
       });
     }, 300);
     return () => clearInterval(interval);
@@ -144,13 +185,16 @@ export function CombatPage() {
 
     socket.on("combat:started", (data: any) => {
       rewardsRefreshed.current = false;
+      resumedRef.current = true;
       setCombat(data);
-      setCombatLog([`Combate contra ${data.monsterName || "o monstro"} iniciado!`]);
+      setCombatLog([data.resumed ? "Combate retomado!" : `Combate contra ${data.monsterName || "o monstro"} iniciado!`]);
       setLoading(false);
     });
 
     socket.on("combat:skillUsed", (data: CombatUpdate) => {
       setCombat((prev) => (prev ? { ...prev, ...data } : data));
+      if ((data.damage ?? 0) > 0) pushFloater("monster", `-${data.damage}`, data.isCritical ? "crit" : "damage");
+      if ((data.healed ?? 0) > 0) pushFloater("player", `+${data.healed}`, "heal");
       if (data.state === "won") {
         toast.success("Vitória!");
         refreshUser();
@@ -173,6 +217,19 @@ export function CombatPage() {
     });
 
     socket.on("combat:tick", (data: CombatUpdate) => {
+      const prev = combatRef.current;
+      if (prev && data.state === "active") {
+        if (typeof data.monsterHp === "number" && typeof prev.monsterHp === "number") {
+          const delta = prev.monsterHp - data.monsterHp;
+          if (delta > 0) pushFloater("monster", `-${delta}`, "damage");
+          else if (delta < 0) pushFloater("monster", `+${-delta}`, "heal");
+        }
+        if (typeof data.characterHp === "number" && typeof prev.characterHp === "number") {
+          const delta = prev.characterHp - data.characterHp;
+          if (delta > 0) pushFloater("player", `-${delta}`, "damage");
+          else if (delta < 0) pushFloater("player", `+${-delta}`, "heal");
+        }
+      }
       setCombat((prev) => {
         if (!prev) return data as any;
         return { ...prev, ...data };
@@ -204,6 +261,7 @@ export function CombatPage() {
           toast.success("Você fugiu do combate!");
           setCombatLog(prev => [...prev.slice(-19), "Você conseguiu fugir!"]);
         } else {
+          if ((data.damage ?? 0) > 0) pushFloater("player", `-${data.damage}`, "damage");
           toast.error("A fuga falhou!");
           setCombatLog(prev => [...prev.slice(-19), "A fuga falhou! O monstro atacou você."]);
         }
@@ -263,6 +321,9 @@ export function CombatPage() {
   const monsterName = combat?.monsterName || monsterInfo?.name || "Monstro";
   const monsterLevel = combat?.monsterLevel || monsterInfo?.level || 1;
 
+  const playerHasBuff = (combat?.playerEffects ?? []).some((e) => e.kind === "buff" || e.kind === "hot" || e.kind === "shield");
+  const monsterHasDebuff = (combat?.monsterEffects ?? []).some((e) => e.kind === "dot" || e.kind === "debuff");
+
   return (
     <div className="min-h-full flex flex-col pb-40 animate-fade-in">
       <Link to="/map" className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-200 mb-4">
@@ -272,9 +333,12 @@ export function CombatPage() {
       {/* ===== TOPO: vida e mana ===== */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Player */}
-        <div className="panel p-5">
+        <div className="panel p-5 relative">
+          {floaters.filter((f) => f.target === "player").map((f) => (
+            <span key={f.id} className={`combat-floater ${f.kind}`}>{f.text}</span>
+          ))}
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center">
+            <div className={`w-12 h-12 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center ${playerHasBuff ? "ring-2 ring-blue-400/70 shadow-[0_0_14px_rgba(96,165,250,0.45)]" : ""}`}>
               <Shield size={24} className="text-white" />
             </div>
             <div>
@@ -324,9 +388,12 @@ export function CombatPage() {
         </div>
 
         {/* Monster */}
-        <div className="panel p-5">
+        <div className="panel p-5 relative">
+          {floaters.filter((f) => f.target === "monster").map((f) => (
+            <span key={f.id} className={`combat-floater ${f.kind}`}>{f.text}</span>
+          ))}
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-600 to-orange-600 flex items-center justify-center">
+            <div className={`w-12 h-12 rounded-xl bg-gradient-to-br from-red-600 to-orange-600 flex items-center justify-center ${monsterHasDebuff ? "ring-2 ring-red-500/70 shadow-[0_0_14px_rgba(239,68,68,0.45)]" : ""}`}>
               <Skull size={24} className="text-white" />
             </div>
             <div>
@@ -408,7 +475,7 @@ export function CombatPage() {
             <p className="text-sm text-gray-600">O combate ainda não começou. Seu ataque automático acontece sozinho a cada 2s.</p>
           )}
           {combatLog.map((log, i) => (
-            <p key={i} className="text-sm text-gray-300 font-mono">{log}</p>
+            <p key={i} className={`text-sm font-mono ${logClass(log)}`}>{log}</p>
           ))}
         </div>
       </div>
@@ -451,6 +518,12 @@ export function CombatPage() {
                       <span className="absolute inset-0 bg-black/70 rounded-xl flex items-center justify-center">
                         <span className="text-lg font-bold text-white font-mono">
                           {(cdLeft / 1000).toFixed(1)}s
+                        </span>
+                        <span className="absolute bottom-0 left-0 right-0 h-1 bg-white/10 rounded-b-xl overflow-hidden">
+                          <span
+                            className="block h-full bg-purple-400/80"
+                            style={{ width: `${Math.min(100, Math.max(0, ((skill.cooldown - cdLeft) / skill.cooldown) * 100))}%` }}
+                          />
                         </span>
                       </span>
                     )}

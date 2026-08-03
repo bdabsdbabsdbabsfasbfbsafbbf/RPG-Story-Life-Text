@@ -659,6 +659,94 @@ export class Battle {
     };
   }
 
+  // ============ Persistência (retomar combate após refresh) ============
+  saveState(): Record<string, any> {
+    const serializeRuntime = (effects: ActiveEffectRuntime[]) =>
+      effects.map((e) => ({
+        slug: e.effect.slug,
+        stacks: e.stacks,
+        remainingMs: e.remainingMs,
+        nextTickAt: e.nextTickAt,
+        shieldHp: e.shieldHp,
+      }));
+
+    return {
+      id: this.id,
+      monsterId: this.monsterId,
+      state: this.state,
+      startedAt: this.startedAt,
+      lastTick: this.lastTick,
+      round: this.round,
+      rank: this.rank,
+      player: {
+        hp: this.player.hp,
+        mana: this.player.mana,
+        lastAttackAt: this.player.lastAttackAt,
+        effects: serializeRuntime(this.player.effects),
+      },
+      monster: {
+        hp: this.monster.hp,
+        mana: this.monster.mana,
+        lastAttackAt: this.monster.lastAttackAt,
+        effects: serializeRuntime(this.monster.effects),
+      },
+      cooldowns: Array.from(this.cooldowns.entries()),
+      channeling: this.channeling ? { skillId: this.channeling.skill.id, until: this.channeling.until } : null,
+      summons: this.summons,
+    };
+  }
+
+  restoreState(save: any): void {
+    if (!save) return;
+    this.id = save.id || this.id;
+    this.state = save.state || "active";
+    this.startedAt = save.startedAt ?? this.startedAt;
+    this.lastTick = save.lastTick ?? Date.now();
+    this.round = save.round || 0;
+    this.rank = save.rank ?? this.rank;
+
+    const resolveRuntime = (raw: any[]): ActiveEffectRuntime[] => {
+      if (!Array.isArray(raw)) return [];
+      const out: ActiveEffectRuntime[] = [];
+      for (const e of raw) {
+        const effect = this.effects.find((ef) => ef.slug === e?.slug);
+        if (!effect) continue;
+        out.push({
+          effect,
+          stacks: Number(e.stacks) || 1,
+          remainingMs: Number(e.remainingMs) || 0,
+          nextTickAt: e.nextTickAt ? Number(e.nextTickAt) : null,
+          shieldHp: e.shieldHp ? Number(e.shieldHp) : undefined,
+        });
+      }
+      return out;
+    };
+
+    if (save.player) {
+      this.player.hp = Number(save.player.hp ?? this.player.hp);
+      this.player.mana = Number(save.player.mana ?? this.player.mana);
+      this.player.lastAttackAt = Number(save.player.lastAttackAt) || Date.now();
+      this.player.effects = resolveRuntime(save.player.effects);
+    }
+    if (save.monster) {
+      this.monster.hp = Number(save.monster.hp ?? this.monster.hp);
+      this.monster.mana = Number(save.monster.mana ?? this.monster.mana);
+      this.monster.lastAttackAt = Number(save.monster.lastAttackAt) || Date.now();
+      this.monster.effects = resolveRuntime(save.monster.effects);
+    }
+
+    this.cooldowns = new Map(
+      Array.isArray(save.cooldowns)
+        ? (save.cooldowns as [string, number][]).map(([id, at]) => [id, Number(at)])
+        : []
+    );
+    if (save.channeling) {
+      const skill = this.skills.find((s) => s.id === save.channeling.skillId);
+      this.channeling = skill ? { skill, until: Number(save.channeling.until) } : null;
+    }
+    if (Array.isArray(save.summons)) this.summons = save.summons;
+  }
+
   cooldownInfo(): Array<{ skillId: string; remaining: number }> {
     const now = Date.now();
     const out: Array<{ skillId: string; remaining: number }> = [];

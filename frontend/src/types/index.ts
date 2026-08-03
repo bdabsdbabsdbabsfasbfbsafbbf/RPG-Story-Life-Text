@@ -622,10 +622,12 @@ export interface CombatUpdate {
   action?: string;
   fled?: boolean;
   itemName?: string;
+  resumed?: boolean;
+  drops?: { name: string; quantity: number }[];
   messages?: string[];
   playerEffects?: CombatEffect[];
   monsterEffects?: CombatEffect[];
-  rewards?: { xpGain?: number; goldGain?: number; levelUps?: number; classXpGain?: number } | null;
+  rewards?: { xpGain?: number; goldGain?: number; levelUps?: number; classXpGain?: number; drops?: { name: string; quantity: number }[] } | null;
 }
 
 export type ChatChannel = 'global' | 'local' | 'party' | 'guild' | 'trade' | 'system' | 'whisper';

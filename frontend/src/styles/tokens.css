@@ -74,3 +74,30 @@
 
 .text-damage { color: var(--color-damage); }
 .text-heal { color: var(--color-heal); }
+
+/* Números flutuantes do combate (dano/cura flutuando sobre os painéis). */
+.combat-floater {
+  position: absolute;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 700;
+  font-size: 1.05rem;
+  line-height: 1;
+  pointer-events: none;
+  animation: combat-float-up 1s ease-out forwards;
+  z-index: 30;
+  white-space: nowrap;
+}
+
+.combat-floater.damage { color: var(--color-damage); text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8); }
+.combat-floater.crit { color: #fde047; font-size: 1.3rem; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8); }
+.combat-floater.heal { color: var(--color-heal); text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8); }
+.combat-floater.dodge { color: #7dd3fc; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8); }
+
+@keyframes combat-float-up {
+  0% { opacity: 0; transform: translateX(-50%) translateY(10px); }
+  15% { opacity: 1; transform: translateX(-50%) translateY(4px); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-30px); }
+}
