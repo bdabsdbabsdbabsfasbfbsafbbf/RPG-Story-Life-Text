@@ -7,7 +7,7 @@ export type JsonFieldDef =
   | { mode: "string-array"; placeholder?: string; addLabel?: string }
   | {
       mode: "object-array";
-      fields: { name: string; label: string; type: "text" | "number" | "select" | "effect-slug"; options?: string[]; placeholder?: string }[];
+      fields: { name: string; label: string; type: "text" | "number" | "select" | "effect-slug"; options?: string[]; placeholder?: string; step?: string }[];
       addLabel?: string;
     }
   | {
@@ -278,7 +278,7 @@ export default function JsonField({ schema, value, onChange }: JsonFieldProps) {
                 ) : (
                   <input
                     type={f.type === "number" ? "number" : "text"}
-                    step={f.type === "number" ? "any" : undefined}
+                    step={f.type === "number" ? (f.step ?? "any") : undefined}
                     className={inputClass}
                     placeholder={f.placeholder}
                     value={item?.[f.name] ?? ""}

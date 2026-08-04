@@ -118,6 +118,7 @@ export interface DerivedStats {
   speed: number;
   attackPower: number;
   spellPower: number;
+  hitChance: number;
   critChance: number;
   critDamage: number;
   dodge: number;
@@ -127,7 +128,12 @@ export interface DerivedStats {
   threatPerAttack: number;
   aggroPerHit: number;
   damagePercent: number;
-  magicDamagePercent: number;
+  physicalDamagePercent: number;
+  magicalDamagePercent: number;
+  damageResistance: number;
+  physicalResistance: number;
+  magicalResistance: number;
+  penetration: number;
   healingPercent: number;
   dotPercent: number;
   overhealPercent: number;

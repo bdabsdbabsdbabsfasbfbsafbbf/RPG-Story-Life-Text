@@ -112,6 +112,13 @@ export function computeDamageAmount(
   ctx: ActionContext
 ): { amount: number; isCritical: boolean; isDodged: boolean } {
   const raw = scaleValue(action.amount ?? 0, action.scaling, actorStats);
+
+  // Hit Chance: chance do atacante acertar (100 = sempre acerta)
+  const hitChance = Math.min(100, actorStats.hitChance || 100);
+  if (Math.random() * 100 >= hitChance) {
+    return { amount: 0, isCritical: false, isDodged: true };
+  }
+
   const critRoll = Math.random() * 100;
   const isCritical = action.crit !== false && critRoll < actorStats.critChance;
   const isDodged = action.crit !== false && rollDodge(target, targetStats);
@@ -127,17 +134,28 @@ export function computeDamageAmount(
   if (type === "physical" || type === "magic") {
     const def = type === "physical" ? targetStats.defense : targetStats.magicDefense;
     if (!action.ignoreDefense) {
-      const reduction = def / (def + 100);
+      // Penetração reduz a defesa efetiva do alvo
+      const penetration = Math.min(80, Math.max(0, actorStats.penetration || 0));
+      const effectiveDef = Math.max(0, def * (1 - penetration / 100));
+      const reduction = effectiveDef / (effectiveDef + 100);
       amount *= 1 - reduction;
     }
   }
 
   const skillMods = ctx.getSkillModifiers();
   let boost = 0;
-  if (type === "magic") boost += actorStats.magicDamagePercent;
+  if (type === "physical") boost += actorStats.physicalDamagePercent;
+  if (type === "magic") boost += actorStats.magicalDamagePercent;
   boost += actorStats.damagePercent;
   if (skillMods?.damagePercent) boost += skillMods.damagePercent;
   amount *= 1 + boost / 100;
+
+  // Resistências do alvo (reduzem o dano final por tipo)
+  let resistance = targetStats.damageResistance || 0;
+  if (type === "physical") resistance += targetStats.physicalResistance || 0;
+  if (type === "magic") resistance += targetStats.magicalResistance || 0;
+  resistance = Math.min(80, Math.max(0, resistance));
+  if (resistance > 0) amount *= 1 - resistance / 100;
 
   return { amount: Math.max(1, Math.floor(amount)), isCritical, isDodged: false };
 }

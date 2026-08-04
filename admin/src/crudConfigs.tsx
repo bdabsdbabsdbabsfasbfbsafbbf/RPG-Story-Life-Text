@@ -76,6 +76,23 @@ const STAT_SCALING_FIELDS = [
   { key: "aggroPerHit", label: "Aggro/Golpe" },
 ];
 
+const CORE_STAT_FIELDS = [
+  { key: "strength", label: "Strength" },
+  { key: "intellect", label: "Intellect" },
+  { key: "endurance", label: "Endurance" },
+  { key: "dexterity", label: "Dexterity" },
+  { key: "wisdom", label: "Wisdom" },
+  { key: "luck", label: "Luck" },
+];
+
+const CATEGORY_BADGE: Record<string, string> = {
+  melee: "bg-red-500/20 text-red-300",
+  caster: "bg-blue-500/20 text-blue-300",
+  hybrid: "bg-purple-500/20 text-purple-300",
+  support: "bg-green-500/20 text-green-300",
+  tank: "bg-yellow-500/20 text-yellow-300",
+};
+
 export const crudConfigs: CrudConfig[] = [
   {
     key: "classes",
@@ -377,6 +394,16 @@ export const crudConfigs: CrudConfig[] = [
       idColumn,
       { key: "name", label: "Name", render: (v) => <span className="font-medium text-white">{v}</span> },
       { key: "slug", label: "Slug", render: (v) => <span className="text-xs text-gray-500">{v}</span> },
+      {
+        key: "category",
+        label: "Categoria",
+        render: (v) => (
+          <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium capitalize ${CATEGORY_BADGE[v] || "bg-dark-700 text-gray-300"}`}>
+            {v || "-"}
+          </span>
+        ),
+      },
+      { key: "attackIntervalBase", label: "Intervalo Base", render: (v) => <span className="text-xs text-gray-300">{v ? `${v}ms` : "-"}</span> },
       { key: "base", label: "Base", render: jsonPreview },
       { key: "perLevel", label: "Per Level", render: jsonPreview },
       { key: "isActive", label: "Active", render: (v) => boolBadge(v) },
@@ -385,6 +412,14 @@ export const crudConfigs: CrudConfig[] = [
       { name: "name", label: "Name", type: "text", required: true },
       { name: "slug", label: "Slug", type: "text", required: true, hint: "Unique, lowercase" },
       { name: "description", label: "Description", type: "textarea", required: true },
+      {
+        name: "category",
+        label: "Categoria de combate",
+        type: "select",
+        defaultValue: "hybrid",
+        options: ["melee", "caster", "hybrid", "support", "tank"],
+        hint: "Define o estilo de combate da identidade",
+      },
       {
         name: "base",
         label: "Base (nível 1)",
@@ -402,6 +437,75 @@ export const crudConfigs: CrudConfig[] = [
         label: "Scaling (derivados)",
         type: "json",
         jsonSchema: { mode: "fixed-record", fields: STAT_SCALING_FIELDS },
+      },
+      {
+        name: "coreStats",
+        label: "Core Stats base",
+        type: "json",
+        jsonSchema: { mode: "fixed-record", fields: CORE_STAT_FIELDS },
+        hint: "Pontos dos 6 atributos que o modelo concede no nível 1",
+      },
+      {
+        name: "coreStatsPerLevel",
+        label: "Core Stats por nível",
+        type: "json",
+        jsonSchema: { mode: "fixed-record", fields: CORE_STAT_FIELDS },
+        hint: "Crescimento dos atributos a cada nível",
+      },
+      {
+        name: "conversions",
+        label: "Conversões de atributos",
+        type: "json",
+        jsonSchema: {
+          mode: "object-array",
+          addLabel: "Adicionar conversão",
+          fields: [
+            { name: "stat", label: "Atributo", type: "select", options: ["strength", "intellect", "endurance", "dexterity", "wisdom", "luck"] },
+            {
+              name: "target",
+              label: "Combat Stat",
+              type: "select",
+              options: ["attackPower", "spellPower", "critChance", "critDamage", "dodge", "hitChance", "attackSpeedPercent", "cooldownReduction", "hp", "mana", "defense", "magicDefense"],
+            },
+            { name: "factor", label: "Multiplicador", type: "number", step: "0.1" },
+          ],
+        },
+        hint: "Ex.: strength → attackPower ×1.5 | dexterity → attackSpeedPercent ×10 | luck → critDamage ×1.2",
+      },
+      { name: "attackIntervalBase", label: "Attack Interval Base (ms)", type: "number", defaultValue: 1000, hint: "Ritmo natural de ataque: 500 melee rápido, 700 tank, 400 ágil. Fórmula: Base ÷ (1 + AttackSpeed%) — mínimo 100ms. NUNCA redução direta em ms." },
+      {
+        name: "combatStatsBase",
+        label: "Combat Stats Base",
+        type: "json",
+        jsonSchema: {
+          mode: "fixed-record",
+          fields: [
+            { key: "hitChance", label: "Hit Chance (%)" },
+            { key: "critChance", label: "Crit Chance (%)" },
+            { key: "critMultiplier", label: "Crit Multiplier (%)" },
+            { key: "evasion", label: "Evasion (%)" },
+            { key: "cooldownReduction", label: "CDR (%)" },
+          ],
+        },
+      },
+      {
+        name: "bonuses",
+        label: "Bônus do modelo",
+        type: "json",
+        jsonSchema: {
+          mode: "fixed-record",
+          fields: [
+            { key: "physicalBoost", label: "Physical Boost (%)" },
+            { key: "magicalBoost", label: "Magical Boost (%)" },
+            { key: "damageBoost", label: "Damage Boost (%)" },
+            { key: "healingBoost", label: "Healing Boost (%)" },
+            { key: "damageResistance", label: "Damage Resistance (%)" },
+            { key: "physicalResistance", label: "Physical Resistance (%)" },
+            { key: "magicalResistance", label: "Magical Resistance (%)" },
+            { key: "penetration", label: "Penetration (%)" },
+            { key: "attackSpeed", label: "Attack Speed (%)" },
+          ],
+        },
       },
       { name: "isActive", label: "Active", type: "boolean", defaultValue: true },
     ],

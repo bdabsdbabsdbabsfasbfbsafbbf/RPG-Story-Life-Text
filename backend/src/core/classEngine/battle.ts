@@ -457,8 +457,14 @@ export class Battle {
     if (entityHasKind(this.monster, "stun")) return;
     const pStats = this.effectivePlayerStats();
     const mStats = this.effectiveMonsterStats();
-    const reduction = Math.min(0.8, pStats.defense / (pStats.defense + 100));
+    // Penetração do monstro reduz a defesa efetiva do jogador
+    const pen = Math.min(80, Math.max(0, mStats.penetration || 0));
+    const effDef = Math.max(0, pStats.defense * (1 - pen / 100));
+    const reduction = Math.min(0.8, effDef / (effDef + 100));
     let damage = Math.max(1, Math.floor(mStats.attack * (1 - reduction)));
+    // Resistências do jogador
+    const resist = Math.min(80, Math.max(0, (pStats.damageResistance || 0) + (pStats.physicalResistance || 0)));
+    if (resist > 0) damage = Math.max(1, Math.floor(damage * (1 - resist / 100)));
 
     const crit = Math.random() * 100 < mStats.critChance;
     if (crit) damage = Math.floor(damage * (mStats.critDamage / 100));

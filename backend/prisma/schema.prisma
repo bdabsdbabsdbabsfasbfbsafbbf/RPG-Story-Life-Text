@@ -162,6 +162,8 @@ model StatModel {
   name        String      @unique
   slug        String      @unique
   description String      @default("")
+  // Categoria de combate: melee, caster, hybrid, support, tank
+  category    String      @default("hybrid")
   // base: { hp, mana, attack, defense, magic, magicDefense, speed } — valores no nível 1
   base        Json        @default("{}")
   // perLevel: mesmo shape de base — crescimento a cada nível
@@ -170,10 +172,26 @@ model StatModel {
   //            dodgePerSpeed, attackSpeedMs, manaRegenPerTick, healthRegenPerTick,
   //            threatPerAttack, aggroPerHit }
   scaling     Json        @default("{}")
-  isActive    Boolean     @default(true)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  classes     GameClass[]
+  // coreStats: { strength, intellect, endurance, dexterity, wisdom, luck } — pontos base do modelo
+  coreStats   Json        @default("{}")
+  // coreStatsPerLevel: crescimento dos core stats a cada nível
+  coreStatsPerLevel Json  @default("{}")
+  // conversions: [{ stat, target, factor }] — como atributos viram Combat Stats.
+  // Ex.: { stat: "strength", target: "attackPower", factor: 1.5 },
+  //      { stat: "luck", target: "critDamage", factor: 1.2 },
+  //      { stat: "dexterity", target: "attackSpeedPercent", factor: 10 }
+  conversions Json        @default("[]")
+  // attackIntervalBase: ms naturais entre auto-ataques (ex.: 500 melee, 700 tank, 400 dodge)
+  attackIntervalBase Int  @default(1000)
+  // combatStatsBase: { hitChance, critChance, critMultiplier, evasion, cooldownReduction }
+  combatStatsBase Json   @default("{}")
+  // bonuses: { physicalBoost, magicalBoost, damageBoost, healingBoost,
+  //            damageResistance, physicalResistance, magicalResistance, penetration }
+  bonuses       Json      @default("{}")
+  isActive      Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  classes       GameClass[]
 }
 
 model Skill {
