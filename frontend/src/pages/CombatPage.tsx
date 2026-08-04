@@ -509,11 +509,11 @@ export function CombatPage() {
             <div>
               <div className="flex items-stretch justify-center gap-1.5 flex-wrap">
               {/* Auto attack */}
-              <div className="w-14 card-hover py-2 text-center opacity-80" title={autoSkill?.description ?? "Ataque automático"}>
+              <div className="w-20 card-hover py-2 text-center opacity-80" title={autoSkill?.description ?? "Ataque automático"}>
                 {autoSkill?.icon ? (
-                  <img src={autoSkill.icon} alt="" className="w-5 h-5 mx-auto mb-1 object-contain" style={{ imageRendering: "pixelated" }} />
+                  <img src={autoSkill.icon} alt="" className="w-6 h-6 mx-auto mb-1 object-contain" style={{ imageRendering: "pixelated" }} />
                 ) : (
-                  <Sword size={15} className="mx-auto mb-1 text-purple-400" />
+                  <Sword size={18} className="mx-auto mb-1 text-purple-400" />
                 )}
                 <span className="text-[10px] block truncate px-0.5">{autoSkill?.name || "Auto"}</span>
                 <span className="text-[8px] text-gray-500 block">Automático</span>
@@ -530,7 +530,7 @@ export function CombatPage() {
                     key={skill.id}
                     onClick={() => useSkill(skill.id)}
                     disabled={disabled}
-                    className={`w-14 card-hover py-2 text-center relative ${
+                    className={`w-20 card-hover py-2 text-center relative ${
                       disabled ? "opacity-40 cursor-not-allowed" : ""
                     } ${skill.trigger === "ultimate" ? "border-yellow-500/40" : ""}`}
                     title={locked ? `Requer Rank ${skill.rankRequired}` : skill.description}
@@ -549,25 +549,25 @@ export function CombatPage() {
                       </span>
                     )}
                     {locked ? (
-                      <Lock size={15} className="mx-auto mb-1 text-gray-500" />
+                      <Lock size={18} className="mx-auto mb-1 text-gray-500" />
                     ) : skill.icon ? (
-                      <div className="relative mx-auto mb-1 w-5 h-5">
+                      <div className="relative mx-auto mb-1 w-6 h-6">
                         <img src={skill.icon} alt="" className="w-full h-full object-contain" style={{ imageRendering: "pixelated" }} />
                         {skill.iconSecondary && (
                           <img
                             src={skill.iconSecondary}
                             alt=""
-                            className="absolute -bottom-1 -right-1 w-3 h-3 object-contain rounded bg-dark-800 border border-dark-600"
+                            className="absolute -bottom-1 -right-1 w-3.5 h-3.5 object-contain rounded bg-dark-800 border border-dark-600"
                             style={{ imageRendering: "pixelated" }}
                           />
                         )}
                       </div>
                     ) : skill.trigger === "ultimate" ? (
-                      <Zap size={15} className="mx-auto mb-1 text-yellow-400" />
+                      <Zap size={18} className="mx-auto mb-1 text-yellow-400" />
                     ) : skill.kind === "heal" ? (
-                      <Heart size={15} className="mx-auto mb-1 text-green-400" />
+                      <Heart size={18} className="mx-auto mb-1 text-green-400" />
                     ) : (
-                      <Sword size={15} className="mx-auto mb-1 text-purple-400" />
+                      <Sword size={18} className="mx-auto mb-1 text-purple-400" />
                     )}
                     <span className="text-[10px] block truncate px-0.5">{skill.name}</span>
                     <span className="text-[8px] text-gray-500 block">
@@ -590,13 +590,13 @@ export function CombatPage() {
                   <button
                     onClick={() => usePotion(p.inventoryId)}
                     disabled={disabled}
-                    className={`w-14 card-hover py-2 text-center ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
+                    className={`w-20 card-hover py-2 text-center ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
                     title={`Poção de cura: restaura ${p.heal} de vida (x${p.quantity})`}
                   >
                     {p.icon ? (
-                      <img src={p.icon} alt="" className="w-5 h-5 mx-auto mb-1 object-contain" style={{ imageRendering: "pixelated" }} />
+                      <img src={p.icon} alt="" className="w-6 h-6 mx-auto mb-1 object-contain" style={{ imageRendering: "pixelated" }} />
                     ) : (
-                      <HeartPulse size={15} className="mx-auto mb-1 text-red-400" />
+                      <HeartPulse size={18} className="mx-auto mb-1 text-red-400" />
                     )}
                     <span className="text-[10px] block truncate px-0.5">Cura</span>
                     <span className="text-[8px] text-gray-500 block">x{p.quantity}</span>
@@ -615,13 +615,13 @@ export function CombatPage() {
                   <button
                     onClick={() => usePotion(p.inventoryId)}
                     disabled={disabled}
-                    className={`w-14 card-hover py-2 text-center ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
+                    className={`w-20 card-hover py-2 text-center ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
                     title={`Poção de mana: restaura ${p.manaRestore} de mana (x${p.quantity})`}
                   >
                     {p.icon ? (
-                      <img src={p.icon} alt="" className="w-5 h-5 mx-auto mb-1 object-contain" style={{ imageRendering: "pixelated" }} />
+                      <img src={p.icon} alt="" className="w-6 h-6 mx-auto mb-1 object-contain" style={{ imageRendering: "pixelated" }} />
                     ) : (
-                      <Droplets size={15} className="mx-auto mb-1 text-blue-400" />
+                      <Droplets size={18} className="mx-auto mb-1 text-blue-400" />
                     )}
                     <span className="text-[10px] block truncate px-0.5">Mana</span>
                     <span className="text-[8px] text-gray-500 block">x{p.quantity}</span>
@@ -632,10 +632,10 @@ export function CombatPage() {
               <button
                 onClick={flee}
                 disabled={combat.state !== "active"}
-                className={`w-14 card-hover py-2 text-center ${combat.state !== "active" ? "opacity-40 cursor-not-allowed" : "hover:border-amber-500/40"}`}
+                className={`w-20 card-hover py-2 text-center ${combat.state !== "active" ? "opacity-40 cursor-not-allowed" : "hover:border-amber-500/40"}`}
                 title="Tenta fugir do combate (70% de chance)"
               >
-                <DoorOpen size={15} className="mx-auto mb-1 text-amber-400" />
+                <DoorOpen size={18} className="mx-auto mb-1 text-amber-400" />
                 <span className="text-[10px] block">Fugir</span>
                 <span className="text-[8px] text-gray-500 block">70%</span>
               </button>
