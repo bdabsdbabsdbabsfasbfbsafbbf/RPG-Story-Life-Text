@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { inventoryApi, classesApi, authApi, marketApi } from "../services/api";
+import { inventoryApi, authApi, marketApi } from "../services/api";
 import { InventoryItem, UserEnchantment } from "../types";
 import {
-  Backpack, Search, Star, Swords, Check, Coins, Lock,
+  Backpack, Search, Star, Coins, Lock,
   Sword, Crown, HardHat, Shield, Wind, Gem, Link2, Sparkles, X,
 } from "lucide-react";
 import { useGameStore } from "../store/gameStore";
@@ -32,20 +32,12 @@ const CORE_STAT_LABELS: { key: string; label: string; color: string }[] = [
   { key: "luck", label: "Sorte", color: "text-yellow-400" },
 ];
 
-interface UnlockedClass {
-  id: string;
-  rank: number;
-  isActive: boolean;
-  gameClass: { id: string; name: string; slug: string; role: string };
-}
-
 export function InventoryPage() {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
-  const [classes, setClasses] = useState<UnlockedClass[]>([]);
   const [selling, setSelling] = useState(false);
   const [listing, setListing] = useState(false);
   const [listPrice, setListPrice] = useState(0);
@@ -116,17 +108,6 @@ export function InventoryPage() {
       setSelling(false);
     }
   };
-
-  const loadClasses = () => {
-    if (!selectedCharacter?.id) return;
-    classesApi.listClasses(selectedCharacter.id)
-      .then(({ data }) => setClasses(Array.isArray(data) ? data : []))
-      .catch(() => {});
-  };
-
-  useEffect(() => {
-    loadClasses();
-  }, [selectedCharacter?.id]);
 
   const handleEquip = async (inv: InventoryItem) => {
     if (!selectedCharacter) return;
@@ -221,32 +202,6 @@ export function InventoryPage() {
           <span className="text-sm text-gray-500 font-normal">({items.length} items)</span>
         </h1>
       </div>
-
-      {classes.length > 0 && (
-        <div className="panel p-4">
-          <h2 className="font-display font-semibold mb-3 flex items-center gap-2">
-            <Swords size={16} className="text-blue-400" /> Classe
-          </h2>
-          <div className="grid grid-cols-1 gap-3 max-w-xl">
-            {classes.map((p) => {
-              const equipped = !!p.isActive;
-              return (
-                <div key={p.id} className={`card-hover p-4 flex items-center justify-between gap-3 ${equipped ? "border-purple-500/40" : ""}`}>
-                  <div className="min-w-0">
-                    <p className="font-medium">{p.gameClass?.name}</p>
-                    <p className="text-xs text-gray-500 capitalize">
-                      {p.gameClass?.role} • Rank {p.rank}
-                    </p>
-                  </div>
-                  <span className="flex items-center gap-1 text-xs text-purple-400 px-2 py-1 shrink-0">
-                    <Check size={13} /> Equipada
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       <div className="panel p-4">
         <h2 className="font-display font-semibold mb-3 flex items-center gap-2">

@@ -14,6 +14,7 @@ interface CombatPotion {
   quantity: number;
   heal: number;
   manaRestore: number;
+  icon?: string | null;
 }
 
 interface Floater {
@@ -123,7 +124,7 @@ export function CombatPage() {
       const usable = list
         .map((inv) => {
           const { heal, manaRestore } = itemEffects(inv.item);
-          return { inventoryId: inv.id, itemName: inv.item.name, quantity: inv.quantity, heal, manaRestore };
+          return { inventoryId: inv.id, itemName: inv.item.name, quantity: inv.quantity, heal, manaRestore, icon: inv.item.icon ?? null };
         })
         .filter((p) => p.heal > 0 || p.manaRestore > 0);
       setPotions(usable);
@@ -506,12 +507,16 @@ export function CombatPage() {
             <p className="text-center text-sm text-gray-500">Clique em "Iniciar combate" para liberar suas habilidades.</p>
           ) : (
             <div>
-              <div className="flex items-stretch justify-center gap-2 flex-wrap">
+              <div className="flex items-stretch justify-center gap-1.5 flex-wrap">
               {/* Auto attack */}
-              <div className="w-20 card-hover py-3 text-center opacity-80" title={autoSkill?.description ?? "Ataque automático"}>
-                <Sword size={18} className="mx-auto mb-1 text-purple-400" />
-                <span className="text-[11px] block">{autoSkill?.name || "Auto"}</span>
-                <span className="text-[9px] text-gray-500 block">Automático</span>
+              <div className="w-14 card-hover py-2 text-center opacity-80" title={autoSkill?.description ?? "Ataque automático"}>
+                {autoSkill?.icon ? (
+                  <img src={autoSkill.icon} alt="" className="w-5 h-5 mx-auto mb-1 object-contain" style={{ imageRendering: "pixelated" }} />
+                ) : (
+                  <Sword size={15} className="mx-auto mb-1 text-purple-400" />
+                )}
+                <span className="text-[10px] block truncate px-0.5">{autoSkill?.name || "Auto"}</span>
+                <span className="text-[8px] text-gray-500 block">Automático</span>
               </div>
 
               {usableSkills.map((skill) => {
@@ -525,14 +530,14 @@ export function CombatPage() {
                     key={skill.id}
                     onClick={() => useSkill(skill.id)}
                     disabled={disabled}
-                    className={`w-20 card-hover py-3 text-center relative ${
+                    className={`w-14 card-hover py-2 text-center relative ${
                       disabled ? "opacity-40 cursor-not-allowed" : ""
                     } ${skill.trigger === "ultimate" ? "border-yellow-500/40" : ""}`}
                     title={locked ? `Requer Rank ${skill.rankRequired}` : skill.description}
                   >
                     {cd && (
                       <span className="absolute inset-0 bg-black/70 rounded-xl flex items-center justify-center">
-                        <span className="text-lg font-bold text-white font-mono">
+                        <span className="text-base font-bold text-white font-mono">
                           {(cdLeft / 1000).toFixed(1)}s
                         </span>
                         <span className="absolute bottom-0 left-0 right-0 h-1 bg-white/10 rounded-b-xl overflow-hidden">
@@ -544,28 +549,28 @@ export function CombatPage() {
                       </span>
                     )}
                     {locked ? (
-                      <Lock size={16} className="mx-auto mb-1 text-gray-500" />
+                      <Lock size={15} className="mx-auto mb-1 text-gray-500" />
                     ) : skill.icon ? (
-                      <div className="relative mx-auto mb-1 w-6 h-6">
+                      <div className="relative mx-auto mb-1 w-5 h-5">
                         <img src={skill.icon} alt="" className="w-full h-full object-contain" style={{ imageRendering: "pixelated" }} />
                         {skill.iconSecondary && (
                           <img
                             src={skill.iconSecondary}
                             alt=""
-                            className="absolute -bottom-1 -right-1 w-3.5 h-3.5 object-contain rounded bg-dark-800 border border-dark-600"
+                            className="absolute -bottom-1 -right-1 w-3 h-3 object-contain rounded bg-dark-800 border border-dark-600"
                             style={{ imageRendering: "pixelated" }}
                           />
                         )}
                       </div>
                     ) : skill.trigger === "ultimate" ? (
-                      <Zap size={18} className="mx-auto mb-1 text-yellow-400" />
+                      <Zap size={15} className="mx-auto mb-1 text-yellow-400" />
                     ) : skill.kind === "heal" ? (
-                      <Heart size={18} className="mx-auto mb-1 text-green-400" />
+                      <Heart size={15} className="mx-auto mb-1 text-green-400" />
                     ) : (
-                      <Sword size={18} className="mx-auto mb-1 text-purple-400" />
+                      <Sword size={15} className="mx-auto mb-1 text-purple-400" />
                     )}
-                    <span className="text-[11px] block">{skill.name}</span>
-                    <span className="text-[9px] text-gray-500 block">
+                    <span className="text-[10px] block truncate px-0.5">{skill.name}</span>
+                    <span className="text-[8px] text-gray-500 block">
                       {locked
                         ? `Rank ${skill.rankRequired}+`
                         : `${skill.manaCost} mana${cd ? " · CD" : ""}`}
@@ -573,52 +578,68 @@ export function CombatPage() {
                   </button>
                 );
               })}
+
+              {/* Poção de cura */}
+              {(() => {
+                const healPotions = potions.filter((p) => p.heal > 0);
+                if (healPotions.length === 0) return null;
+                const p = healPotions[0];
+                const needsHp = (combat.characterHp ?? 0) < (combat.maxHp ?? 0);
+                const disabled = p.quantity < 1 || !needsHp || combat.state !== "active";
+                return (
+                  <button
+                    onClick={() => usePotion(p.inventoryId)}
+                    disabled={disabled}
+                    className={`w-14 card-hover py-2 text-center ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
+                    title={`Poção de cura: restaura ${p.heal} de vida (x${p.quantity})`}
+                  >
+                    {p.icon ? (
+                      <img src={p.icon} alt="" className="w-5 h-5 mx-auto mb-1 object-contain" style={{ imageRendering: "pixelated" }} />
+                    ) : (
+                      <HeartPulse size={15} className="mx-auto mb-1 text-red-400" />
+                    )}
+                    <span className="text-[10px] block truncate px-0.5">Cura</span>
+                    <span className="text-[8px] text-gray-500 block">x{p.quantity}</span>
+                  </button>
+                );
+              })()}
+
+              {/* Poção de mana */}
+              {(() => {
+                const manaPotions = potions.filter((p) => p.manaRestore > 0);
+                if (manaPotions.length === 0) return null;
+                const p = manaPotions[0];
+                const needsMana = (combat.characterMana ?? 0) < (combat.maxMana ?? 0);
+                const disabled = p.quantity < 1 || !needsMana || combat.state !== "active";
+                return (
+                  <button
+                    onClick={() => usePotion(p.inventoryId)}
+                    disabled={disabled}
+                    className={`w-14 card-hover py-2 text-center ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
+                    title={`Poção de mana: restaura ${p.manaRestore} de mana (x${p.quantity})`}
+                  >
+                    {p.icon ? (
+                      <img src={p.icon} alt="" className="w-5 h-5 mx-auto mb-1 object-contain" style={{ imageRendering: "pixelated" }} />
+                    ) : (
+                      <Droplets size={15} className="mx-auto mb-1 text-blue-400" />
+                    )}
+                    <span className="text-[10px] block truncate px-0.5">Mana</span>
+                    <span className="text-[8px] text-gray-500 block">x{p.quantity}</span>
+                  </button>
+                );
+              })()}
+
               <button
                 onClick={flee}
                 disabled={combat.state !== "active"}
-                className={`w-20 card-hover py-3 text-center ${combat.state !== "active" ? "opacity-40 cursor-not-allowed" : "hover:border-amber-500/40"}`}
+                className={`w-14 card-hover py-2 text-center ${combat.state !== "active" ? "opacity-40 cursor-not-allowed" : "hover:border-amber-500/40"}`}
                 title="Tenta fugir do combate (70% de chance)"
               >
-                <DoorOpen size={18} className="mx-auto mb-1 text-amber-400" />
-                <span className="text-[11px] block">Fugir</span>
-                <span className="text-[9px] text-gray-500 block">70%</span>
+                <DoorOpen size={15} className="mx-auto mb-1 text-amber-400" />
+                <span className="text-[10px] block">Fugir</span>
+                <span className="text-[8px] text-gray-500 block">70%</span>
               </button>
             </div>
-
-            {/* Poções */}
-            {potions.length > 0 && combat.state === "active" && (
-              <div className="mt-3 border-t border-dark-700 pt-3">
-                <p className="text-[11px] text-gray-500 uppercase tracking-wider mb-2 text-center">Itens</p>
-                <div className="flex items-stretch justify-center gap-2 flex-wrap">
-                  {potions.map((p) => {
-                    const canUse = p.quantity > 0;
-                    const needsHp = p.heal > 0 && (combat.characterHp ?? 0) < (combat.maxHp ?? 0);
-                    const needsMana = p.manaRestore > 0 && (combat.characterMana ?? 0) < (combat.maxMana ?? 0);
-                    const useful = needsHp || needsMana;
-                    const disabled = !canUse || !useful;
-                    return (
-                      <button
-                        key={p.inventoryId}
-                        onClick={() => usePotion(p.inventoryId)}
-                        disabled={disabled}
-                        className={`w-24 card-hover py-2.5 px-2 text-center ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
-                        title={`${p.heal > 0 ? `Cura ${p.heal} de vida. ` : ""}${p.manaRestore > 0 ? `Restaura ${p.manaRestore} de mana.` : ""}`}
-                      >
-                        {p.heal > 0 && p.manaRestore === 0 ? (
-                          <HeartPulse size={16} className="mx-auto mb-1 text-red-400" />
-                        ) : p.manaRestore > 0 && p.heal === 0 ? (
-                          <Droplets size={16} className="mx-auto mb-1 text-blue-400" />
-                        ) : (
-                          <FlaskConical size={16} className="mx-auto mb-1 text-purple-400" />
-                        )}
-                        <span className="text-[11px] block truncate">{p.itemName}</span>
-                        <span className="text-[9px] text-gray-500 block">x{p.quantity}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
           </div>
           )}
         </div>
