@@ -128,38 +128,38 @@ const starterClasses = [
 
 const items = [
   // ===== Weapons (STR/INT) =====
-  { name: "Espada de Iniciante", description: "Uma espada simples forjada para novos aventureiros.", type: "weapon", rarity: "common", level: 1, rank: 1, buyPrice: 50, sellPrice: 10, strength: 4, dexterity: 1 },
-  { name: "Adaga de Iniciante", description: "Leve e afiada, ideal para golpes precisos.", type: "weapon", rarity: "common", level: 1, rank: 1, buyPrice: 50, sellPrice: 10, strength: 2, dexterity: 3 },
-  { name: "Cajado do Aprendiz", description: "Canaliza os primeiros feitiços de um mago.", type: "weapon", rarity: "common", level: 1, rank: 1, buyPrice: 50, sellPrice: 10, intellect: 5 },
-  { name: "Cajado da Luz", description: "Um cajado abençoado que fortalece as curas.", type: "weapon", rarity: "common", level: 1, rank: 1, buyPrice: 50, sellPrice: 10, intellect: 4, wisdom: 1 },
-  { name: "Espada de Ferro", description: "Uma espada de ferro confiável para aventureiros iniciantes.", type: "weapon", rarity: "uncommon", level: 3, rank: 2, buyPrice: 150, sellPrice: 30, strength: 8, dexterity: 2 },
-  { name: "Adaga Serrilhada", description: "Lâmina serrilhada que causa ferimentos graves.", type: "weapon", rarity: "uncommon", level: 3, rank: 2, buyPrice: 140, sellPrice: 28, strength: 4, dexterity: 6 },
-  { name: "Cajado Arcano", description: "Canaliza poder arcano com precisão.", type: "weapon", rarity: "uncommon", level: 3, rank: 2, buyPrice: 160, sellPrice: 32, intellect: 10, wisdom: 2 },
-  { name: "Machado de Batalha", description: "Uma lâmina pesada que parte escudos.", type: "weapon", rarity: "rare", level: 6, rank: 3, buyPrice: 400, sellPrice: 80, strength: 18, endurance: 3 },
-  { name: "Grimório Antigo", description: "Um tomo arcano repleto de feitiços esquecidos.", type: "weapon", rarity: "rare", level: 6, rank: 3, buyPrice: 420, sellPrice: 84, intellect: 16, wisdom: 5 },
+  { name: "Espada de Iniciante", description: "Uma espada simples forjada para novos aventureiros.", type: "weapon", rarity: "common", level: 1, rank: 1, buyPrice: 50, sellPrice: 10, strength: 4, dexterity: 1, icon: "/icons/64x64/Armas/fc1441.png" },
+  { name: "Adaga de Iniciante", description: "Leve e afiada, ideal para golpes precisos.", type: "weapon", rarity: "common", level: 1, rank: 1, buyPrice: 50, sellPrice: 10, strength: 2, dexterity: 3, icon: "/icons/64x64/Armas/fc1442.png" },
+  { name: "Cajado do Aprendiz", description: "Canaliza os primeiros feitiços de um mago.", type: "weapon", rarity: "common", level: 1, rank: 1, buyPrice: 50, sellPrice: 10, intellect: 5, icon: "/icons/64x64/Armas/fc1443.png" },
+  { name: "Cajado da Luz", description: "Um cajado abençoado que fortalece as curas.", type: "weapon", rarity: "common", level: 1, rank: 1, buyPrice: 50, sellPrice: 10, intellect: 4, wisdom: 1, icon: "/icons/64x64/Armas/fc1444.png" },
+  { name: "Espada de Ferro", description: "Uma espada de ferro confiável para aventureiros iniciantes.", type: "weapon", rarity: "uncommon", level: 3, rank: 2, buyPrice: 150, sellPrice: 30, strength: 8, dexterity: 2, icon: "/icons/64x64/Armas/fc1445.png" },
+  { name: "Adaga Serrilhada", description: "Lâmina serrilhada que causa ferimentos graves.", type: "weapon", rarity: "uncommon", level: 3, rank: 2, buyPrice: 140, sellPrice: 28, strength: 4, dexterity: 6, icon: "/icons/64x64/Armas/fc1446.png" },
+  { name: "Cajado Arcano", description: "Canaliza poder arcano com precisão.", type: "weapon", rarity: "uncommon", level: 3, rank: 2, buyPrice: 160, sellPrice: 32, intellect: 10, wisdom: 2, icon: "/icons/64x64/Armas/fc1447.png" },
+  { name: "Machado de Batalha", description: "Uma lâmina pesada que parte escudos.", type: "weapon", rarity: "rare", level: 6, rank: 3, buyPrice: 400, sellPrice: 80, strength: 18, endurance: 3, icon: "/icons/64x64/Armas/fc1448.png" },
+  { name: "Grimório Antigo", description: "Um tomo arcano repleto de feitiços esquecidos.", type: "weapon", rarity: "rare", level: 6, rank: 3, buyPrice: 420, sellPrice: 84, intellect: 16, wisdom: 5, icon: "/icons/64x64/Armas/fc1449.png" },
   // ===== Helms (END/WIS) =====
-  { name: "Capuz de Pano", description: "Proteção simples para a cabeça.", type: "helm", rarity: "common", level: 1, rank: 1, buyPrice: 30, sellPrice: 6, endurance: 2, wisdom: 1 },
-  { name: "Elmo de Ferro", description: "Elmo resistente dos soldados da vila.", type: "helm", rarity: "uncommon", level: 3, rank: 2, buyPrice: 110, sellPrice: 22, endurance: 6, wisdom: 2 },
-  { name: "Coroa Arcano", description: "Coroa encantada que amplifica o conhecimento.", type: "helm", rarity: "rare", level: 6, rank: 3, buyPrice: 360, sellPrice: 72, wisdom: 10, intellect: 5 },
+  { name: "Capuz de Pano", description: "Proteção simples para a cabeça.", type: "helm", rarity: "common", level: 1, rank: 1, buyPrice: 30, sellPrice: 6, endurance: 2, wisdom: 1, icon: "/icons/64x64/Elmo/fc1832.png" },
+  { name: "Elmo de Ferro", description: "Elmo resistente dos soldados da vila.", type: "helm", rarity: "uncommon", level: 3, rank: 2, buyPrice: 110, sellPrice: 22, endurance: 6, wisdom: 2, icon: "/icons/64x64/Elmo/fc1838.png" },
+  { name: "Coroa Arcano", description: "Coroa encantada que amplifica o conhecimento.", type: "helm", rarity: "rare", level: 6, rank: 3, buyPrice: 360, sellPrice: 72, wisdom: 10, intellect: 5, icon: "/icons/64x64/Elmo/fc1839.png" },
   // ===== Armors (END/DEX) =====
-  { name: "Túnica Simples", description: "Roupas leves e confortáveis.", type: "armor", rarity: "common", level: 1, rank: 1, buyPrice: 40, sellPrice: 8, endurance: 3 },
-  { name: "Armadura de Couro", description: "Proteção leve e resistente.", type: "armor", rarity: "uncommon", level: 2, rank: 2, buyPrice: 120, sellPrice: 24, endurance: 8, dexterity: 2 },
-  { name: "Cota de Malha", description: "Anéis de aço entrelaçados para máxima defesa.", type: "armor", rarity: "rare", level: 6, rank: 3, buyPrice: 380, sellPrice: 76, endurance: 14, strength: 4 },
+  { name: "Túnica Simples", description: "Roupas leves e confortáveis.", type: "armor", rarity: "common", level: 1, rank: 1, buyPrice: 40, sellPrice: 8, endurance: 3, icon: "/icons/64x64/Robes/fc1969.png" },
+  { name: "Armadura de Couro", description: "Proteção leve e resistente.", type: "armor", rarity: "uncommon", level: 2, rank: 2, buyPrice: 120, sellPrice: 24, endurance: 8, dexterity: 2, icon: "/icons/64x64/Armaduras/fc1827.png" },
+  { name: "Cota de Malha", description: "Anéis de aço entrelaçados para máxima defesa.", type: "armor", rarity: "rare", level: 6, rank: 3, buyPrice: 380, sellPrice: 76, endurance: 14, strength: 4, icon: "/icons/64x64/Armaduras/fc1828.png" },
   // ===== Capes (WIS/LUK) =====
-  { name: "Capa Esfarrapada", description: "Uma capa velha que esconde bem seu dono.", type: "cape", rarity: "common", level: 1, rank: 1, buyPrice: 35, sellPrice: 7, wisdom: 2, luck: 1 },
-  { name: "Manto de Veludo", description: "Um manto elegante dos nobres da vila.", type: "cape", rarity: "uncommon", level: 3, rank: 2, buyPrice: 130, sellPrice: 26, wisdom: 6, luck: 3 },
-  { name: "Capa do Vento", description: "Flutua como o vento e melhora os reflexos.", type: "cape", rarity: "rare", level: 6, rank: 3, buyPrice: 340, sellPrice: 68, dexterity: 8, luck: 4 },
+  { name: "Capa Esfarrapada", description: "Uma capa velha que esconde bem seu dono.", type: "cape", rarity: "common", level: 1, rank: 1, buyPrice: 35, sellPrice: 7, wisdom: 2, luck: 1, icon: "/icons/64x64/Capas/fc1823.png" },
+  { name: "Manto de Veludo", description: "Um manto elegante dos nobres da vila.", type: "cape", rarity: "uncommon", level: 3, rank: 2, buyPrice: 130, sellPrice: 26, wisdom: 6, luck: 3, icon: "/icons/64x64/Capas/fc1824.png" },
+  { name: "Capa do Vento", description: "Flutua como o vento e melhora os reflexos.", type: "cape", rarity: "rare", level: 6, rank: 3, buyPrice: 340, sellPrice: 68, dexterity: 8, luck: 4, icon: "/icons/64x64/Capas/fc1825.png" },
   // ===== Rings (LUK/STR ou INT) =====
-  { name: "Anel de Bronze", description: "Um anel simples, dizem que traz sorte.", type: "ring", rarity: "common", level: 1, rank: 1, buyPrice: 45, sellPrice: 9, luck: 2, strength: 1 },
-  { name: "Anel de Prata", description: "Anel prateado de um artesão habilidoso.", type: "ring", rarity: "uncommon", level: 3, rank: 2, buyPrice: 145, sellPrice: 29, luck: 5, strength: 3 },
-  { name: "Anel do Fogo", description: "Pulsa com energia ardente.", type: "ring", rarity: "rare", level: 6, rank: 3, buyPrice: 390, sellPrice: 78, intellect: 7, luck: 5 },
+  { name: "Anel de Bronze", description: "Um anel simples, dizem que traz sorte.", type: "ring", rarity: "common", level: 1, rank: 1, buyPrice: 45, sellPrice: 9, luck: 2, strength: 1, icon: "/icons/64x64/Aneis/fc1843.png" },
+  { name: "Anel de Prata", description: "Anel prateado de um artesão habilidoso.", type: "ring", rarity: "uncommon", level: 3, rank: 2, buyPrice: 145, sellPrice: 29, luck: 5, strength: 3, icon: "/icons/64x64/Aneis/fc1844.png" },
+  { name: "Anel do Fogo", description: "Pulsa com energia ardente.", type: "ring", rarity: "rare", level: 6, rank: 3, buyPrice: 390, sellPrice: 78, intellect: 7, luck: 5, icon: "/icons/64x64/Aneis/fc1845.png" },
   // ===== Necklaces (WIS/LUK) =====
-  { name: "Colar de Contas", description: "Contas de madeira entalhadas à mão.", type: "necklace", rarity: "common", level: 1, rank: 1, buyPrice: 40, sellPrice: 8, wisdom: 2, luck: 1 },
-  { name: "Amuleto da Sorte", description: "Um amuleto que afasta o azar.", type: "necklace", rarity: "uncommon", level: 3, rank: 2, buyPrice: 140, sellPrice: 28, luck: 5, wisdom: 3 },
-  { name: "Colar Arcano", description: "Um colar banhado em energia mística.", type: "necklace", rarity: "rare", level: 6, rank: 3, buyPrice: 370, sellPrice: 74, wisdom: 8, intellect: 4 },
+  { name: "Colar de Contas", description: "Contas de madeira entalhadas à mão.", type: "necklace", rarity: "common", level: 1, rank: 1, buyPrice: 40, sellPrice: 8, wisdom: 2, luck: 1, icon: "/icons/64x64/Colares/fc1849.png" },
+  { name: "Amuleto da Sorte", description: "Um amuleto que afasta o azar.", type: "necklace", rarity: "uncommon", level: 3, rank: 2, buyPrice: 140, sellPrice: 28, luck: 5, wisdom: 3, icon: "/icons/64x64/Colares/fc1850.png" },
+  { name: "Colar Arcano", description: "Um colar banhado em energia mística.", type: "necklace", rarity: "rare", level: 6, rank: 3, buyPrice: 370, sellPrice: 74, wisdom: 8, intellect: 4, icon: "/icons/64x64/Colares/fc1851.png" },
   // ===== Consumables =====
-  { name: "Poção de Vida", description: "Restaura 50 de vida.", type: "consumable", rarity: "common", level: 1, isStackable: true, maxStack: 99, buyPrice: 20, sellPrice: 4, effects: '{"heal": 50}' },
-  { name: "Poção de Mana", description: "Restaura 40 de mana.", type: "consumable", rarity: "common", level: 1, isStackable: true, maxStack: 99, buyPrice: 25, sellPrice: 5, effects: '{"manaRestore": 40}' },
+  { name: "Poção de Vida", description: "Restaura 50 de vida.", type: "consumable", rarity: "common", level: 1, isStackable: true, maxStack: 99, buyPrice: 20, sellPrice: 4, effects: '{"heal": 50}', icon: "/icons/64x64/Potion/Vida.png" },
+  { name: "Poção de Mana", description: "Restaura 40 de mana.", type: "consumable", rarity: "common", level: 1, isStackable: true, maxStack: 99, buyPrice: 25, sellPrice: 5, effects: '{"manaRestore": 40}', icon: "/icons/64x64/Potion/Mana.png" },
 ];
 
 // ===== Encantamentos (independentes dos itens, comprados na loja) =====
@@ -534,8 +534,8 @@ async function upsertMonster(monster) {
           minQuantity: drop.min || 1,
           maxQuantity: drop.max || drop.min || 1,
           isGuaranteed: drop.guaranteed || false,
-          minLevel: drop.minLevel || null,
-          maxLevel: drop.maxLevel || null,
+          ...(drop.minLevel !== undefined ? { minLevel: drop.minLevel } : {}),
+          ...(drop.maxLevel !== undefined ? { maxLevel: drop.maxLevel } : {}),
         },
       });
     }
