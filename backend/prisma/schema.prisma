@@ -342,6 +342,9 @@ model Item {
   buyPrice      BigInt   @default(0)
   sellPrice     BigInt   @default(0)
   effects       String? // apenas consumíveis (ex: {"heal":50})
+  // Natural da arma (apenas weapon): 0 = usa o scaling da classe
+  attackSpeedMs  Int     @default(0) // ms entre ataques (velocidade natural)
+  dps            Float   @default(0) // dano por segundo natural da arma
   // Core Stats — únicos atributos que equipamentos fornecem
   strength      Int      @default(0)
   intellect     Int      @default(0)

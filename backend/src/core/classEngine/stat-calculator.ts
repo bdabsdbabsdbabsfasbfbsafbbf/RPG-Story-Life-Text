@@ -68,6 +68,8 @@ export interface StatsInput {
   resource?: Record<string, any>;
   passives: PassiveDef[]; // apenas passivas desbloqueadas pelo rank
   coreStats?: CoreStats; // Core Stats vindos de equipamentos + encantamentos
+  attackSpeedMs?: number; // override vindo da arma equipada (0 = usa o scaling da classe)
+  weaponDps?: number; // DPS natural da arma equipada (soma ao attack power)
 }
 
 function flatPassiveMods(passives: PassiveDef[], key: string): number {
@@ -133,7 +135,7 @@ export function computeStats(input: StatsInput): DerivedStats {
   stats.critChance = Math.max(0, stats.speed * num(scaling.critChancePerSpeed, 0.05) + flatPassiveMods(input.passives, "critChance"));
   stats.critDamage = num(scaling.critDamageBase, 150) + flatPassiveMods(input.passives, "critDamage");
   stats.dodge = Math.min(60, Math.max(0, stats.speed * num(scaling.dodgePerSpeed, 0.02) + flatPassiveMods(input.passives, "dodge")));
-  stats.attackSpeedMs = Math.max(500, num(scaling.attackSpeedMs, 2000));
+  stats.attackSpeedMs = Math.max(500, input.attackSpeedMs ?? num(scaling.attackSpeedMs, 2000));
   stats.manaRegenPerTick = num(resource.manaRegenPerTick, num(scaling.manaRegenPerTick, 5)) + flatPassiveMods(input.passives, "manaRegen");
   stats.healthRegenPerTick = num(scaling.healthRegenPerTick, 0) + flatPassiveMods(input.passives, "healthRegen");
   stats.threatPerAttack = num(scaling.threatPerAttack, 1);
@@ -161,6 +163,9 @@ export function computeStats(input: StatsInput): DerivedStats {
   stats.maxMana = stats.mana;
   stats.attackPower = Math.floor(applyPercent(stats.attackPower, percentPassiveMods(input.passives, "attackPower")));
   stats.spellPower = Math.floor(applyPercent(stats.spellPower, percentPassiveMods(input.passives, "spellPower")));
+  if (input.weaponDps) {
+    stats.attackPower = Math.floor(stats.attackPower + (input.weaponDps * stats.attackSpeedMs) / 1000);
+  }
 
   return stats;
 }

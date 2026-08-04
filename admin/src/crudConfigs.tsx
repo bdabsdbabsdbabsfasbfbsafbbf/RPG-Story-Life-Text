@@ -246,12 +246,12 @@ export const crudConfigs: CrudConfig[] = [
       { name: "rank", label: "Rank", type: "number", defaultValue: 1 },
       { name: "buyPrice", label: "Preço de compra", type: "number", defaultValue: 0, step: "1" },
       { name: "sellPrice", label: "Preço de venda", type: "number", defaultValue: 0, step: "1" },
-      { name: "effects", label: "Effects (consumíveis)", type: "json", jsonSchema: { mode: "fixed-record", fields: [
+      { name: "effects", label: "Effects (consumíveis)", type: "json", visibleIf: { field: "type", values: ["consumable"] }, jsonSchema: { mode: "fixed-record", fields: [
           { key: "heal", label: "Cura" },
           { key: "manaRestore", label: "Recupera Mana" },
-          { key: "shield", label: "Escudo" },
-          { key: "damage", label: "Dano" },
         ] } },
+      { name: "attackSpeedMs", label: "Velocidade natural da arma (ms)", type: "number", defaultValue: 0, visibleIf: { field: "type", values: ["weapon"] }, hint: "0 = usa a velocidade da classe. Ex.: 2200 (2,2s entre ataques)" },
+      { name: "dps", label: "DPS natural da arma", type: "number", defaultValue: 0, visibleIf: { field: "type", values: ["weapon"] }, hint: "Dano por segundo somado ao ataque no combate" },
       { name: "strength", label: "Força", type: "number", defaultValue: 0, visibleIf: { field: "type", values: ["weapon", "ring"] }, hint: "Weapon: Strength (física) | Ring: complementa" },
       { name: "intellect", label: "Intelecto", type: "number", defaultValue: 0, visibleIf: { field: "type", values: ["weapon", "ring"] }, hint: "Weapon: Intellect (mágica) | Ring: complementa" },
       { name: "endurance", label: "Resistência", type: "number", defaultValue: 0, visibleIf: { field: "type", values: ["armor", "helm"] }, hint: "Armor/Helm: sobrevivência" },

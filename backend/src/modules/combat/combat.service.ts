@@ -227,6 +227,8 @@ export class CombatService {
       resource: parseJson(gameClass.resource, {}),
       passives,
       coreStats,
+      attackSpeedMs: (character.equipment as any)?.weapon?.attackSpeedMs > 0 ? (character.equipment as any).weapon.attackSpeedMs : undefined,
+      weaponDps: Number((character.equipment as any)?.weapon?.dps) > 0 ? Number((character.equipment as any).weapon.dps) : undefined,
     };
 
     const battle = new Battle({
