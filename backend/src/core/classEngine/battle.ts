@@ -614,7 +614,6 @@ export class Battle {
       }
     }
     for (const ev of playerStep.events.expired) {
-      this.pushMessage(`${ev.effect.name} expirou`);
       this.fire("onEffectExpired", { actor: this.player, target: this.monster });
       if (ev.effect.onExpire && ev.effect.onExpire.length > 0) {
         const result = emptyResult();
@@ -635,7 +634,7 @@ export class Battle {
         const boosted = raw * (1 + (pStats.dotPercent + (mods?.damagePercent || 0)) / 100) * (1 + (mods?.tickPercent || 0) / 100);
         const dmg = Math.max(1, Math.floor(boosted)) * ev.stacks;
         this.monster.hp = Math.max(0, this.monster.hp - dmg);
-        this.pushMessage(`${ev.effect.name} causou ${dmg} de dano (${ev.stacks} stack${ev.stacks > 1 ? "s" : ""})`);
+        this.pushMessage(`${ev.effect.name} causou ${dmg} de dano${ev.stacks > 1 ? ` (${ev.stacks} stacks)` : ""}`);
         if (this.monster.hp <= 0) {
           this.monster.hp = 0;
           this.state = "won";
@@ -649,7 +648,6 @@ export class Battle {
       }
     }
     for (const ev of monsterStep.events.expired) {
-      this.pushMessage(`${ev.effect.name} expirou no inimigo`);
       if (ev.effect.onExpire && ev.effect.onExpire.length > 0) {
         const result = emptyResult();
         const ctx = this.buildActionContext(this.player, this.monster, result, "");
