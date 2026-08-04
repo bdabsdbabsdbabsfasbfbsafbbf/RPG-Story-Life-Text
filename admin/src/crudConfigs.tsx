@@ -272,6 +272,7 @@ export const crudConfigs: CrudConfig[] = [
     columns: [
       idColumn,
       { key: "name", label: "Name", render: (v) => <span className="font-medium text-white">{v}</span> },
+      { key: "imageUrl", label: "Ícone", render: (v) => (v ? <img src={v} alt="" className="w-9 h-9 object-contain rounded bg-dark-700 p-0.5" style={{ imageRendering: "pixelated" }} /> : <span className="text-gray-600 text-xs">—</span>) },
       { key: "level", label: "Level" },
       { key: "hp", label: "HP" },
       { key: "attack", label: "Attack" },
@@ -281,7 +282,7 @@ export const crudConfigs: CrudConfig[] = [
     fields: [
       { name: "name", label: "Name", type: "text", required: true },
       { name: "description", label: "Description", type: "textarea", required: true },
-      { name: "imageUrl", label: "Image URL", type: "text" },
+      { name: "imageUrl", label: "Ícone do monstro", type: "icon" },
       { name: "level", label: "Level", type: "number", defaultValue: 1 },
       { name: "hp", label: "HP", type: "number", defaultValue: 50 },
       { name: "mana", label: "Mana", type: "number", defaultValue: 20 },
@@ -310,6 +311,7 @@ export const crudConfigs: CrudConfig[] = [
     title: "Maps",
     columns: [
       idColumn,
+      { key: "imageUrl", label: "Ícone", render: (v) => (v ? <img src={v} alt="" className="w-9 h-9 object-contain rounded bg-dark-700 p-0.5" style={{ imageRendering: "pixelated" }} /> : <span className="text-gray-600 text-xs">—</span>) },
       { key: "name", label: "Name", render: (v) => <span className="font-medium text-white">{v}</span> },
       { key: "slug", label: "Slug", render: (v) => <span className="text-xs text-gray-500">{v}</span> },
       { key: "region", label: "Region" },
@@ -322,7 +324,7 @@ export const crudConfigs: CrudConfig[] = [
       { name: "name", label: "Name", type: "text", required: true },
       { name: "slug", label: "Slug", type: "text", required: true, hint: "Unique, lowercase" },
       { name: "description", label: "Description", type: "textarea", required: true },
-      { name: "imageUrl", label: "Image URL", type: "text" },
+      { name: "imageUrl", label: "Ícone do mapa", type: "icon" },
       { name: "region", label: "Region", type: "text", required: true },
       { name: "requiredLevel", label: "Required Level", type: "number", defaultValue: 1 },
       { name: "sortOrder", label: "Sort Order", type: "number", defaultValue: 0 },

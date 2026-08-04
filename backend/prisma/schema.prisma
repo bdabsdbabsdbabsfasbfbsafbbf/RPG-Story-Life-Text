@@ -183,6 +183,7 @@ model Skill {
   slug           String
   description    String
   icon           String?
+  iconSecondary  String? // ícone de efeito/secundário exibido junto ao principal
   kind           String   @default("attack") // attack, heal, buff, debuff, summon, mobility, control, defense, channel
   trigger        String   @default("active") // auto, active, ultimate
   target         String   @default("enemy") // enemy, self

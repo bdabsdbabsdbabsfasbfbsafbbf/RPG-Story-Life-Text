@@ -337,6 +337,8 @@ export interface Item {
   isTradable: boolean;
   isSellable: boolean;
   icon?: string | null;
+  attackSpeedMs?: number;
+  dps?: number;
 }
 
 export type ItemType =
@@ -608,6 +610,7 @@ export interface CombatSkill {
   slug: string;
   description: string;
   icon: string | null;
+  iconSecondary?: string | null;
   kind: string;
   trigger: 'auto' | 'active' | 'ultimate';
   cooldown: number;

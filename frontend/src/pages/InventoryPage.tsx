@@ -333,14 +333,18 @@ export function InventoryPage() {
               </div>
             )}
             <div className="flex items-start gap-3">
-              <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${
+              <div className={`w-12 h-12 rounded-lg overflow-hidden bg-gradient-to-br ${
                 inv.item.rarity === "rare" ? "from-blue-600 to-purple-600" :
                 inv.item.rarity === "epic" ? "from-purple-600 to-pink-600" :
                 inv.item.rarity === "legendary" ? "from-orange-500 to-yellow-500" :
                 inv.item.rarity === "mythic" ? "from-red-500 to-purple-600" :
                 "from-dark-600 to-dark-500"
               } flex items-center justify-center`}>
-                <Star size={22} className="text-white/80" />
+                {inv.item.icon ? (
+                  <img src={inv.item.icon} alt="" className="w-full h-full object-contain" style={{ imageRendering: "pixelated" }} />
+                ) : (
+                  <Star size={22} className="text-white/80" />
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm truncate">{inv.item.name}</p>
@@ -348,6 +352,11 @@ export function InventoryPage() {
                   {inv.item.rarity} • Rank {inv.item.rank}
                 </p>
                 <p className="text-xs text-gray-500 capitalize">{inv.item.type} {inv.item.level > 1 ? `• Lv.${inv.item.level}` : ""}</p>
+                {inv.item.type === "weapon" && (
+                  <p className="text-[11px] text-orange-300/90">
+                    DPS {Number(inv.item.dps || 0).toLocaleString()} · {Number(inv.item.attackSpeedMs) > 0 ? `${Number(inv.item.attackSpeedMs).toLocaleString()}ms` : "vel. da classe"}
+                  </p>
+                )}
                 {inv.quantity > 1 && (
                   <p className="text-xs text-gray-500">x{inv.quantity}</p>
                 )}
@@ -368,13 +377,17 @@ export function InventoryPage() {
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setSelectedItem(null)}>
           <div className="panel p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-start gap-4 mb-4">
-              <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${
+              <div className={`w-16 h-16 rounded-xl overflow-hidden bg-gradient-to-br ${
                 selectedItem.item.rarity === "rare" ? "from-blue-600 to-purple-600" :
                 selectedItem.item.rarity === "epic" ? "from-purple-600 to-pink-600" :
                 selectedItem.item.rarity === "legendary" ? "from-orange-500 to-yellow-500" :
                 "from-dark-600 to-dark-500"
               } flex items-center justify-center`}>
-                <Star size={32} className="text-white/80" />
+                {selectedItem.item.icon ? (
+                  <img src={selectedItem.item.icon} alt="" className="w-full h-full object-contain p-0.5" style={{ imageRendering: "pixelated" }} />
+                ) : (
+                  <Star size={32} className="text-white/80" />
+                )}
               </div>
               <div className="flex-1">
                 <h3 className="text-lg font-display font-bold">{selectedItem.item.name}</h3>
@@ -404,6 +417,20 @@ export function InventoryPage() {
                       </div>
                     );
                   })}
+                  {selectedItem.item.type === "weapon" && (
+                    <div className="col-span-2 border-t border-dark-600 pt-1.5 mt-1 flex items-center justify-between">
+                      <span className="text-orange-300/90">DPS natural</span>
+                      <span className="font-mono text-orange-300">{Number(selectedItem.item.dps || 0).toLocaleString()}</span>
+                    </div>
+                  )}
+                  {selectedItem.item.type === "weapon" && (
+                    <div className="col-span-2 flex items-center justify-between">
+                      <span className="text-orange-300/90">Velocidade natural</span>
+                      <span className="font-mono text-orange-300">
+                        {Number(selectedItem.item.attackSpeedMs) > 0 ? `${Number(selectedItem.item.attackSpeedMs).toLocaleString()}ms` : "da classe"}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { adminApi } from "../api";
 import JsonField from "../components/JsonField";
+import IconPicker from "../components/IconPicker";
 import {
   actionFields,
   conditionFields,
@@ -33,6 +34,7 @@ const defaultSkill = {
   slug: "",
   description: "",
   icon: "",
+  iconSecondary: "",
   kind: "attack",
   trigger: "active",
   target: "enemy",
@@ -141,6 +143,7 @@ export default function SkillsPage() {
       slug: skill.slug ?? "",
       description: skill.description ?? "",
       icon: skill.icon ?? "",
+      iconSecondary: skill.iconSecondary ?? "",
       kind: skill.kind ?? "attack",
       trigger: skill.trigger ?? "active",
       target: skill.target ?? "enemy",
@@ -166,6 +169,7 @@ export default function SkillsPage() {
       slug: form.slug || form.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || `skill-${Date.now()}`,
       description: form.description,
       icon: form.icon || null,
+      iconSecondary: form.iconSecondary || null,
       kind: form.kind,
       trigger: form.trigger,
       target: form.target,
@@ -644,7 +648,11 @@ export default function SkillsPage() {
                 </div>
                 <div>
                   <label className="block text-sm text-gray-400 mb-1.5">Icon</label>
-                  <input type="text" value={form.icon} onChange={(e) => setForm({ ...form, icon: e.target.value })} className={inputClass} placeholder="e.g. 'Flame'" />
+                  <IconPicker value={form.icon} onChange={(v) => setForm({ ...form, icon: v })} placeholder="Ícone principal da skill" />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1.5">Icon Secundário (efeito)</label>
+                  <IconPicker value={form.iconSecondary} onChange={(v) => setForm({ ...form, iconSecondary: v })} placeholder="Ícone extra exibido junto" />
                 </div>
                 <div className="sm:col-span-2">
                   <label className="block text-sm text-gray-400 mb-1.5">Description *</label>

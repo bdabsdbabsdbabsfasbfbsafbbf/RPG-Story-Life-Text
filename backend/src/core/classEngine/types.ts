@@ -36,6 +36,7 @@ export interface SkillDef {
   slug: string;
   description: string;
   icon?: string | null;
+  iconSecondary?: string | null;
   kind: string;
   trigger: string;
   target: string;

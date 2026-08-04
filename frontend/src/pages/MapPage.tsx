@@ -13,7 +13,7 @@ interface NpcDetail {
   id: string;
   name: string;
   type: string;
-  shopItems?: { id: string; price: string | number; itemId?: string | null; enchantmentId?: string | null; classId?: string | null; requiredLevel?: number; class?: { name: string; slug: string } | null; item: { id: string; name: string; description: string; type: string; rarity: string } | null; enchantment?: { name: string; slug: string; description: string } | null }[];
+  shopItems?: { id: string; price: string | number; itemId?: string | null; enchantmentId?: string | null; classId?: string | null; requiredLevel?: number; class?: { name: string; slug: string } | null; item: { id: string; name: string; description: string; type: string; rarity: string; icon?: string | null; attackSpeedMs?: number; dps?: number } | null; enchantment?: { name: string; slug: string; description: string } | null }[];
   quests?: { id: string; title: string; description: string; requiredLevel: number; requiredRank: number; requiredQuestIds?: string | null; xpReward: string | number; goldReward: string | number }[];
 }
 
@@ -407,8 +407,14 @@ export function MapPage() {
                     const description = isEnchantment ? offer.enchantment?.description ?? "" : offer.item?.description ?? "";
                     return (
                       <div key={offer.id} className="card p-3 flex items-center gap-3">
-                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${isEnchantment ? "bg-purple-500/20" : "bg-dark-700"}`}>
-                          <ShoppingBag size={16} className={isEnchantment ? "text-purple-400" : "text-cyan-400"} />
+                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center overflow-hidden ${isEnchantment ? "bg-purple-500/20" : "bg-dark-700"}`}>
+                          {isEnchantment ? (
+                            <ShoppingBag size={16} className="text-purple-400" />
+                          ) : offer.item?.icon ? (
+                            <img src={offer.item.icon} alt="" className="w-full h-full object-contain" style={{ imageRendering: "pixelated" }} />
+                          ) : (
+                            <ShoppingBag size={16} className="text-cyan-400" />
+                          )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium">
@@ -417,6 +423,11 @@ export function MapPage() {
                           </p>
                           <p className="text-[11px] text-gray-500 line-clamp-1">{description}</p>
                           <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                            {!isEnchantment && offer.item?.type === "weapon" && (
+                              <span className="text-[10px] px-1.5 py-0.5 bg-orange-500/15 text-orange-300 rounded-md">
+                                DPS {Number(offer.item.dps || 0).toLocaleString()} · {Number(offer.item.attackSpeedMs) > 0 ? `${Number(offer.item.attackSpeedMs).toLocaleString()}ms` : "vel. da classe"}
+                              </span>
+                            )}
                             {offer.class && (
                               <span className="text-[10px] px-1.5 py-0.5 bg-purple-500/15 text-purple-300 rounded-md flex items-center gap-1">
                                 <Shield size={9} /> Classe: {offer.class.name}

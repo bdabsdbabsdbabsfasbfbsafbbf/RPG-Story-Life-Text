@@ -83,6 +83,17 @@ export default function IconPicker({ value, onChange, placeholder }: IconPickerP
         >
           Escolher
         </button>
+        <button
+          type="button"
+          onClick={() => {
+            const term = encodeURIComponent((value || "").split("/").pop()?.replace(/\.[a-z]+$/i, "").replace(/[-_]+/g, " ") || "");
+            window.open(`https://www.flaticon.com/br/icones-gratis/${term}`, "_blank", "noopener");
+          }}
+          className="px-3 py-2 bg-sky-700/30 hover:bg-sky-700/50 text-sky-300 text-sm rounded-lg shrink-0"
+          title="Buscar ícone no Flaticon (nova aba) — baixe o PNG e salve na pasta Icons/64x64, depois rode node scripts/gen-icons-manifest.js"
+        >
+          Flaticon
+        </button>
         {currentUrl && (
           <button
             type="button"

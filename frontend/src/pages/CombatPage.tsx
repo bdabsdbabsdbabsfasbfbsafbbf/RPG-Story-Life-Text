@@ -545,6 +545,18 @@ export function CombatPage() {
                     )}
                     {locked ? (
                       <Lock size={16} className="mx-auto mb-1 text-gray-500" />
+                    ) : skill.icon ? (
+                      <div className="relative mx-auto mb-1 w-6 h-6">
+                        <img src={skill.icon} alt="" className="w-full h-full object-contain" style={{ imageRendering: "pixelated" }} />
+                        {skill.iconSecondary && (
+                          <img
+                            src={skill.iconSecondary}
+                            alt=""
+                            className="absolute -bottom-1 -right-1 w-3.5 h-3.5 object-contain rounded bg-dark-800 border border-dark-600"
+                            style={{ imageRendering: "pixelated" }}
+                          />
+                        )}
+                      </div>
                     ) : skill.trigger === "ultimate" ? (
                       <Zap size={18} className="mx-auto mb-1 text-yellow-400" />
                     ) : skill.kind === "heal" ? (
