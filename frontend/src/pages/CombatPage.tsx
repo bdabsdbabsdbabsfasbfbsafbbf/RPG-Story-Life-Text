@@ -509,7 +509,7 @@ export function CombatPage() {
             <div>
               <div className="flex items-stretch justify-center gap-1.5 flex-wrap">
               {/* Auto attack */}
-              <div className="w-20 card-hover py-2 text-center opacity-80" title={autoSkill?.description ?? "Ataque automático"}>
+              <div className="w-28 card-hover py-2 text-center opacity-80" title={autoSkill?.description ?? "Ataque automático"}>
                 {autoSkill?.icon ? (
                   <img src={autoSkill.icon} alt="" className="w-6 h-6 mx-auto mb-1 object-contain" style={{ imageRendering: "pixelated" }} />
                 ) : (
@@ -530,7 +530,7 @@ export function CombatPage() {
                     key={skill.id}
                     onClick={() => useSkill(skill.id)}
                     disabled={disabled}
-                    className={`w-20 card-hover py-2 text-center relative ${
+                    className={`w-28 card-hover py-2 text-center relative ${
                       disabled ? "opacity-40 cursor-not-allowed" : ""
                     } ${skill.trigger === "ultimate" ? "border-yellow-500/40" : ""}`}
                     title={locked ? `Requer Rank ${skill.rankRequired}` : skill.description}
@@ -590,7 +590,7 @@ export function CombatPage() {
                   <button
                     onClick={() => usePotion(p.inventoryId)}
                     disabled={disabled}
-                    className={`w-20 card-hover py-2 text-center ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
+                    className={`w-28 card-hover py-2 text-center ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
                     title={`Poção de cura: restaura ${p.heal} de vida (x${p.quantity})`}
                   >
                     {p.icon ? (
@@ -615,7 +615,7 @@ export function CombatPage() {
                   <button
                     onClick={() => usePotion(p.inventoryId)}
                     disabled={disabled}
-                    className={`w-20 card-hover py-2 text-center ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
+                    className={`w-28 card-hover py-2 text-center ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
                     title={`Poção de mana: restaura ${p.manaRestore} de mana (x${p.quantity})`}
                   >
                     {p.icon ? (
@@ -632,7 +632,7 @@ export function CombatPage() {
               <button
                 onClick={flee}
                 disabled={combat.state !== "active"}
-                className={`w-20 card-hover py-2 text-center ${combat.state !== "active" ? "opacity-40 cursor-not-allowed" : "hover:border-amber-500/40"}`}
+                className={`w-28 card-hover py-2 text-center ${combat.state !== "active" ? "opacity-40 cursor-not-allowed" : "hover:border-amber-500/40"}`}
                 title="Tenta fugir do combate (70% de chance)"
               >
                 <DoorOpen size={18} className="mx-auto mb-1 text-amber-400" />
