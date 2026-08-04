@@ -20,7 +20,6 @@ const TYPE_LABELS: Record<string, string> = {
   ring: "Anel",
   necklace: "Colar",
   consumable: "Consumível",
-  class: "Classe",
   material: "Material",
 };
 
@@ -32,7 +31,6 @@ const TYPE_BADGE: Record<string, string> = {
   ring: "bg-yellow-500/20 text-yellow-300",
   necklace: "bg-orange-500/20 text-orange-300",
   consumable: "bg-green-500/20 text-green-300",
-  class: "bg-pink-500/20 text-pink-300",
   material: "bg-teal-500/20 text-teal-300",
 };
 
@@ -216,7 +214,7 @@ export const crudConfigs: CrudConfig[] = [
         type: "select",
         required: true,
         defaultValue: "weapon",
-        options: ["weapon", "helm", "armor", "cape", "ring", "necklace", "consumable", "class", "material"],
+        options: ["weapon", "helm", "armor", "cape", "ring", "necklace", "consumable", "material"],
       },
       {
         name: "subtype",
@@ -232,7 +230,6 @@ export const crudConfigs: CrudConfig[] = [
             ring: [],
             necklace: [],
             consumable: ["potion", "scroll", "food", "material"],
-            class: [],
             material: ["ore", "dust", "bone", "essence"],
           },
         },
