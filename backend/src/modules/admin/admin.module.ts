@@ -400,6 +400,7 @@ export function createAdminModule(app: Express): void {
   // Relações opcionais: string vazia/null vira null (evita FK error)
   const NULLABLE_RELATIONS: Record<string, string[]> = {
     class: ["statModelId"],
+    item: ["enchantmentId"],
     shopitem: ["npcId", "itemId", "classId", "enchantmentId"],
     mapnpc: ["mapId", "npcId"],
     mapmonster: ["mapId", "monsterId"],
