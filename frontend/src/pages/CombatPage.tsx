@@ -197,6 +197,12 @@ export function CombatPage() {
       if ((data.healed ?? 0) > 0) pushFloater("player", `+${data.healed}`, "heal");
       if (data.state === "won") {
         toast.success("Vitória!");
+        if (data.rewards?.drops && data.rewards.drops.length > 0) {
+          toast(data.rewards.drops.map((d) => `${d.quantity}x ${d.name}`).join(" • "), {
+            icon: "🎁",
+            duration: 4000,
+          });
+        }
         refreshUser();
       } else if (data.state === "lost") {
         toast.error("Derrota!");

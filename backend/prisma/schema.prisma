@@ -138,6 +138,7 @@ model GameClass {
   rankMax       Int      @default(10)
   requiredLevel Int      @default(1) // nível mínimo do personagem para equipar essa classe
   requiredVip   Boolean  @default(false) // classe exclusiva para quem já foi/é VIP
+  price         Int      @default(0) // custo em ouro para equipar (0 = grátis)
   statModelId   String?
   resource      Json     @default("{}") // { manaRegenPerTick?, manaOnHit?, manaOnKill? }
   isStarter     Boolean  @default(false)
@@ -359,6 +360,7 @@ model Item {
   dropItems           DropItem[]
   mailItems           MailItem[]
   marketListings      MarketListing[]
+  craftRecipes        CraftRecipe[]
   equippedAsWeapon    Equipment?      @relation("EquippedWeapon")
   equippedAsClassItem Equipment?      @relation("EquippedClassItem")
   equippedAsHelm      Equipment?      @relation("EquippedHelm")
@@ -371,6 +373,23 @@ model Item {
   @@index([rarity])
   @@index([level])
   @@index([name])
+}
+
+// Receita de crafting: itens (por nome) consumidos para criar o item resultado
+model CraftRecipe {
+  id             String   @id @default(uuid())
+  name           String
+  description    String   @default("")
+  resultItemId   String
+  resultQuantity Int      @default(1)
+  requiredLevel  Int      @default(1) // nível mínimo do personagem para craftar
+  ingredients    String   @default("[]") // JSON: [{ "itemName": "Ossos", "quantity": 3 }]
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  resultItem     Item     @relation(fields: [resultItemId], references: [id])
+
+  @@index([isActive])
 }
 
 model Enchantment {

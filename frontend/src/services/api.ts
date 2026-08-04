@@ -137,6 +137,11 @@ export const raidApi = {
   status: () => api.get("/raid/status"),
 };
 
+export const craftApi = {
+  list: () => api.get("/craft"),
+  craft: (id: string) => api.post(`/craft/${id}/craft`),
+};
+
 export const leaderboardApi = {
   list: () => api.get("/leaderboard"),
 };

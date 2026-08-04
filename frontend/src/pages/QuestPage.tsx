@@ -37,8 +37,12 @@ export function QuestPage() {
 
   const handleClaim = async (questId: string) => {
     try {
-      await questsApi.claim(questId);
-      toast.success("Rewards claimed!");
+      const { data } = await questsApi.claim(questId);
+      let msg = `Recompensa resgatada! +${data.xpGain ?? 0} XP, +${data.goldGain ?? 0} gold`;
+      if (Array.isArray(data.items) && data.items.length > 0) {
+        msg += ` • Itens: ${data.items.map((it: { itemName: string; quantity: number }) => `${it.quantity}x ${it.itemName}`).join(", ")}`;
+      }
+      toast.success(msg, { duration: 5000 });
       load();
       window.dispatchEvent(new Event("quests-changed"));
     } catch (err: any) {

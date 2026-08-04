@@ -412,6 +412,7 @@ export function createAdminModule(app: Express): void {
     itemId: "Item",
     classId: "Classe",
     enchantmentId: "Encantamento",
+    resultItemId: "Item resultado",
     mapId: "Mapa",
     monsterId: "Monstro",
     statModelId: "Stat Model",
@@ -680,8 +681,7 @@ export function createAdminModule(app: Express): void {
   });
 
   // ShopItems CRUD (itens que um NPC vende)
-  app.get("/api/admin/shopitems", requireAdmin, async (_req: Request, res: Response, next: NextFunction) => {
-    try {
+  app.get("/api/admin/shopitems", requireAdmin, async (_req: Request, res: Response, next: NextFunction) => {    try {
       res.json(await prisma.shopItem.findMany({
         include: { item: true, npc: true },
         orderBy: { createdAt: "desc" },
@@ -746,6 +746,28 @@ export function createAdminModule(app: Express): void {
   });
 
   // PatchNotes CRUD (avisos de atualização exibidos no Dashboard)
+  // CraftRecipes CRUD
+  app.get("/api/admin/craft-recipes", requireAdmin, async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      res.json(await prisma.craftRecipe.findMany({
+        include: { resultItem: true },
+        orderBy: { requiredLevel: "asc" },
+      }));
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/admin/craft-recipes", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try { res.status(201).json(await saveWithFk("craftRecipe", null, req.body)); } catch (err) { next(err); }
+  });
+
+  app.put("/api/admin/craft-recipes/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try { res.json(await saveWithFk("craftRecipe", req.params.id, req.body)); } catch (err) { next(err); }
+  });
+
+  app.delete("/api/admin/craft-recipes/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try { await prisma.craftRecipe.delete({ where: { id: req.params.id } }); res.json({ message: "Deleted" }); } catch (err) { next(err); }
+  });
+
   app.get("/api/admin/patch-notes", requireAdmin, async (_req: Request, res: Response, next: NextFunction) => {
     try {
       res.json(await prisma.patchNote.findMany({ orderBy: { createdAt: "desc" } }));

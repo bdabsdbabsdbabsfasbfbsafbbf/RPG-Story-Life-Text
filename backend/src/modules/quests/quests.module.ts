@@ -153,6 +153,14 @@ export function createQuestsModule(app: Express): void {
       }
       const goldGain = clampGold(user?.gold ?? 0n, questGold, BigInt(limits.maxGold));
 
+      // Grant item rewards (JSON: [{ "itemName": "Poção de Vida", "quantity": 2 }])
+      let rewards: any[] = [];
+      try {
+        rewards = JSON.parse(progress.quest.itemRewards || "[]");
+      } catch {
+        rewards = [];
+      }
+
       await prisma.$transaction(async (tx) => {
         await tx.questProgress.update({
           where: { id: progress.id },
@@ -167,20 +175,14 @@ export function createQuestsModule(app: Express): void {
           },
         });
 
-        // Grant item rewards (JSON: [{ "itemName": "Poção de Vida", "quantity": 2 }])
-        let rewards: any[] = [];
-        try {
-          rewards = JSON.parse(progress.quest.itemRewards || "[]");
-        } catch {
-          rewards = [];
-        }
+        // Entregar recompensas de itens no inventário
         await addItemsToInventory(tx, req.user!.userId, rewards);
 
         // XP para o passe de temporada (1/5 do XP da quest)
         await grantPassXp(tx, req.user!.userId, Math.floor(Number(progress.quest.xpReward) / 5));
       });
 
-      res.json({ message: "Rewards claimed" });
+      res.json({ message: "Rewards claimed", xpGain: questXp, goldGain, items: rewards });
     } catch (err) {
       next(err);
     }

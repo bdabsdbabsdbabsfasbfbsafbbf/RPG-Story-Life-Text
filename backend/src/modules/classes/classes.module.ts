@@ -235,6 +235,32 @@ export function createClassesModule(app: Express): void {
         }
       }
 
+      // Nível mínimo do personagem
+      if (character.level < gameClass.requiredLevel) {
+        res.status(400).json({ error: `Requer nível ${gameClass.requiredLevel} para equipar esta classe.` });
+        return;
+      }
+
+      // Preço em ouro (cobra apenas na primeira vez que equipa a classe)
+      const ownedProgress = await prisma.characterClass.findUnique({
+        where: { characterId_classId: { characterId: character.id, classId } },
+      });
+      const isFreeSwitch = !!ownedProgress || character.classId === classId;
+      if (!isFreeSwitch && gameClass.price > 0) {
+        const user = await prisma.user.findUnique({
+          where: { id: req.user!.userId },
+          select: { id: true, gold: true },
+        });
+        if (!user || Number(user.gold) < gameClass.price) {
+          res.status(400).json({ error: `Ouro insuficiente para equipar esta classe (${gameClass.price} gold).` });
+          return;
+        }
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { gold: { decrement: gameClass.price } },
+        });
+      }
+
       // Upsert CharacterClass progress entry
       await prisma.characterClass.upsert({
         where: {

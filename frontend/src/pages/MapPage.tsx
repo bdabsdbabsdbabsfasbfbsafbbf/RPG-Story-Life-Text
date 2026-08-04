@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { mapsApi, npcApi, questsApi, raidApi } from "../services/api";
+import { mapsApi, npcApi, questsApi, raidApi, craftApi } from "../services/api";
 import { Map as MapType } from "../types";
 import { getSocket } from "../services/socket";
 import {
   ArrowLeft, Skull, Store, ScrollText, Navigation, Shield, Map as MapIcon,
-  X, ShoppingBag, CheckCircle2, Clock, Gift, Lock, Swords,
+  X, ShoppingBag, CheckCircle2, Clock, Gift, Lock, Swords, Hammer,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -29,6 +29,27 @@ interface RaidStatusEntry {
   resetsInMs: number;
 }
 
+interface CraftRecipe {
+  id: string;
+  name: string;
+  description: string;
+  resultItemId: string;
+  resultQuantity: number;
+  requiredLevel: number;
+  ingredients: string;
+  isActive: boolean;
+  resultItem?: { name: string } | null;
+}
+
+function parseIngredients(raw: string): { itemName: string; quantity: number }[] {
+  try {
+    const parsed = JSON.parse(raw || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 function formatRaidReset(ms: number): string {
   if (ms <= 0) return "pronto";
   const h = Math.floor(ms / 3600000);
@@ -46,6 +67,31 @@ export function MapPage() {
   const [npcLoading, setNpcLoading] = useState(false);
   const [questProgress, setQuestProgress] = useState<QuestProgressEntry[]>([]);
   const [buyingItemId, setBuyingItemId] = useState<string | null>(null);
+  const [crafts, setCrafts] = useState<CraftRecipe[]>([]);
+  const [craftingId, setCraftingId] = useState<string | null>(null);
+
+  const loadCrafts = () => {
+    craftApi.list().then(({ data }) => {
+      if (Array.isArray(data)) setCrafts(data);
+    }).catch(() => {});
+  };
+
+  useEffect(() => {
+    loadCrafts();
+  }, []);
+
+  const craftItem = async (recipe: CraftRecipe) => {
+    setCraftingId(recipe.id);
+    try {
+      const { data } = await craftApi.craft(recipe.id);
+      toast.success(data.message || "Craftado!");
+      loadCrafts();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || "Falha ao craftar.");
+    } finally {
+      setCraftingId(null);
+    }
+  };
 
   useEffect(() => {
     raidApi.status().then(({ data }) => {
@@ -129,10 +175,14 @@ export function MapPage() {
 
   const claimQuest = async (questId: string) => {
     try {
-      await questsApi.claim(questId);
-      toast.success("Recompensa resgatada!");
-      const { data } = await questsApi.progress();
-      if (Array.isArray(data)) setQuestProgress(data);
+      const { data } = await questsApi.claim(questId);
+      let msg = `Recompensa resgatada! +${data.xpGain ?? 0} XP, +${data.goldGain ?? 0} gold`;
+      if (Array.isArray(data.items) && data.items.length > 0) {
+        msg += ` • Itens: ${data.items.map((it: { itemName: string; quantity: number }) => `${it.quantity}x ${it.itemName}`).join(", ")}`;
+      }
+      toast.success(msg, { duration: 5000 });
+      const { data: prog } = await questsApi.progress();
+      if (Array.isArray(prog)) setQuestProgress(prog);
       window.dispatchEvent(new Event("quests-changed"));
     } catch (err: any) {
       toast.error(err.response?.data?.error || "Failed to claim rewards");
@@ -395,6 +445,49 @@ export function MapPage() {
                 ) : (
                   <p className="text-sm text-gray-500">Esta loja está vazia.</p>
                 )}
+              </div>
+            )}
+
+            {npc.type === "vendor" && crafts.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-dark-700">
+                <h3 className="font-display font-semibold text-sm mb-2 flex items-center gap-2">
+                  <Hammer size={14} className="text-orange-400" /> Craftar
+                </h3>
+                <div className="space-y-2">
+                  {crafts.map((recipe) => {
+                    const ings = parseIngredients(recipe.ingredients);
+                    return (
+                      <div key={recipe.id} className="card p-3 flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-lg bg-orange-500/15 flex items-center justify-center shrink-0">
+                          <Hammer size={16} className="text-orange-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium">{recipe.resultItem?.name ?? "Item"} <span className="text-gray-500">x{recipe.resultQuantity}</span></p>
+                          <p className="text-[11px] text-gray-500 line-clamp-1">{recipe.description}</p>
+                          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                            {Number(recipe.requiredLevel) > 0 && (
+                              <span className="text-[10px] px-1.5 py-0.5 bg-yellow-500/15 text-yellow-300 rounded-md">
+                                Nv. {recipe.requiredLevel}+
+                              </span>
+                            )}
+                            {ings.map((ing, i) => (
+                              <span key={i} className="text-[10px] px-1.5 py-0.5 bg-dark-700 text-gray-300 rounded-md">
+                                {ing.quantity}x {ing.itemName}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => craftItem(recipe)}
+                          disabled={craftingId === recipe.id}
+                          className="btn-secondary text-xs px-3 py-1 mt-1 shrink-0 disabled:opacity-50"
+                        >
+                          {craftingId === recipe.id ? "..." : "Craftar"}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
 

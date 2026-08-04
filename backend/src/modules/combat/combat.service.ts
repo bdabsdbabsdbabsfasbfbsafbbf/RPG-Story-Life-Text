@@ -809,7 +809,9 @@ export class CombatService {
     });
     const rolled: { itemName: string; quantity: number }[] = [];
     for (const d of dropRows) {
-      if (Math.random() * 100 >= d.dropChance) continue;
+      if (d.minLevel && character.level < d.minLevel) continue;
+      if (d.maxLevel && character.level > d.maxLevel) continue;
+      if (!d.isGuaranteed && Math.random() * 100 >= d.dropChance) continue;
       const min = Math.max(1, d.minQuantity || 1);
       const max = Math.max(min, d.maxQuantity || min);
       const qty = min === max ? min : min + Math.floor(Math.random() * (max - min + 1));
