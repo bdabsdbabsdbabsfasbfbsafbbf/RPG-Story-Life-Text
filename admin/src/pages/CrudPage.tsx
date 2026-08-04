@@ -11,6 +11,7 @@ export interface FieldConfig {
   options?: string[];
   optionsFrom?: string;
   optionsFor?: { source: string; map: Record<string, string[]> };
+  visibleIf?: { field: string; values: any[] };
   required?: boolean;
   defaultValue?: any;
   step?: string;
@@ -128,9 +129,19 @@ export default function CrudPage({ config }: CrudPageProps) {
     setEditing(null);
   };
 
+  const isFieldVisible = (field: FieldConfig) => {
+    if (!field.visibleIf) return true;
+    const source = form[field.visibleIf.field];
+    return field.visibleIf.values.some((v) => String(v) === String(source));
+  };
+
   const buildPayload = () => {
     const payload: Record<string, any> = {};
     for (const field of config.fields) {
+      if (!isFieldVisible(field)) {
+        payload[field.name] = editing ? editing[field.name] ?? null : field.defaultValue ?? null;
+        continue;
+      }
       let value = form[field.name];
       if (field.type === "json") {
         payload[field.name] = field.jsonSchema ? JSON.stringify(value) : value && value.trim() ? value : null;
@@ -362,8 +373,8 @@ export default function CrudPage({ config }: CrudPageProps) {
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {config.fields.map((field) => (
-                  <div key={field.name} className={field.type === "textarea" || field.type === "json" ? "sm:col-span-2" : ""}>
+                {config.fields.filter(isFieldVisible).map((field) => (
+                  <div key={field.name} className={field.type === "textarea" || field.type === "json" || field.type === "icon" ? "sm:col-span-2" : ""}>
                     <label className="block text-sm text-gray-400 mb-1.5">{field.label}</label>
                     {renderField(field)}
                     {field.hint && <p className="text-xs text-gray-500 mt-1">{field.hint}</p>}

@@ -400,6 +400,7 @@ model Enchantment {
   description      String
   category         String // physical | magical | defensive | utility
   rarity           String            @default("common")
+  tier             Int               @default(1) // nível do encantamento (I, II, III...)
   minRank          Int               @default(1) // rank mínimo do equipamento
   price            BigInt            @default(0) // valor em ouro
   compatibleSlots  String            @default("[]") // JSON: ["weapon","helm",...]
