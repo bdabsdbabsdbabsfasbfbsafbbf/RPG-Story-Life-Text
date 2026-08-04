@@ -2,13 +2,15 @@ import { FormEvent, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { adminApi } from "../api";
 import JsonField, { JsonFieldDef } from "../components/JsonField";
+import IconPicker from "../components/IconPicker";
 
 export interface FieldConfig {
   name: string;
   label: string;
-  type: "text" | "number" | "textarea" | "select" | "boolean" | "json";
+  type: "text" | "number" | "textarea" | "select" | "boolean" | "json" | "icon";
   options?: string[];
   optionsFrom?: string;
+  optionsFor?: { source: string; map: Record<string, string[]> };
   required?: boolean;
   defaultValue?: any;
   step?: string;
@@ -192,7 +194,9 @@ export default function CrudPage({ config }: CrudPageProps) {
       case "select": {
         const options = field.optionsFrom
           ? remoteOptions[field.optionsFrom] || []
-          : field.options || [];
+          : field.optionsFor
+            ? field.optionsFor.map[form[field.optionsFor.source]] || []
+            : field.options || [];
         const optionLabel = (opt: any) => {
           if (typeof opt === "string") return opt;
           return opt.slug && opt.slug !== opt.name ? `${opt.name} (${opt.slug})` : opt.name;
@@ -200,7 +204,17 @@ export default function CrudPage({ config }: CrudPageProps) {
         return (
           <select
             value={value ?? ""}
-            onChange={(e) => setForm({ ...form, [field.name]: e.target.value })}
+            onChange={(e) => {
+              const next = { ...form, [field.name]: e.target.value };
+              if (field.optionsFor) {
+                const allowed = field.optionsFor.map[next[field.optionsFor.source]] || [];
+                if (!allowed.includes(next[field.name])) {
+                  const target = config.fields.find((f) => f.optionsFor?.source === field.name);
+                  if (target) next[target.name] = "";
+                }
+              }
+              setForm(next);
+            }}
             className={inputClass}
             required={field.required}
           >
@@ -213,6 +227,8 @@ export default function CrudPage({ config }: CrudPageProps) {
           </select>
         );
       }
+      case "icon":
+        return <IconPicker value={value ?? ""} onChange={(v) => setForm({ ...form, [field.name]: v })} />;
       case "boolean":
         return (
           <div className="flex items-center gap-2 pt-1">

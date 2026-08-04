@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import { Sparkles } from "lucide-react";
 import { CrudConfig } from "./pages/CrudPage";
-import { EQUIP_GROUPS } from "./statFields";
 
 const boolBadge = (v: any, yesClass = "bg-green-500/20 text-green-400", noClass = "bg-gray-600/20 text-gray-400") => (
   <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${v ? yesClass : noClass}`}>
@@ -12,6 +11,39 @@ const boolBadge = (v: any, yesClass = "bg-green-500/20 text-green-400", noClass 
 const jsonPreview = (v: any) => (
   <span className="text-xs text-gray-500">{v ? JSON.stringify(v).slice(0, 40) : "-"}</span>
 );
+
+const TYPE_LABELS: Record<string, string> = {
+  weapon: "Arma",
+  helm: "Elmo",
+  armor: "Armadura",
+  cape: "Capa",
+  ring: "Anel",
+  necklace: "Colar",
+  consumable: "Consumível",
+  class: "Classe",
+  material: "Material",
+};
+
+const TYPE_BADGE: Record<string, string> = {
+  weapon: "bg-red-500/20 text-red-300",
+  helm: "bg-sky-500/20 text-sky-300",
+  armor: "bg-blue-500/20 text-blue-300",
+  cape: "bg-purple-500/20 text-purple-300",
+  ring: "bg-yellow-500/20 text-yellow-300",
+  necklace: "bg-orange-500/20 text-orange-300",
+  consumable: "bg-green-500/20 text-green-300",
+  class: "bg-pink-500/20 text-pink-300",
+  material: "bg-teal-500/20 text-teal-300",
+};
+
+const RARITY_COLORS: Record<string, string> = {
+  common: "bg-gray-600/30 text-gray-300",
+  uncommon: "bg-green-600/30 text-green-300",
+  rare: "bg-blue-600/30 text-blue-300",
+  epic: "bg-purple-600/30 text-purple-300",
+  legendary: "bg-yellow-600/30 text-yellow-300",
+  mythic: "bg-red-600/30 text-red-300",
+};
 
 const idColumn = {
   key: "id",
@@ -145,37 +177,95 @@ export const crudConfigs: CrudConfig[] = [
     title: "Items",
     columns: [
       idColumn,
+      {
+        key: "icon",
+        label: "",
+        render: (v) =>
+          v ? (
+            <img src={v} alt="" className="w-8 h-8 object-contain rounded bg-dark-700 p-0.5" style={{ imageRendering: "pixelated" }} />
+          ) : (
+            <span className="text-gray-600 text-xs">—</span>
+          ),
+      },
       { key: "name", label: "Name", render: (v) => <span className="font-medium text-white">{v}</span> },
-      { key: "type", label: "Type" },
-      { key: "rarity", label: "Rarity" },
-      { key: "level", label: "Level" },
-      { key: "tier", label: "Tier" },
+      {
+        key: "type",
+        label: "Type",
+        render: (v) => (
+          <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${TYPE_BADGE[v] || "bg-dark-700 text-gray-300"}`}>
+            {TYPE_LABELS[v] || v || "-"}
+          </span>
+        ),
+      },
+      {
+        key: "rarity",
+        label: "Rarity",
+        render: (v) => <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${RARITY_COLORS[v] ?? "bg-gray-700 text-gray-300"}`}>{v || "-"}</span>,
+      },
+      { key: "level", label: "Nv." },
+      { key: "buyPrice", label: "Preço", render: (v) => <span className="text-yellow-400 text-xs">{Number(v).toLocaleString()}</span> },
       { key: "isActive", label: "Active", render: (v) => boolBadge(v) },
     ],
     fields: [
       { name: "name", label: "Name", type: "text", required: true },
       { name: "description", label: "Description", type: "textarea", required: true },
-      { name: "icon", label: "Icon", type: "text" },
-      { name: "type", label: "Type", type: "text", required: true, placeholder: "weapon, armor, consumable, material..." },
-      { name: "subtype", label: "Subtype", type: "text", placeholder: "sword, potion, helmet..." },
-      { name: "rarity", label: "Rarity", type: "select", required: true, defaultValue: "common", options: ["common", "uncommon", "rare", "epic", "legendary", "mythic"] },
-      { name: "level", label: "Level", type: "number", defaultValue: 1 },
-      { name: "tier", label: "Tier", type: "number", defaultValue: 1 },
-      { name: "buyPrice", label: "Buy Price", type: "number", defaultValue: 0 },
-      { name: "sellPrice", label: "Sell Price", type: "number", defaultValue: 0 },
-      { name: "stats", label: "Stats", type: "json", jsonSchema: { mode: "fixed-record", groups: EQUIP_GROUPS } },
-      { name: "requirements", label: "Requirements", type: "json", jsonSchema: { mode: "fixed-record", fields: [
-          { key: "level", label: "Level" },
-        ] } },
-      { name: "effects", label: "Effects", type: "json", jsonSchema: { mode: "fixed-record", fields: [
+      { name: "icon", label: "Ícone", type: "icon", placeholder: "/icons/64x64/..." },
+      {
+        name: "type",
+        label: "Tipo",
+        type: "select",
+        required: true,
+        defaultValue: "weapon",
+        options: ["weapon", "helm", "armor", "cape", "ring", "necklace", "consumable", "class", "material"],
+      },
+      {
+        name: "subtype",
+        label: "Sub-tipo",
+        type: "select",
+        optionsFor: {
+          source: "type",
+          map: {
+            weapon: ["sword", "dagger", "staff", "axe", "tome", "bow"],
+            helm: ["cap", "helmet", "crown", "hood"],
+            armor: ["light", "heavy", "robe"],
+            cape: [],
+            ring: [],
+            necklace: [],
+            consumable: ["potion", "scroll", "food", "material"],
+            class: [],
+            material: ["ore", "dust", "bone", "essence"],
+          },
+        },
+      },
+      {
+        name: "rarity",
+        label: "Raridade",
+        type: "select",
+        required: true,
+        defaultValue: "common",
+        options: ["common", "uncommon", "rare", "epic", "legendary", "mythic"],
+      },
+      { name: "level", label: "Nível", type: "number", defaultValue: 1 },
+      { name: "rank", label: "Rank", type: "number", defaultValue: 1 },
+      { name: "buyPrice", label: "Preço de compra", type: "number", defaultValue: 0, step: "1" },
+      { name: "sellPrice", label: "Preço de venda", type: "number", defaultValue: 0, step: "1" },
+      { name: "effects", label: "Effects (consumíveis)", type: "json", jsonSchema: { mode: "fixed-record", fields: [
           { key: "heal", label: "Cura" },
           { key: "manaRestore", label: "Recupera Mana" },
           { key: "shield", label: "Escudo" },
           { key: "damage", label: "Dano" },
         ] } },
-      { name: "isTradable", label: "Tradable", type: "boolean", defaultValue: true },
-      { name: "isSellable", label: "Sellable", type: "boolean", defaultValue: true },
-      { name: "isStackable", label: "Stackable", type: "boolean", defaultValue: false },
+      { name: "strength", label: "Força", type: "number", defaultValue: 0 },
+      { name: "intellect", label: "Intelecto", type: "number", defaultValue: 0 },
+      { name: "endurance", label: "Resistência", type: "number", defaultValue: 0 },
+      { name: "dexterity", label: "Destreza", type: "number", defaultValue: 0 },
+      { name: "wisdom", label: "Sabedoria", type: "number", defaultValue: 0 },
+      { name: "luck", label: "Sorte", type: "number", defaultValue: 0 },
+      { name: "enchantmentId", label: "Encantamento (fixo)", type: "select", optionsFrom: "enchantments", hint: "Encantamento já gravado no item (opcional)" },
+      { name: "isStackable", label: "Empilhável", type: "boolean", defaultValue: false },
+      { name: "maxStack", label: "Max stack", type: "number", defaultValue: 1 },
+      { name: "isTradable", label: "Negociável", type: "boolean", defaultValue: true },
+      { name: "isSellable", label: "Vendável", type: "boolean", defaultValue: true },
       { name: "isActive", label: "Active", type: "boolean", defaultValue: true },
     ],
   },

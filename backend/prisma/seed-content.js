@@ -128,14 +128,14 @@ const starterClasses = [
 
 const items = [
   // ===== Weapons (STR/INT) =====
-  { name: "Espada de Iniciante", description: "Uma espada simples forjada para novos aventureiros.", type: "weapon", rarity: "common", level: 1, rank: 1, buyPrice: 50, sellPrice: 10, strength: 4, dexterity: 1, icon: "/icons/64x64/Armas/fc1441.png" },
-  { name: "Adaga de Iniciante", description: "Leve e afiada, ideal para golpes precisos.", type: "weapon", rarity: "common", level: 1, rank: 1, buyPrice: 50, sellPrice: 10, strength: 2, dexterity: 3, icon: "/icons/64x64/Armas/fc1442.png" },
-  { name: "Cajado do Aprendiz", description: "Canaliza os primeiros feitiços de um mago.", type: "weapon", rarity: "common", level: 1, rank: 1, buyPrice: 50, sellPrice: 10, intellect: 5, icon: "/icons/64x64/Armas/fc1443.png" },
-  { name: "Cajado da Luz", description: "Um cajado abençoado que fortalece as curas.", type: "weapon", rarity: "common", level: 1, rank: 1, buyPrice: 50, sellPrice: 10, intellect: 4, wisdom: 1, icon: "/icons/64x64/Armas/fc1444.png" },
-  { name: "Espada de Ferro", description: "Uma espada de ferro confiável para aventureiros iniciantes.", type: "weapon", rarity: "uncommon", level: 3, rank: 2, buyPrice: 150, sellPrice: 30, strength: 8, dexterity: 2, icon: "/icons/64x64/Armas/fc1445.png" },
-  { name: "Adaga Serrilhada", description: "Lâmina serrilhada que causa ferimentos graves.", type: "weapon", rarity: "uncommon", level: 3, rank: 2, buyPrice: 140, sellPrice: 28, strength: 4, dexterity: 6, icon: "/icons/64x64/Armas/fc1446.png" },
-  { name: "Cajado Arcano", description: "Canaliza poder arcano com precisão.", type: "weapon", rarity: "uncommon", level: 3, rank: 2, buyPrice: 160, sellPrice: 32, intellect: 10, wisdom: 2, icon: "/icons/64x64/Armas/fc1447.png" },
-  { name: "Machado de Batalha", description: "Uma lâmina pesada que parte escudos.", type: "weapon", rarity: "rare", level: 6, rank: 3, buyPrice: 400, sellPrice: 80, strength: 18, endurance: 3, icon: "/icons/64x64/Armas/fc1448.png" },
+  { name: "Espada de Iniciante", description: "Uma espada simples forjada para novos aventureiros.", type: "weapon", subtype: "sword", rarity: "common", level: 1, rank: 1, buyPrice: 50, sellPrice: 10, strength: 4, dexterity: 1, icon: "/icons/64x64/Armas/fc1441.png" },
+  { name: "Adaga de Iniciante", description: "Leve e afiada, ideal para golpes precisos.", type: "weapon", subtype: "dagger", rarity: "common", level: 1, rank: 1, buyPrice: 50, sellPrice: 10, strength: 2, dexterity: 3, icon: "/icons/64x64/Armas/fc1442.png" },
+  { name: "Cajado do Aprendiz", description: "Canaliza os primeiros feitiços de um mago.", type: "weapon", subtype: "staff", rarity: "common", level: 1, rank: 1, buyPrice: 50, sellPrice: 10, intellect: 5, icon: "/icons/64x64/Armas/fc1443.png" },
+  { name: "Cajado da Luz", description: "Um cajado abençoado que fortalece as curas.", type: "weapon", subtype: "staff", rarity: "common", level: 1, rank: 1, buyPrice: 50, sellPrice: 10, intellect: 4, wisdom: 1, icon: "/icons/64x64/Armas/fc1444.png" },
+  { name: "Espada de Ferro", description: "Uma espada de ferro confiável para aventureiros iniciantes.", type: "weapon", subtype: "sword", rarity: "uncommon", level: 3, rank: 2, buyPrice: 150, sellPrice: 30, strength: 8, dexterity: 2, icon: "/icons/64x64/Armas/fc1445.png" },
+  { name: "Adaga Serrilhada", description: "Lâmina serrilhada que causa ferimentos graves.", type: "weapon", subtype: "dagger", rarity: "uncommon", level: 3, rank: 2, buyPrice: 140, sellPrice: 28, strength: 4, dexterity: 6, icon: "/icons/64x64/Armas/fc1446.png" },
+  { name: "Cajado Arcano", description: "Canaliza poder arcano com precisão.", type: "weapon", subtype: "staff", rarity: "uncommon", level: 3, rank: 2, buyPrice: 160, sellPrice: 32, intellect: 10, wisdom: 2, icon: "/icons/64x64/Armas/fc1447.png" },
+  { name: "Machado de Batalha", description: "Uma lâmina pesada que parte escudos.", type: "weapon", subtype: "axe", rarity: "rare", level: 6, rank: 3, buyPrice: 400, sellPrice: 80, strength: 18, endurance: 3, icon: "/icons/64x64/Armas/fc1448.png" },
   { name: "Grimório Antigo", description: "Um tomo arcano repleto de feitiços esquecidos.", type: "weapon", rarity: "rare", level: 6, rank: 3, buyPrice: 420, sellPrice: 84, intellect: 16, wisdom: 5, icon: "/icons/64x64/Armas/fc1449.png" },
   // ===== Helms (END/WIS) =====
   { name: "Capuz de Pano", description: "Proteção simples para a cabeça.", type: "helm", rarity: "common", level: 1, rank: 1, buyPrice: 30, sellPrice: 6, endurance: 2, wisdom: 1, icon: "/icons/64x64/Elmo/fc1832.png" },
@@ -158,8 +158,8 @@ const items = [
   { name: "Amuleto da Sorte", description: "Um amuleto que afasta o azar.", type: "necklace", rarity: "uncommon", level: 3, rank: 2, buyPrice: 140, sellPrice: 28, luck: 5, wisdom: 3, icon: "/icons/64x64/Colares/fc1850.png" },
   { name: "Colar Arcano", description: "Um colar banhado em energia mística.", type: "necklace", rarity: "rare", level: 6, rank: 3, buyPrice: 370, sellPrice: 74, wisdom: 8, intellect: 4, icon: "/icons/64x64/Colares/fc1851.png" },
   // ===== Consumables =====
-  { name: "Poção de Vida", description: "Restaura 50 de vida.", type: "consumable", rarity: "common", level: 1, isStackable: true, maxStack: 99, buyPrice: 20, sellPrice: 4, effects: '{"heal": 50}', icon: "/icons/64x64/Potion/Vida.png" },
-  { name: "Poção de Mana", description: "Restaura 40 de mana.", type: "consumable", rarity: "common", level: 1, isStackable: true, maxStack: 99, buyPrice: 25, sellPrice: 5, effects: '{"manaRestore": 40}', icon: "/icons/64x64/Potion/Mana.png" },
+  { name: "Poção de Vida", description: "Restaura 50 de vida.", type: "consumable", subtype: "potion", rarity: "common", level: 1, isStackable: true, maxStack: 99, buyPrice: 20, sellPrice: 4, effects: '{"heal": 50}', icon: "/icons/64x64/Potion/Vida.png" },
+  { name: "Poção de Mana", description: "Restaura 40 de mana.", type: "consumable", subtype: "potion", rarity: "common", level: 1, isStackable: true, maxStack: 99, buyPrice: 25, sellPrice: 5, effects: '{"manaRestore": 40}', icon: "/icons/64x64/Potion/Mana.png" },
 ];
 
 // ===== Encantamentos (independentes dos itens, comprados na loja) =====

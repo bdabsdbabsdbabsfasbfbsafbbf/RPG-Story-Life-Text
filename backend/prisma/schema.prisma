@@ -331,6 +331,7 @@ model Item {
   description   String
   icon          String?
   type          String // weapon | class | helm | armor | cape | ring | necklace | consumable
+  subtype       String? // ex: sword, dagger, staff, potion, material...
   rarity        String
   level         Int      @default(1)
   rank          Int      @default(1)
