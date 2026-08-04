@@ -13,7 +13,7 @@ interface NpcDetail {
   id: string;
   name: string;
   type: string;
-  shopItems?: { id: string; price: string | number; itemId?: string | null; enchantmentId?: string | null; classId?: string | null; requiredLevel?: number; class?: { name: string; slug: string } | null; item: { id: string; name: string; description: string; type: string; rarity: string; icon?: string | null; attackSpeedMs?: number; dps?: number } | null; enchantment?: { name: string; slug: string; description: string } | null }[];
+  shopItems?: { id: string; price: string | number; itemId?: string | null; enchantmentId?: string | null; classId?: string | null; requiredLevel?: number; class?: { name: string; slug: string } | null; item: { id: string; name: string; description: string; type: string; rarity: string; icon?: string | null; attackSpeedMs?: number; dps?: number } | null; enchantment?: { name: string; slug: string; description: string; icon?: string | null } | null }[];
   quests?: { id: string; title: string; description: string; requiredLevel: number; requiredRank: number; requiredQuestIds?: string | null; xpReward: string | number; goldReward: string | number }[];
 }
 
@@ -409,7 +409,11 @@ export function MapPage() {
                       <div key={offer.id} className="card p-3 flex items-center gap-3">
                         <div className={`w-9 h-9 rounded-lg flex items-center justify-center overflow-hidden ${isEnchantment ? "bg-purple-500/20" : "bg-dark-700"}`}>
                           {isEnchantment ? (
-                            <ShoppingBag size={16} className="text-purple-400" />
+                            offer.enchantment?.icon ? (
+                              <img src={offer.enchantment.icon} alt="" className="w-full h-full object-contain p-0.5" style={{ imageRendering: "pixelated" }} />
+                            ) : (
+                              <ShoppingBag size={16} className="text-purple-400" />
+                            )
                           ) : offer.item?.icon ? (
                             <img src={offer.item.icon} alt="" className="w-full h-full object-contain" style={{ imageRendering: "pixelated" }} />
                           ) : (

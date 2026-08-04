@@ -329,7 +329,11 @@ export function InventoryPage() {
             )}
             {inv.item.enchantment && (
               <div className="absolute top-2 left-2 px-1.5 py-0.5 bg-yellow-500/15 text-yellow-400 text-[10px] rounded font-bold flex items-center gap-1">
-                <Sparkles size={10} /> {inv.item.enchantment.name}
+                {inv.item.enchantment.icon ? (
+                  <img src={inv.item.enchantment.icon} alt="" className="w-3 h-3 object-contain" style={{ imageRendering: "pixelated" }} />
+                ) : (
+                  <Sparkles size={10} />
+                )} {inv.item.enchantment.name}
               </div>
             )}
             <div className="flex items-start gap-3">

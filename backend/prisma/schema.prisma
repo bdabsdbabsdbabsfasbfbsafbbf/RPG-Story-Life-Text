@@ -402,6 +402,7 @@ model Enchantment {
   name             String
   slug             String            @unique
   description      String
+  icon             String?
   category         String // physical | magical | defensive | utility
   rarity           String            @default("common")
   tier             Int               @default(1) // nível do encantamento (I, II, III...)

@@ -648,11 +648,11 @@ export default function SkillsPage() {
                 </div>
                 <div>
                   <label className="block text-sm text-gray-400 mb-1.5">Icon</label>
-                  <IconPicker value={form.icon} onChange={(v) => setForm({ ...form, icon: v })} placeholder="Ícone principal da skill" />
+                  <IconPicker categories={["Skills"]} value={form.icon} onChange={(v) => setForm({ ...form, icon: v })} placeholder="Ícone principal da skill" />
                 </div>
                 <div>
                   <label className="block text-sm text-gray-400 mb-1.5">Icon Secundário (efeito)</label>
-                  <IconPicker value={form.iconSecondary} onChange={(v) => setForm({ ...form, iconSecondary: v })} placeholder="Ícone extra exibido junto" />
+                  <IconPicker categories={["Skills"]} value={form.iconSecondary} onChange={(v) => setForm({ ...form, iconSecondary: v })} placeholder="Ícone extra exibido junto" />
                 </div>
                 <div className="sm:col-span-2">
                   <label className="block text-sm text-gray-400 mb-1.5">Description *</label>

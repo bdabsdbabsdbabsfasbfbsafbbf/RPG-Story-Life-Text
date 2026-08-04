@@ -293,6 +293,7 @@ export interface Enchantment {
   name: string;
   slug: string;
   description: string;
+  icon?: string | null;
   category: string;
   rarity: string;
   minRank: number;

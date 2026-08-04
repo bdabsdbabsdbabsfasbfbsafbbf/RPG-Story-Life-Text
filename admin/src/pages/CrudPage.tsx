@@ -17,6 +17,7 @@ export interface FieldConfig {
   step?: string;
   placeholder?: string;
   hint?: string;
+  iconCategories?: string[];
   jsonSchema?: JsonFieldDef;
 }
 
@@ -239,7 +240,7 @@ export default function CrudPage({ config }: CrudPageProps) {
         );
       }
       case "icon":
-        return <IconPicker value={value ?? ""} onChange={(v) => setForm({ ...form, [field.name]: v })} />;
+        return <IconPicker value={value ?? ""} onChange={(v) => setForm({ ...form, [field.name]: v })} categories={field.iconCategories} />;
       case "boolean":
         return (
           <div className="flex items-center gap-2 pt-1">

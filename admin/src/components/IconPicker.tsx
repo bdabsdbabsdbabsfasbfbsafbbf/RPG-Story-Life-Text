@@ -23,6 +23,8 @@ const CAT_LABELS: Record<string, string> = {
 
 const ICON_BASE = "/icons/64x64";
 
+const HIDDEN_CATEGORIES = ["Raridade", "Skills", "Classes", "Encantamento"];
+
 function pickIconUrl(item: string | null | undefined): string | null {
   if (!item) return null;
   if (item.startsWith("/") || item.startsWith("http")) return item;
@@ -36,9 +38,10 @@ interface IconPickerProps {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
+  categories?: string[]; // categorias permitidas; sem esta opção mostra todas (exceto Raridade)
 }
 
-export default function IconPicker({ value, onChange, placeholder }: IconPickerProps) {
+export default function IconPicker({ value, onChange, placeholder, categories }: IconPickerProps) {
   const [manifest, setManifest] = useState<Manifest | null>(null);
   const [loadErr, setLoadErr] = useState(false);
   const [open, setOpen] = useState(false);
@@ -54,7 +57,10 @@ export default function IconPicker({ value, onChange, placeholder }: IconPickerP
       .catch(() => setLoadErr(true));
   }, []);
 
-  const cats = useMemo(() => (manifest ? Object.keys(manifest) : []), [manifest]);
+  const cats = useMemo(
+    () => (manifest ? Object.keys(manifest).filter((c) => c !== "Raridade" && (!categories || categories.includes(c))) : []),
+    [manifest, categories]
+  );
   const files = useMemo(() => (manifest && cat ? manifest[cat] || [] : []), [manifest, cat]);
 
   const currentUrl = pickIconUrl(value);
@@ -128,6 +134,7 @@ export default function IconPicker({ value, onChange, placeholder }: IconPickerP
               {cats.map((c) => (
                 <button
                   key={c}
+                  type="button"
                   onClick={() => setCat(c)}
                   className={`px-2.5 py-1 rounded-full text-xs transition-colors ${
                     cat === c ? "bg-accent-600 text-white" : "bg-dark-700 text-gray-400 hover:text-white"

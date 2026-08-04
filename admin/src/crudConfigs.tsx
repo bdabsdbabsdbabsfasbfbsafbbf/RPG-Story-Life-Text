@@ -131,7 +131,7 @@ export const crudConfigs: CrudConfig[] = [
       { name: "name", label: "Name", type: "text", required: true },
       { name: "slug", label: "Slug", type: "text", required: true, placeholder: "e.g. cavaleiro", hint: "Lowercase, no spaces, unique" },
       { name: "description", label: "Description", type: "textarea", required: true },
-      { name: "icon", label: "Icon", type: "text", placeholder: "e.g. 'Swords'" },
+      { name: "icon", label: "Icon", type: "icon", iconCategories: ["Classes"], placeholder: "/icons/64x64/Classes/..." },
       {
         name: "role",
         label: "Role",
@@ -207,7 +207,7 @@ export const crudConfigs: CrudConfig[] = [
     fields: [
       { name: "name", label: "Name", type: "text", required: true },
       { name: "description", label: "Description", type: "textarea", required: true },
-      { name: "icon", label: "Ícone", type: "icon", placeholder: "/icons/64x64/..." },
+      { name: "icon", label: "Ícone", type: "icon", placeholder: "/icons/64x64/...", iconCategories: ["Armas", "Elmo", "Elmos Magicos", "Armaduras", "Robes", "Capas", "Aneis", "Colares", "Potion", "Drop Boss"] },
       {
         name: "type",
         label: "Tipo",
@@ -434,6 +434,7 @@ export const crudConfigs: CrudConfig[] = [
     title: "Encantamentos",
     columns: [
       idColumn,
+      { key: "icon", label: "Ícone", render: (v) => (v ? <img src={v} alt="" className="w-9 h-9 object-contain rounded bg-dark-700 p-0.5" style={{ imageRendering: "pixelated" }} /> : <span className="text-gray-600 text-xs">—</span>) },
       { key: "name", label: "Name", render: (v) => <span className="font-medium text-white">{v}</span> },
       { key: "slug", label: "Slug", render: (v) => <span className="text-xs text-gray-500">{v}</span> },
       { key: "category", label: "Category" },
@@ -446,6 +447,7 @@ export const crudConfigs: CrudConfig[] = [
       { name: "name", label: "Name", type: "text", required: true },
       { name: "slug", label: "Slug", type: "text", required: true, hint: "Unique, lowercase" },
       { name: "description", label: "Description", type: "textarea", required: true },
+      { name: "icon", label: "Ícone", type: "icon", iconCategories: ["Encantamento", "Skills"], placeholder: "/icons/64x64/Encantamento/..." },
       { name: "category", label: "Category", type: "select", defaultValue: "physical", options: ["physical", "magical", "defensive", "utility"] },
       { name: "rarity", label: "Rarity", type: "select", defaultValue: "common", options: ["common", "uncommon", "rare", "epic", "legendary", "mythic"] },
       { name: "tier", label: "Nível (I, II, III...)", type: "number", defaultValue: 1, hint: "Titan I, Titan II... — crie versões mais fortes com o mesmo slug-base e tier maior" },
