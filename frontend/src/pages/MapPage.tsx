@@ -5,7 +5,7 @@ import { Map as MapType } from "../types";
 import { getSocket } from "../services/socket";
 import {
   ArrowLeft, Skull, Store, ScrollText, Navigation, Shield, Map as MapIcon,
-  X, ShoppingBag, CheckCircle2, Clock, Gift, Lock, Swords, Hammer, Crown,
+  X, ShoppingBag, CheckCircle2, Clock, Gift, Lock, Swords, Hammer, Crown, Sparkles,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuthStore } from "../store/authStore";
@@ -82,6 +82,7 @@ export function MapPage() {
   const [buyingItemId, setBuyingItemId] = useState<string | null>(null);
   const [crafts, setCrafts] = useState<CraftRecipe[]>([]);
   const [craftingId, setCraftingId] = useState<string | null>(null);
+  const [vendorTab, setVendorTab] = useState<"items" | "enchantments" | "crafts">("items");
 
   const refreshUser = async () => {
     try {
@@ -154,6 +155,7 @@ export function MapPage() {
   const openNpc = async (npcId: string) => {
     setNpcLoading(true);
     setNpc(null);
+    setVendorTab("items");
     try {
       const { data } = await npcApi.get(npcId);
       setNpc(data);
@@ -422,124 +424,156 @@ export function MapPage() {
 
             {isShopNpc(npc.type) && (
               <div className="space-y-2">
-                {npc.shopItems && npc.shopItems.length > 0 ? (
-                  npc.shopItems.map((offer) => {
-                    const isEnchantment = !!offer.enchantmentId;
-                    const label = isEnchantment ? offer.enchantment?.name ?? "Encantamento" : offer.item?.name ?? "-";
-                    const description = isEnchantment ? offer.enchantment?.description ?? "" : offer.item?.description ?? "";
+                <div className="flex gap-2 flex-wrap border-b border-dark-700 pb-2">
+                  {(
+                    [
+                      { key: "items", label: "Itens", icon: ShoppingBag, count: npc.shopItems?.filter((o) => !o.enchantmentId).length ?? 0 },
+                      { key: "enchantments", label: "Encantamentos", icon: Sparkles, count: npc.shopItems?.filter((o) => !!o.enchantmentId).length ?? 0 },
+                      { key: "crafts", label: "Craftar", icon: Hammer, count: crafts.length },
+                    ] as const
+                  ).map((t) => {
+                    const Icon = t.icon;
                     return (
-                      <div key={offer.id} className="card p-3 flex items-center gap-3">
-                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center overflow-hidden ${isEnchantment ? "bg-purple-500/20" : "bg-dark-700"}`}>
-                          {isEnchantment ? (
-                            offer.enchantment?.icon ? (
-                              <img src={offer.enchantment.icon} alt="" className="w-full h-full object-contain p-0.5" style={{ imageRendering: "pixelated" }} />
-                            ) : (
-                              <ShoppingBag size={16} className="text-purple-400" />
-                            )
-                          ) : offer.item?.icon ? (
-                            <img src={offer.item.icon} alt="" className="w-full h-full object-contain" style={{ imageRendering: "pixelated" }} />
-                          ) : (
-                            <ShoppingBag size={16} className="text-cyan-400" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium">
-                            {label}
-                            {isEnchantment && <span className="text-[10px] ml-1.5 px-1.5 py-0.5 rounded-full bg-purple-500/15 text-purple-300 align-middle">encantamento</span>}
-                          </p>
-                          <p className="text-[11px] text-gray-500 line-clamp-1">{description}</p>
-                          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                            {!isEnchantment && offer.item?.type === "weapon" && (
-                              <span className="text-[10px] px-1.5 py-0.5 bg-orange-500/15 text-orange-300 rounded-md">
-                                DPS {Number(offer.item.dps || 0).toLocaleString()} · {Number(offer.item.attackSpeedMs) > 0 ? `${(Number(offer.item.attackSpeedMs) / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}s` : "vel. da classe"}
-                              </span>
-                            )}
-                            {offer.item?.requiredVip && (
-                              <span className="text-[10px] px-1.5 py-0.5 bg-yellow-500/15 text-yellow-300 rounded-md flex items-center gap-1">
-                                <Crown size={9} /> VIP
-                              </span>
-                            )}
-                            {offer.enchantment?.requiredVip && (
-                              <span className="text-[10px] px-1.5 py-0.5 bg-yellow-500/15 text-yellow-300 rounded-md flex items-center gap-1">
-                                <Crown size={9} /> VIP
-                              </span>
-                            )}
-                            {offer.class && (
-                              <span className="text-[10px] px-1.5 py-0.5 bg-purple-500/15 text-purple-300 rounded-md flex items-center gap-1">
-                                <Shield size={9} /> Classe: {offer.class.name}
-                              </span>
-                            )}
-                            {Number(offer.requiredLevel) > 0 && (
-                              <span className="text-[10px] px-1.5 py-0.5 bg-yellow-500/15 text-yellow-300 rounded-md">
-                                Nv. {offer.requiredLevel}+
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <p className="text-sm text-yellow-400">
-                            {Number(offer.price).toLocaleString()} {offer.currency === "diamond" ? "💎" : "gold"}
-                          </p>
-                          {offer.currency === "diamond" && (
-                            <p className="text-[10px] text-cyan-400/80">diamantes</p>
-                          )}
-                          <button
-                            onClick={() => buyItem(offer)}
-                            disabled={buyingItemId === (isEnchantment ? offer.enchantmentId : offer.itemId)}
-                            className="btn-secondary text-xs px-3 py-1 mt-1 disabled:opacity-50"
-                          >
-                            {buyingItemId === (isEnchantment ? offer.enchantmentId : offer.itemId) ? "..." : "Comprar"}
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <p className="text-sm text-gray-500">Esta loja está vazia.</p>
-                )}
-              </div>
-            )}
-
-            {isShopNpc(npc.type) && crafts.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-dark-700">
-                <h3 className="font-display font-semibold text-sm mb-2 flex items-center gap-2">
-                  <Hammer size={14} className="text-orange-400" /> Craftar
-                </h3>
-                <div className="space-y-2">
-                  {crafts.map((recipe) => {
-                    const ings = parseIngredients(recipe.ingredients);
-                    return (
-                      <div key={recipe.id} className="card p-3 flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-lg bg-orange-500/15 flex items-center justify-center shrink-0">
-                          <Hammer size={16} className="text-orange-400" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium">{recipe.resultItem?.name ?? "Item"} <span className="text-gray-500">x{recipe.resultQuantity}</span></p>
-                          <p className="text-[11px] text-gray-500 line-clamp-1">{recipe.description}</p>
-                          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                            {Number(recipe.requiredLevel) > 0 && (
-                              <span className="text-[10px] px-1.5 py-0.5 bg-yellow-500/15 text-yellow-300 rounded-md">
-                                Nv. {recipe.requiredLevel}+
-                              </span>
-                            )}
-                            {ings.map((ing, i) => (
-                              <span key={i} className="text-[10px] px-1.5 py-0.5 bg-dark-700 text-gray-300 rounded-md">
-                                {ing.quantity}x {ing.itemName}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => craftItem(recipe)}
-                          disabled={craftingId === recipe.id}
-                          className="btn-secondary text-xs px-3 py-1 mt-1 shrink-0 disabled:opacity-50"
-                        >
-                          {craftingId === recipe.id ? "..." : "Craftar"}
-                        </button>
-                      </div>
+                      <button
+                        key={t.key}
+                        onClick={() => setVendorTab(t.key)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                          vendorTab === t.key
+                            ? "bg-gradient-to-r from-purple-600/30 to-blue-600/30 border border-purple-500/40 text-white"
+                            : "bg-dark-800 border border-dark-600 text-gray-400 hover:text-white"
+                        }`}
+                      >
+                        <Icon size={14} /> {t.label}
+                        {t.count > 0 && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-dark-700 text-gray-400">{t.count}</span>}
+                      </button>
                     );
                   })}
                 </div>
+
+                {(vendorTab === "items" || vendorTab === "enchantments") && (() => {
+                  const offers = (npc.shopItems ?? []).filter((o) =>
+                    vendorTab === "enchantments" ? !!o.enchantmentId : !o.enchantmentId
+                  );
+                  return offers.length > 0 ? (
+                    offers.map((offer) => {
+                      const isEnchantment = !!offer.enchantmentId;
+                      const label = isEnchantment ? offer.enchantment?.name ?? "Encantamento" : offer.item?.name ?? "-";
+                      const description = isEnchantment ? offer.enchantment?.description ?? "" : offer.item?.description ?? "";
+                      return (
+                        <div key={offer.id} className="card p-3 flex items-center gap-3">
+                          <div className={`w-9 h-9 rounded-lg flex items-center justify-center overflow-hidden ${isEnchantment ? "bg-purple-500/20" : "bg-dark-700"}`}>
+                            {isEnchantment ? (
+                              offer.enchantment?.icon ? (
+                                <img src={offer.enchantment.icon} alt="" className="w-full h-full object-contain p-0.5" style={{ imageRendering: "pixelated" }} />
+                              ) : (
+                                <ShoppingBag size={16} className="text-purple-400" />
+                              )
+                            ) : offer.item?.icon ? (
+                              <img src={offer.item.icon} alt="" className="w-full h-full object-contain" style={{ imageRendering: "pixelated" }} />
+                            ) : (
+                              <ShoppingBag size={16} className="text-cyan-400" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium">
+                              {label}
+                              {isEnchantment && <span className="text-[10px] ml-1.5 px-1.5 py-0.5 rounded-full bg-purple-500/15 text-purple-300 align-middle">encantamento</span>}
+                            </p>
+                            <p className="text-[11px] text-gray-500 line-clamp-1">{description}</p>
+                            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                              {!isEnchantment && offer.item?.type === "weapon" && (
+                                <span className="text-[10px] px-1.5 py-0.5 bg-orange-500/15 text-orange-300 rounded-md">
+                                  DPS {Number(offer.item.dps || 0).toLocaleString()} · {Number(offer.item.attackSpeedMs) > 0 ? `${(Number(offer.item.attackSpeedMs) / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}s` : "vel. da classe"}
+                                </span>
+                              )}
+                              {offer.item?.requiredVip && (
+                                <span className="text-[10px] px-1.5 py-0.5 bg-yellow-500/15 text-yellow-300 rounded-md flex items-center gap-1">
+                                  <Crown size={9} /> VIP
+                                </span>
+                              )}
+                              {offer.enchantment?.requiredVip && (
+                                <span className="text-[10px] px-1.5 py-0.5 bg-yellow-500/15 text-yellow-300 rounded-md flex items-center gap-1">
+                                  <Crown size={9} /> VIP
+                                </span>
+                              )}
+                              {offer.class && (
+                                <span className="text-[10px] px-1.5 py-0.5 bg-purple-500/15 text-purple-300 rounded-md flex items-center gap-1">
+                                  <Shield size={9} /> Classe: {offer.class.name}
+                                </span>
+                              )}
+                              {Number(offer.requiredLevel) > 0 && (
+                                <span className="text-[10px] px-1.5 py-0.5 bg-yellow-500/15 text-yellow-300 rounded-md">
+                                  Nv. {offer.requiredLevel}+
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="text-sm text-yellow-400">
+                              {Number(offer.price).toLocaleString()} {offer.currency === "diamond" ? "💎" : "gold"}
+                            </p>
+                            {offer.currency === "diamond" && (
+                              <p className="text-[10px] text-cyan-400/80">diamantes</p>
+                            )}
+                            <button
+                              onClick={() => buyItem(offer)}
+                              disabled={buyingItemId === (isEnchantment ? offer.enchantmentId : offer.itemId)}
+                              className="btn-secondary text-xs px-3 py-1 mt-1 disabled:opacity-50"
+                            >
+                              {buyingItemId === (isEnchantment ? offer.enchantmentId : offer.itemId) ? "..." : "Comprar"}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className="text-sm text-gray-500">
+                      {vendorTab === "enchantments" ? "Nenhum encantamento à venda." : "Nenhum item à venda."}
+                    </p>
+                  );
+                })()}
+
+                {vendorTab === "crafts" && (
+                  crafts.length > 0 ? (
+                    <div className="space-y-2">
+                      {crafts.map((recipe) => {
+                        const ings = parseIngredients(recipe.ingredients);
+                        return (
+                          <div key={recipe.id} className="card p-3 flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-lg bg-orange-500/15 flex items-center justify-center shrink-0">
+                              <Hammer size={16} className="text-orange-400" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium">{recipe.resultItem?.name ?? "Item"} <span className="text-gray-500">x{recipe.resultQuantity}</span></p>
+                              <p className="text-[11px] text-gray-500 line-clamp-1">{recipe.description}</p>
+                              <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                                {Number(recipe.requiredLevel) > 0 && (
+                                  <span className="text-[10px] px-1.5 py-0.5 bg-yellow-500/15 text-yellow-300 rounded-md">
+                                    Nv. {recipe.requiredLevel}+
+                                  </span>
+                                )}
+                                {ings.map((ing, i) => (
+                                  <span key={i} className="text-[10px] px-1.5 py-0.5 bg-dark-700 text-gray-300 rounded-md">
+                                    {ing.quantity}x {ing.itemName}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => craftItem(recipe)}
+                              disabled={craftingId === recipe.id}
+                              className="btn-secondary text-xs px-3 py-1 mt-1 shrink-0 disabled:opacity-50"
+                            >
+                              {craftingId === recipe.id ? "..." : "Craftar"}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">Nenhuma receita disponível.</p>
+                  )
+                )}
               </div>
             )}
 
