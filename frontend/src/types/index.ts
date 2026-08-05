@@ -112,9 +112,8 @@ export interface StatModel {
   name: string;
   slug: string;
   description: string;
-  base: Record<string, number>;
-  perLevel: Record<string, number>;
-  scaling: Record<string, number>;
+  coreStats: Record<string, number>;
+  conversions: Array<{ stat: string; target: string; factor: number }>;
   isActive: boolean;
 }
 

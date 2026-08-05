@@ -478,7 +478,6 @@ const statModels = [
     base: { hp: 140, mana: 60, magic: 4, speed: 5, attack: 14, defense: 16, magicDefense: 12 },
     scaling: { aggroPerHit: 30, attackSpeedMs: 1600, dodgePerSpeed: 0.25, critDamageBase: 150, threatPerAttack: 25, manaRegenPerTick: 4, critChancePerSpeed: 0.5, healthRegenPerTick: 2, spellPowerPerMagic: 1, attackPowerPerAttack: 1 },
     coreStats: { strength: 6, endurance: 8, dexterity: 2, wisdom: 3, luck: 1 },
-    coreStatsPerLevel: { strength: 1.4, endurance: 2, dexterity: 0.5, wisdom: 0.6, luck: 0.2 },
     conversions: [
       { stat: "strength", target: "attackPower", factor: 1.5 },
       { stat: "endurance", target: "hp", factor: 12 },
@@ -497,7 +496,6 @@ const statModels = [
     base: { hp: 90, mana: 130, magic: 20, speed: 6, attack: 6, defense: 8, magicDefense: 12 },
     scaling: { aggroPerHit: 10, attackSpeedMs: 1500, dodgePerSpeed: 0.25, critDamageBase: 150, threatPerAttack: 10, manaRegenPerTick: 12, critChancePerSpeed: 0.5, healthRegenPerTick: 1, spellPowerPerMagic: 1, attackPowerPerAttack: 1 },
     coreStats: { intellect: 8, wisdom: 5, dexterity: 2, luck: 2 },
-    coreStatsPerLevel: { intellect: 2, wisdom: 1.2, dexterity: 0.4, luck: 0.4 },
     conversions: [
       { stat: "intellect", target: "spellPower", factor: 1.5 },
       { stat: "wisdom", target: "mana", factor: 8 },
@@ -516,7 +514,6 @@ const statModels = [
     base: { hp: 110, mana: 70, magic: 6, speed: 12, attack: 20, defense: 10, magicDefense: 8 },
     scaling: { aggroPerHit: 10, attackSpeedMs: 1200, dodgePerSpeed: 0.8, critDamageBase: 180, threatPerAttack: 15, manaRegenPerTick: 6, critChancePerSpeed: 1.2, healthRegenPerTick: 2, spellPowerPerMagic: 1, attackPowerPerAttack: 1 },
     coreStats: { strength: 4, dexterity: 8, luck: 4, endurance: 2 },
-    coreStatsPerLevel: { strength: 1, dexterity: 2, luck: 1, endurance: 0.5 },
     conversions: [
       { stat: "strength", target: "attackPower", factor: 1.3 },
       { stat: "dexterity", target: "attackSpeedPercent", factor: 12 },
@@ -536,7 +533,6 @@ const statModels = [
     base: { hp: 100, mana: 120, magic: 16, speed: 6, attack: 8, defense: 10, magicDefense: 12 },
     scaling: { aggroPerHit: 10, attackSpeedMs: 1500, dodgePerSpeed: 0.25, critDamageBase: 150, threatPerAttack: 10, manaRegenPerTick: 10, critChancePerSpeed: 0.5, healthRegenPerTick: 2, spellPowerPerMagic: 1, attackPowerPerAttack: 1 },
     coreStats: { intellect: 6, wisdom: 7, endurance: 3, luck: 1 },
-    coreStatsPerLevel: { intellect: 1.4, wisdom: 1.8, endurance: 0.6, luck: 0.2 },
     conversions: [
       { stat: "intellect", target: "spellPower", factor: 1.2 },
       { stat: "wisdom", target: "mana", factor: 10 },
@@ -554,7 +550,6 @@ const statModels = [
     base: { hp: 100, mana: 100, magic: 12, speed: 7, attack: 12, defense: 10, magicDefense: 10 },
     scaling: { aggroPerHit: 12, attackSpeedMs: 1400, dodgePerSpeed: 0.3, critDamageBase: 155, threatPerAttack: 12, manaRegenPerTick: 8, critChancePerSpeed: 0.6, healthRegenPerTick: 2, spellPowerPerMagic: 1, attackPowerPerAttack: 1 },
     coreStats: { strength: 5, intellect: 5, endurance: 4, dexterity: 4, wisdom: 3, luck: 2 },
-    coreStatsPerLevel: { strength: 1.1, intellect: 1.1, endurance: 1, dexterity: 1, wisdom: 0.7, luck: 0.4 },
     conversions: [
       { stat: "strength", target: "attackPower", factor: 1.1 },
       { stat: "intellect", target: "spellPower", factor: 1.1 },

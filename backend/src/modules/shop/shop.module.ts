@@ -61,6 +61,38 @@ async function applyProduct(
     return { amount: 1, message: "Encantamento adquirido" };
   }
 
+  if (product.type === "item") {
+    if (!product.itemId) throw new AppError(400, "Produto sem item vinculado");
+    const qty = Math.max(1, product.quantity || 1);
+    const existing = await tx.inventory.findFirst({
+      where: { userId, itemId: product.itemId, slotIndex: null },
+    });
+    if (existing) {
+      await tx.inventory.update({
+        where: { id: existing.id },
+        data: { quantity: { increment: qty } },
+      });
+    } else {
+      await tx.inventory.create({
+        data: { userId, itemId: product.itemId, quantity: qty },
+      });
+    }
+    return { amount: qty, message: `${qty}x item adicionado ao inventário` };
+  }
+
+  if (product.type === "class") {
+    if (!product.classId) throw new AppError(400, "Produto sem classe vinculada");
+    const characters = await tx.character.findMany({ where: { userId } });
+    for (const character of characters) {
+      await tx.characterClass.upsert({
+        where: { characterId_classId: { characterId: character.id, classId: product.classId } },
+        update: {},
+        create: { characterId: character.id, classId: product.classId },
+      });
+    }
+    return { amount: characters.length, message: "Classe desbloqueada" };
+  }
+
   throw new AppError(400, "Produto inválido");
 }
 
@@ -70,7 +102,7 @@ export function createShopModule(app: Express): void {
     try {
       const products = await prisma.shopProduct.findMany({
         where: { isActive: true },
-        include: { enchantment: true },
+        include: { enchantment: true, item: true, gameClass: true },
         orderBy: [{ type: "asc" }, { sortOrder: "asc" }],
       });
       res.json(products);
@@ -104,7 +136,7 @@ export function createShopModule(app: Express): void {
               userId: req.user!.userId,
               productId: product.id,
               type: product.type,
-              amount: product.type === "vip" ? product.vipDays : product.type === "diamond_pack" ? product.diamondAmount : 1,
+              amount: product.type === "vip" ? product.vipDays : product.type === "diamond_pack" ? product.diamondAmount : product.type === "item" ? Math.max(1, product.quantity || 1) : 1,
               price: product.price,
               currency: "diamond",
               status: "paid",
@@ -134,7 +166,7 @@ export function createShopModule(app: Express): void {
               userId: req.user!.userId,
               productId: product.id,
               type: product.type,
-              amount: 1,
+              amount: product.type === "item" ? Math.max(1, product.quantity || 1) : 1,
               price: product.price,
               currency: "gold",
               status: "paid",
@@ -157,7 +189,7 @@ export function createShopModule(app: Express): void {
             userId: req.user!.userId,
             productId: product.id,
             type: product.type,
-            amount: product.type === "vip" ? product.vipDays : product.type === "diamond_pack" ? product.diamondAmount : 1,
+            amount: product.type === "vip" ? product.vipDays : product.type === "diamond_pack" ? product.diamondAmount : product.type === "item" ? Math.max(1, product.quantity || 1) : 1,
             price: product.price,
             currency: "money",
             status: "paid",

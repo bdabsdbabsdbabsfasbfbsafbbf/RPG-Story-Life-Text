@@ -6,7 +6,6 @@ import { connectSocket, disconnectSocket, getSocket } from "../../services/socke
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { ChatPanel } from "./ChatPanel";
-import { CombatHUD } from "../Combat/CombatHUD";
 import { OnboardingModal } from "../OnboardingModal";
 import { useGameStore } from "../../store/gameStore";
 
@@ -14,7 +13,6 @@ export function GameLayout() {
   const { user, logout, accessToken, setUser } = useAuthStore();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [chatOpen, setChatOpen] = useState(true);
-  const combat = useGameStore((s) => s.combat);
   const setCharacter = useGameStore((s) => s.setCharacter);
 
   useEffect(() => {
@@ -69,8 +67,6 @@ export function GameLayout() {
 
         {chatOpen && <ChatPanel />}
       </div>
-
-      {combat && combat.state === "active" && <CombatHUD combat={combat} />}
       {user?.characters && user.characters.length > 0 && <OnboardingModal />}
     </div>
   );

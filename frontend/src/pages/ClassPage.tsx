@@ -383,7 +383,7 @@ export function ClassPage() {
             ))}
             <p className="col-span-full text-[10px] text-gray-500 uppercase tracking-wider mt-2">Special</p>
             {[
-              { label: "Attack Speed", value: `${stats.attackSpeedMs ?? 2000}ms`, icon: Gauge, color: "text-yellow-400" },
+              { label: "Attack Speed", value: `${(stats.attackSpeedMs ?? 2000) / 1000}s`, icon: Gauge, color: "text-yellow-400" },
               { label: "Mana Regen", value: `${stats.manaRegenPerTick ?? 0}/tick`, icon: Droplets, color: "text-blue-400" },
               { label: "HP Regen", value: `${stats.healthRegenPerTick ?? 0}/tick`, icon: HeartPulse, color: "text-green-400" },
               { label: "Threat", value: "100%", icon: Siren, color: "text-red-400" },

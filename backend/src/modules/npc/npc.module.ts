@@ -57,7 +57,7 @@ export function createNpcModule(app: Express): void {
     }
   });
 
-  // Buy an item (ou encantamento) do NPC vendor (debita gold e adiciona ao inventário/coleção)
+  // Buy an item (ou encantamento) do NPC vendor (debita gold/diamante e adiciona ao inventário/coleção)
   app.post("/api/npcs/:id/buy", authenticate, async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { itemId, enchantmentId, quantity = 1 } = req.body;
@@ -77,9 +77,15 @@ export function createNpcModule(app: Express): void {
 
       const user = await prisma.user.findUnique({
         where: { id: req.user!.userId },
-        select: { id: true, gold: true },
+        select: { id: true, gold: true, diamonds: true, vipOwned: true },
       });
       if (!user) throw new AppError(404, "User not found");
+
+      // Itens/encantamentos exclusivos para VIP
+      const requiresVip = shopOffer.item?.requiredVip || shopOffer.enchantment?.requiredVip;
+      if (requiresVip && !user.vipOwned) {
+        throw new AppError(403, `Este item é exclusivo para VIP.`);
+      }
 
       // Restrição de classe/nível: usa o personagem ativo (mais recente)
       if (shopOffer.classId || Number(shopOffer.requiredLevel) > 0) {
@@ -99,16 +105,28 @@ export function createNpcModule(app: Express): void {
         }
       }
 
+      const currency = shopOffer.currency === "diamond" ? "diamond" : "gold";
       const totalPrice = Number(shopOffer.price) * qty;
-      if (Number(user.gold) < totalPrice) {
+      if (currency === "diamond") {
+        if (Number(user.diamonds) < totalPrice) {
+          throw new AppError(400, `Not enough diamonds (need ${totalPrice})`);
+        }
+      } else if (Number(user.gold) < totalPrice) {
         throw new AppError(400, `Not enough gold (need ${totalPrice})`);
       }
 
       await prisma.$transaction(async (tx) => {
-        await tx.user.update({
-          where: { id: user.id },
-          data: { gold: { decrement: totalPrice } },
-        });
+        if (currency === "diamond") {
+          await tx.user.update({
+            where: { id: user.id },
+            data: { diamonds: { decrement: totalPrice } },
+          });
+        } else {
+          await tx.user.update({
+            where: { id: user.id },
+            data: { gold: { decrement: totalPrice } },
+          });
+        }
         if (shopOffer.enchantmentId) {
           await tx.userEnchantment.upsert({
             where: { userId_enchantmentId: { userId: user.id, enchantmentId: shopOffer.enchantmentId } },
@@ -136,7 +154,8 @@ export function createNpcModule(app: Express): void {
         item: shopOffer.enchantment?.name ?? shopOffer.item?.name ?? "Compra",
         quantity: qty,
         totalPrice,
-        goldLeft: Math.max(0, Number(user.gold) - totalPrice),
+        currency,
+        [currency === "diamond" ? "diamondsLeft" : "goldLeft"]: Math.max(0, Number(currency === "diamond" ? user.diamonds : user.gold) - totalPrice),
       });
     } catch (err) {
       next(err);

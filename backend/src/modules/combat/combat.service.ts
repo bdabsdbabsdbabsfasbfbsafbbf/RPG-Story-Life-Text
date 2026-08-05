@@ -231,7 +231,6 @@ export class CombatService {
         perLevel: parseJson(gameClass.statModel?.perLevel, {}),
         scaling: parseJson(gameClass.statModel?.scaling, {}),
         coreStats: parseJson(gameClass.statModel?.coreStats, {}),
-        coreStatsPerLevel: parseJson(gameClass.statModel?.coreStatsPerLevel, {}),
         conversions: parseJson(gameClass.statModel?.conversions, []),
         attackIntervalBase: gameClass.statModel?.attackIntervalBase ?? 0,
         combatStatsBase: parseJson(gameClass.statModel?.combatStatsBase, {}),

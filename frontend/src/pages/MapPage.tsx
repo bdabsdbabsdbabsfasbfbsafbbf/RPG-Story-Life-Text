@@ -1,19 +1,20 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { mapsApi, npcApi, questsApi, raidApi, craftApi } from "../services/api";
+import { mapsApi, npcApi, questsApi, raidApi, craftApi, authApi } from "../services/api";
 import { Map as MapType } from "../types";
 import { getSocket } from "../services/socket";
 import {
   ArrowLeft, Skull, Store, ScrollText, Navigation, Shield, Map as MapIcon,
-  X, ShoppingBag, CheckCircle2, Clock, Gift, Lock, Swords, Hammer,
+  X, ShoppingBag, CheckCircle2, Clock, Gift, Lock, Swords, Hammer, Crown,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { useAuthStore } from "../store/authStore";
 
 interface NpcDetail {
   id: string;
   name: string;
   type: string;
-  shopItems?: { id: string; price: string | number; itemId?: string | null; enchantmentId?: string | null; classId?: string | null; requiredLevel?: number; class?: { name: string; slug: string } | null; item: { id: string; name: string; description: string; type: string; rarity: string; icon?: string | null; attackSpeedMs?: number; dps?: number } | null; enchantment?: { name: string; slug: string; description: string; icon?: string | null } | null }[];
+  shopItems?: { id: string; price: string | number; currency?: string; itemId?: string | null; enchantmentId?: string | null; classId?: string | null; requiredLevel?: number; class?: { name: string; slug: string } | null; item: { id: string; name: string; description: string; type: string; rarity: string; icon?: string | null; attackSpeedMs?: number; dps?: number; requiredVip?: boolean } | null; enchantment?: { name: string; slug: string; description: string; icon?: string | null; requiredVip?: boolean } | null }[];
   quests?: { id: string; title: string; description: string; requiredLevel: number; requiredRank: number; requiredQuestIds?: string | null; xpReward: string | number; goldReward: string | number }[];
 }
 
@@ -57,8 +58,20 @@ function formatRaidReset(ms: number): string {
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
+const SHOP_TYPES = new Set(["vendor", "shop"]);
+const QUEST_TYPES = new Set(["quest_giver", "quest"]);
+
+function isShopNpc(type?: string | null) {
+  return !!type && SHOP_TYPES.has(type);
+}
+
+function isQuestNpc(type?: string | null) {
+  return !!type && QUEST_TYPES.has(type);
+}
+
 export function MapPage() {
   const { slug } = useParams<{ slug: string }>();
+  const { user, setUser } = useAuthStore();
   const [map, setMap] = useState<MapType | null>(null);
   const [maps, setMaps] = useState<MapType[]>([]);
   const [raidStatus, setRaidStatus] = useState<Record<string, RaidStatusEntry>>({});
@@ -69,6 +82,13 @@ export function MapPage() {
   const [buyingItemId, setBuyingItemId] = useState<string | null>(null);
   const [crafts, setCrafts] = useState<CraftRecipe[]>([]);
   const [craftingId, setCraftingId] = useState<string | null>(null);
+
+  const refreshUser = async () => {
+    try {
+      const { data } = await authApi.me();
+      if (data.user) setUser(data.user);
+    } catch { /* ignore */ }
+  };
 
   const loadCrafts = () => {
     craftApi.list().then(({ data }) => {
@@ -144,7 +164,7 @@ export function MapPage() {
     }
   };
 
-  const buyItem = async (offer: { item?: { id: string } | null; enchantment?: { name: string } | null; enchantmentId?: string | null; itemId?: string | null; price: string | number }) => {
+  const buyItem = async (offer: { item?: { id: string } | null; enchantment?: { name: string } | null; enchantmentId?: string | null; itemId?: string | null; price: string | number; currency?: string }) => {
     if (!npc) return;
     const isEnchantment = !!offer.enchantmentId;
     setBuyingItemId(isEnchantment ? offer.enchantmentId! : offer.itemId!);
@@ -153,7 +173,9 @@ export function MapPage() {
         ? { enchantmentId: offer.enchantmentId!, quantity: 1 }
         : { itemId: offer.itemId!, quantity: 1 };
       const { data } = await npcApi.buy(npc.id, payload);
-      toast.success(`${data.quantity}x ${data.item} comprado (${data.totalPrice} gold)`);
+      const currency = data.currency === "diamond" ? "diamantes" : "gold";
+      toast.success(`${data.quantity}x ${data.item} comprado (${data.totalPrice} ${currency})`);
+      if (currency === "diamantes") refreshUser();
     } catch (err: any) {
       toast.error(err.response?.data?.error || "Purchase failed");
     } finally {
@@ -345,8 +367,8 @@ export function MapPage() {
                   className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-dark-700/50 transition-colors text-left"
                 >
                   <div className="w-8 h-8 rounded-lg bg-dark-700 flex items-center justify-center">
-                    {mn.npc.type === "vendor" ? <Store size={16} className="text-cyan-400" /> :
-                     mn.npc.type === "quest_giver" ? <ScrollText size={16} className="text-green-400" /> :
+                    {isShopNpc(mn.npc.type) ? <Store size={16} className="text-cyan-400" /> :
+                     isQuestNpc(mn.npc.type) ? <ScrollText size={16} className="text-green-400" /> :
                      <Shield size={16} className="text-purple-400" />}
                   </div>
                   <div>
@@ -398,7 +420,7 @@ export function MapPage() {
               </button>
             </div>
 
-            {npc.type === "vendor" && (
+            {isShopNpc(npc.type) && (
               <div className="space-y-2">
                 {npc.shopItems && npc.shopItems.length > 0 ? (
                   npc.shopItems.map((offer) => {
@@ -429,7 +451,17 @@ export function MapPage() {
                           <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                             {!isEnchantment && offer.item?.type === "weapon" && (
                               <span className="text-[10px] px-1.5 py-0.5 bg-orange-500/15 text-orange-300 rounded-md">
-                                DPS {Number(offer.item.dps || 0).toLocaleString()} · {Number(offer.item.attackSpeedMs) > 0 ? `${Number(offer.item.attackSpeedMs).toLocaleString()}ms` : "vel. da classe"}
+                                DPS {Number(offer.item.dps || 0).toLocaleString()} · {Number(offer.item.attackSpeedMs) > 0 ? `${(Number(offer.item.attackSpeedMs) / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}s` : "vel. da classe"}
+                              </span>
+                            )}
+                            {offer.item?.requiredVip && (
+                              <span className="text-[10px] px-1.5 py-0.5 bg-yellow-500/15 text-yellow-300 rounded-md flex items-center gap-1">
+                                <Crown size={9} /> VIP
+                              </span>
+                            )}
+                            {offer.enchantment?.requiredVip && (
+                              <span className="text-[10px] px-1.5 py-0.5 bg-yellow-500/15 text-yellow-300 rounded-md flex items-center gap-1">
+                                <Crown size={9} /> VIP
                               </span>
                             )}
                             {offer.class && (
@@ -445,7 +477,12 @@ export function MapPage() {
                           </div>
                         </div>
                         <div className="text-right shrink-0">
-                          <p className="text-sm text-yellow-400">{Number(offer.price).toLocaleString()} gold</p>
+                          <p className="text-sm text-yellow-400">
+                            {Number(offer.price).toLocaleString()} {offer.currency === "diamond" ? "💎" : "gold"}
+                          </p>
+                          {offer.currency === "diamond" && (
+                            <p className="text-[10px] text-cyan-400/80">diamantes</p>
+                          )}
                           <button
                             onClick={() => buyItem(offer)}
                             disabled={buyingItemId === (isEnchantment ? offer.enchantmentId : offer.itemId)}
@@ -463,7 +500,7 @@ export function MapPage() {
               </div>
             )}
 
-            {npc.type === "vendor" && crafts.length > 0 && (
+            {isShopNpc(npc.type) && crafts.length > 0 && (
               <div className="mt-4 pt-4 border-t border-dark-700">
                 <h3 className="font-display font-semibold text-sm mb-2 flex items-center gap-2">
                   <Hammer size={14} className="text-orange-400" /> Craftar
@@ -506,7 +543,7 @@ export function MapPage() {
               </div>
             )}
 
-            {npc.type === "quest_giver" && (
+            {isQuestNpc(npc.type) && (
               <div className="space-y-2">
                 {npc.quests && npc.quests.length > 0 ? (
                   npc.quests.map((q) => {
@@ -561,7 +598,7 @@ export function MapPage() {
               </div>
             )}
 
-            {npc.type && npc.type !== "vendor" && npc.type !== "quest_giver" && (
+            {npc.type && !isShopNpc(npc.type) && !isQuestNpc(npc.type) && (
               <p className="text-sm text-gray-500 flex items-center gap-2">
                 <Lock size={14} /> Funcionalidade em breve.
               </p>

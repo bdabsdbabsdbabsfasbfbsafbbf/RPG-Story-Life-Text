@@ -67,6 +67,17 @@ export function createInventoryModule(app: Express): void {
         throw new AppError(400, "Item cannot be equipped");
       }
 
+      // Item exclusivo para VIP
+      if (inv.item.requiredVip) {
+        const user = await prisma.user.findUnique({
+          where: { id: req.user!.userId },
+          select: { vipOwned: true },
+        });
+        if (!user?.vipOwned) {
+          throw new AppError(403, "Este item é exclusivo para VIP.");
+        }
+      }
+
       await prisma.$transaction(async (tx) => {
         // Unequip any item in the same slot
         const existingEquipped = await tx.inventory.findFirst({
@@ -167,6 +178,16 @@ export function createInventoryModule(app: Express): void {
       const enchantment = await prisma.enchantment.findUnique({ where: { id: enchantmentId } });
       if (!enchantment || !enchantment.isActive) {
         throw new AppError(404, "Encantamento não encontrado");
+      }
+      // Encantamento exclusivo para VIP
+      if (enchantment.requiredVip) {
+        const user = await prisma.user.findUnique({
+          where: { id: req.user!.userId },
+          select: { vipOwned: true },
+        });
+        if (!user?.vipOwned) {
+          throw new AppError(403, "Este encantamento é exclusivo para VIP.");
+        }
       }
       if (inv.item.rank < (enchantment.minRank || 1)) {
         throw new AppError(400, `Encantamento requer item de rank ${enchantment.minRank}`);

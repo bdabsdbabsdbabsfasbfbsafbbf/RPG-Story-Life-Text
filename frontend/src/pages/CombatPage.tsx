@@ -61,6 +61,7 @@ export function CombatPage() {
   const { monsterId } = useParams<{ monsterId: string }>();
   const navigate = useNavigate();
   const { selectedCharacter } = useGameStore();
+  const setInCombat = useGameStore((s) => s.setInCombat);
   const { user, setUser } = useAuthStore();
   const [combat, setCombat] = useState<CombatUpdate | null>(null);
   const [combatLog, setCombatLog] = useState<string[]>([]);
@@ -71,7 +72,6 @@ export function CombatPage() {
   const [potions, setPotions] = useState<CombatPotion[]>([]);
   const [classRank, setClassRank] = useState(1);
   const rewardsRefreshed = useRef(false);
-  const resumedRef = useRef(false);
   const combatRef = useRef<CombatUpdate | null>(null);
   combatRef.current = combat;
   const [floaters, setFloaters] = useState<Floater[]>([]);
@@ -150,20 +150,15 @@ export function CombatPage() {
 
   useEffect(() => {
     if (!monsterId) return;
-    resumedRef.current = false;
     let done = false;
     const ensure = () => {
       if (done) return;
       done = true;
       const s = getSocket();
       if (!s || !s.connected) return;
-      // Tenta retomar uma batalha salva; senão, começa um novo combate
+      // Retoma uma batalha salva (se existir). Sem auto-start: o combate só
+      // começa quando o jogador clicar em "Iniciar combate".
       s.emit("combat:resume");
-      window.setTimeout(() => {
-        if (!resumedRef.current) {
-          s.emit("combat:start", { monsterId });
-        }
-      }, 1200);
     };
     const interval = setInterval(() => {
       const s = getSocket();
@@ -186,7 +181,7 @@ export function CombatPage() {
 
     socket.on("combat:started", (data: any) => {
       rewardsRefreshed.current = false;
-      resumedRef.current = true;
+      setInCombat(true);
       setCombat(data);
       setCombatLog([data.resumed ? "Combate retomado!" : `Combate contra ${data.monsterName || "o monstro"} iniciado!`]);
       setLoading(false);
@@ -197,6 +192,7 @@ export function CombatPage() {
       if ((data.damage ?? 0) > 0) pushFloater("monster", `-${data.damage}`, data.isCritical ? "crit" : "damage");
       if ((data.healed ?? 0) > 0) pushFloater("player", `+${data.healed}`, "heal");
       if (data.state === "won") {
+        setInCombat(false);
         toast.success("Vitória!");
         if (data.rewards?.drops && data.rewards.drops.length > 0) {
           toast(data.rewards.drops.map((d) => `${d.quantity}x ${d.name}`).join(" • "), {
@@ -206,6 +202,7 @@ export function CombatPage() {
         }
         refreshUser();
       } else if (data.state === "lost") {
+        setInCombat(false);
         toast.error("Derrota!");
       }
       if (data.skillId) {
@@ -249,6 +246,7 @@ export function CombatPage() {
         setCombatLog(prev => [...prev.slice(-19), ...msgs]);
       }
       if (data.state === "won") {
+        setInCombat(false);
         const r = data.rewards;
         let line = `Vitória! +${r?.xpGain ?? 0} XP, +${r?.goldGain ?? 0} gold${r?.levelUps ? `, LEVEL UP x${r.levelUps}!` : ""}`;
         if (r?.drops && r.drops.length > 0) line += ` • Drops: ${r.drops.map((d) => `${d.quantity}x ${d.name}`).join(", ")}`;
@@ -270,6 +268,7 @@ export function CombatPage() {
       });
       if (data.action === "flee") {
         if (data.fled) {
+          setInCombat(false);
           toast.success("Você fugiu do combate!");
           setCombatLog(prev => [...prev.slice(-19), "Você conseguiu fugir!"]);
         } else {
@@ -338,9 +337,15 @@ export function CombatPage() {
 
   return (
     <div className="min-h-full flex flex-col pb-40 animate-fade-in">
-      <Link to="/map" className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-200 mb-4">
-        <ArrowLeft size={16} /> Voltar ao mapa
-      </Link>
+      {combat && combat.state === "active" ? (
+        <p className="flex items-center gap-2 text-sm text-gray-500 mb-4">
+          <Sparkles size={14} className="text-red-400 animate-pulse" /> Em combate — você não pode sair agora
+        </p>
+      ) : (
+        <Link to="/map" className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-200 mb-4">
+          <ArrowLeft size={16} /> Voltar ao mapa
+        </Link>
+      )}
 
       {/* ===== TOPO: vida e mana ===== */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -489,7 +494,7 @@ export function CombatPage() {
         <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Log de Combate</p>
         <div className="space-y-1 max-h-48 overflow-y-auto min-h-[4rem]">
           {combatLog.length === 0 && (
-            <p className="text-sm text-gray-600">O combate ainda não começou. Seu ataque automático acontece sozinho a cada 2s.</p>
+            <p className="text-sm text-gray-600">O combate ainda não começou. Clique em "Iniciar combate" para usar suas habilidades.</p>
           )}
           {combatLog.map((log, i) => (
             <p key={i} className={`text-sm font-mono ${logClass(log)}`}>{log}</p>
@@ -516,7 +521,7 @@ export function CombatPage() {
                   <Sword size={18} className="mx-auto mb-1 text-purple-400" />
                 )}
                 <span className="text-[10px] block truncate px-0.5">{autoSkill?.name || "Auto"}</span>
-                <span className="text-[8px] text-gray-500 block">Automático</span>
+                <span className="text-[8px] text-gray-500 block">Sempre ativo</span>
               </div>
 
               {usableSkills.map((skill) => {

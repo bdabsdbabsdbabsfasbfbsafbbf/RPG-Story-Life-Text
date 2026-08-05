@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard, Map, Sword, Backpack, ScrollText,
-  Settings, Shield, MessageCircle, BookOpen, Trophy, ShoppingBag,
+  Settings, Shield, MessageCircle, BookOpen, Trophy, ShoppingBag, Lock,
 } from "lucide-react";
+import toast from "react-hot-toast";
 import { questsApi } from "../../services/api";
 import { useAuthStore } from "../../store/authStore";
+import { useGameStore } from "../../store/gameStore";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -13,6 +15,7 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen }: SidebarProps) {
   const { user } = useAuthStore();
+  const inCombat = useGameStore((s) => s.inCombat);
   const [hasActiveQuest, setHasActiveQuest] = useState(false);
 
   const checkQuests = () => {
@@ -35,6 +38,13 @@ export function Sidebar({ isOpen }: SidebarProps) {
 
   if (!isOpen) return null;
 
+  const blocked = inCombat;
+  const block = (e: React.MouseEvent) => {
+    if (!blocked) return;
+    e.preventDefault();
+    toast.error("Você está em combate — termine a luta para navegar.");
+  };
+
   const navItems = [
     { to: "/map", icon: Map, label: "Map" },
     { to: "/classes", icon: Sword, label: "Classes" },
@@ -46,6 +56,14 @@ export function Sidebar({ isOpen }: SidebarProps) {
 
   return (
     <nav className="w-56 bg-dark-900/80 backdrop-blur-md border-r border-dark-700 flex flex-col py-4 overflow-y-auto shrink-0">
+      {blocked && (
+        <div className="px-3 mb-4">
+          <div className="flex items-center gap-2 px-3 py-2 bg-red-500/10 border border-red-500/30 rounded-lg">
+            <Lock size={14} className="text-red-400 shrink-0" />
+            <p className="text-xs text-red-300">Em combate — navegação bloqueada</p>
+          </div>
+        </div>
+      )}
       <div className="px-3 mb-4">
         <div className="flex items-center gap-2 px-3 py-2 bg-dark-800 rounded-lg border border-dark-600">
           <Shield size={16} className="text-purple-400" />
@@ -60,11 +78,14 @@ export function Sidebar({ isOpen }: SidebarProps) {
         <NavLink
           to="/"
           end
+          onClick={block}
           className={({ isActive }) =>
             `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 ${
               isActive
                 ? "bg-gradient-to-r from-purple-600/20 to-blue-600/10 text-purple-300 border border-purple-500/20"
-                : "text-gray-400 hover:text-gray-200 hover:bg-dark-800/50"
+                : blocked
+                  ? "text-gray-600 cursor-not-allowed"
+                  : "text-gray-400 hover:text-gray-200 hover:bg-dark-800/50"
             }`
           }
         >
@@ -75,11 +96,14 @@ export function Sidebar({ isOpen }: SidebarProps) {
           <NavLink
             key={item.to}
             to={item.to}
+            onClick={block}
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 ${
                 isActive
                   ? "bg-gradient-to-r from-purple-600/20 to-blue-600/10 text-purple-300 border border-purple-500/20"
-                  : "text-gray-400 hover:text-gray-200 hover:bg-dark-800/50"
+                  : blocked
+                    ? "text-gray-600 cursor-not-allowed"
+                    : "text-gray-400 hover:text-gray-200 hover:bg-dark-800/50"
               }`
             }
           >
@@ -93,9 +117,10 @@ export function Sidebar({ isOpen }: SidebarProps) {
         <div className="space-y-1">
           <NavLink
             to="/settings"
+            onClick={block}
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all ${
-                isActive ? "text-purple-300 bg-dark-800/50" : "text-gray-400 hover:text-gray-200 hover:bg-dark-800/50"
+                isActive ? "text-purple-300 bg-dark-800/50" : blocked ? "text-gray-600 cursor-not-allowed" : "text-gray-400 hover:text-gray-200 hover:bg-dark-800/50"
               }`
             }
           >
@@ -104,9 +129,10 @@ export function Sidebar({ isOpen }: SidebarProps) {
           </NavLink>
           <NavLink
             to="/codex"
+            onClick={block}
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all ${
-                isActive ? "text-purple-300 bg-dark-800/50" : "text-gray-400 hover:text-gray-200 hover:bg-dark-800/50"
+                isActive ? "text-purple-300 bg-dark-800/50" : blocked ? "text-gray-600 cursor-not-allowed" : "text-gray-400 hover:text-gray-200 hover:bg-dark-800/50"
               }`
             }
           >
@@ -115,9 +141,10 @@ export function Sidebar({ isOpen }: SidebarProps) {
           </NavLink>
           <NavLink
             to="/support"
+            onClick={block}
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all ${
-                isActive ? "text-purple-300 bg-dark-800/50" : "text-gray-400 hover:text-gray-200 hover:bg-dark-800/50"
+                isActive ? "text-purple-300 bg-dark-800/50" : blocked ? "text-gray-600 cursor-not-allowed" : "text-gray-400 hover:text-gray-200 hover:bg-dark-800/50"
               }`
             }
           >

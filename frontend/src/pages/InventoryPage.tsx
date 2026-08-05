@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { inventoryApi, authApi, marketApi } from "../services/api";
 import { InventoryItem, UserEnchantment } from "../types";
 import {
@@ -313,7 +314,7 @@ export function InventoryPage() {
                 <p className="text-xs text-gray-500 capitalize">{inv.item.type} {inv.item.level > 1 ? `• Lv.${inv.item.level}` : ""}</p>
                 {inv.item.type === "weapon" && (
                   <p className="text-[11px] text-orange-300/90">
-                    DPS {Number(inv.item.dps || 0).toLocaleString()} · {Number(inv.item.attackSpeedMs) > 0 ? `${Number(inv.item.attackSpeedMs).toLocaleString()}ms` : "vel. da classe"}
+                    DPS {Number(inv.item.dps || 0).toLocaleString()} · {Number(inv.item.attackSpeedMs) > 0 ? `${(Number(inv.item.attackSpeedMs) / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}s` : "vel. da classe"}
                   </p>
                 )}
                 {inv.quantity > 1 && (
@@ -332,9 +333,10 @@ export function InventoryPage() {
         </div>
       )}
 
-      {selectedItem && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setSelectedItem(null)}>
-          <div className="panel p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+      {selectedItem &&
+        createPortal(
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[100] p-4" onClick={() => setSelectedItem(null)}>
+            <div className="panel p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-start gap-4 mb-4">
               <div className={`w-16 h-16 rounded-xl overflow-hidden bg-gradient-to-br ${
                 selectedItem.item.rarity === "rare" ? "from-blue-600 to-purple-600" :
@@ -378,15 +380,15 @@ export function InventoryPage() {
                   })}
                   {selectedItem.item.type === "weapon" && (
                     <div className="col-span-2 border-t border-dark-600 pt-1.5 mt-1 flex items-center justify-between">
-                      <span className="text-orange-300/90">DPS natural</span>
+                      <span className="text-orange-300/90">DPS</span>
                       <span className="font-mono text-orange-300">{Number(selectedItem.item.dps || 0).toLocaleString()}</span>
                     </div>
                   )}
                   {selectedItem.item.type === "weapon" && (
                     <div className="col-span-2 flex items-center justify-between">
-                      <span className="text-orange-300/90">Velocidade natural</span>
+                      <span className="text-orange-300/90">Velocidade</span>
                       <span className="font-mono text-orange-300">
-                        {Number(selectedItem.item.attackSpeedMs) > 0 ? `${Number(selectedItem.item.attackSpeedMs).toLocaleString()}ms` : "da classe"}
+                        {Number(selectedItem.item.attackSpeedMs) > 0 ? `${(Number(selectedItem.item.attackSpeedMs) / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}s` : "da classe"}
                       </span>
                     </div>
                   )}
@@ -520,8 +522,9 @@ export function InventoryPage() {
               </button>
             )}
           </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

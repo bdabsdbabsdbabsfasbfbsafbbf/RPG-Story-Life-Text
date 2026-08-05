@@ -803,7 +803,7 @@ export function createAdminModule(app: Express): void {
   app.get("/api/admin/shop-products", requireAdmin, async (_req: Request, res: Response, next: NextFunction) => {
     try {
       res.json(await prisma.shopProduct.findMany({
-        include: { enchantment: { select: { id: true, name: true, slug: true } } },
+        include: { enchantment: { select: { id: true, name: true, slug: true } }, item: { select: { id: true, name: true } }, gameClass: { select: { id: true, name: true } } },
         orderBy: { sortOrder: "asc" },
       }));
     } catch (err) { next(err); }
@@ -811,13 +811,14 @@ export function createAdminModule(app: Express): void {
 
   app.post("/api/admin/shop-products", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { slug, name, description, type, currency, price, diamondAmount, vipDays, enchantmentId, icon, isActive, sortOrder } = req.body;
+      const { slug, name, description, type, currency, price, diamondAmount, vipDays, enchantmentId, itemId, classId, quantity, icon, isActive, sortOrder } = req.body;
       if (!slug || !name || !type) throw new AppError(400, "slug, name e type são obrigatórios");
       res.status(201).json(await prisma.shopProduct.create({
         data: {
           slug, name, description: description || "", type, currency: currency || "diamond",
           price: Number(price) || 0, diamondAmount: Number(diamondAmount) || 0,
           vipDays: Number(vipDays) || 0, enchantmentId: enchantmentId || null,
+          itemId: itemId || null, classId: classId || null, quantity: Math.max(1, Number(quantity) || 1),
           icon: icon || null, isActive: isActive !== false, sortOrder: Number(sortOrder) || 0,
         },
       }));
@@ -826,13 +827,15 @@ export function createAdminModule(app: Express): void {
 
   app.put("/api/admin/shop-products/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { slug, name, description, type, currency, price, diamondAmount, vipDays, enchantmentId, icon, isActive, sortOrder } = req.body;
+      const { slug, name, description, type, currency, price, diamondAmount, vipDays, enchantmentId, itemId, classId, quantity, icon, isActive, sortOrder } = req.body;
       res.json(await prisma.shopProduct.update({
         where: { id: req.params.id },
         data: {
           slug, name, description, type, currency,
           price: Number(price), diamondAmount: Number(diamondAmount), vipDays: Number(vipDays),
-          enchantmentId: enchantmentId || null, icon: icon || null, isActive, sortOrder: Number(sortOrder),
+          enchantmentId: enchantmentId || null, itemId: itemId || null, classId: classId || null,
+          quantity: Math.max(1, Number(quantity) || 1),
+          icon: icon || null, isActive, sortOrder: Number(sortOrder),
         },
       }));
     } catch (err) { next(err); }
