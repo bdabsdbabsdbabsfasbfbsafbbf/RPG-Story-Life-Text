@@ -5,9 +5,11 @@ export const kindOptions = ["attack", "heal", "buff", "debuff", "summon", "mobil
 export const triggerOptions = ["auto", "active", "ultimate"];
 export const targetOptions = ["enemy", "self"];
 export const damageTypeOptions = ["physical", "magic", "true"];
-export const effectKindOptions = ["buff", "debuff", "hot", "dot", "shield", "reflect", "hitkill", "silence", "stun"];
+export const effectKindOptions = ["buff", "debuff", "hot", "dot", "shield", "reflect", "hitkill", "silence", "stun", "nuke"];
 export const effectCategoryOptions = ["defense", "offense", "control", "mobility", "utility", "recovery"];
 export const refreshBehaviorOptions = ["refresh", "extend", "overwrite", "stack"];
+export const stackGrowthOptions = ["linear", "crescente", "multiplicativo"];
+export const passiveTypeOptions = ["permanente", "condicional", "reativa", "combo"];
 
 export const actionOptions = [
   "damage",
@@ -18,6 +20,7 @@ export const actionOptions = [
   "consumeStacks",
   "summon",
   "leech",
+  "resetCooldown",
 ];
 
 export const conditionTypeOptions = [
@@ -42,6 +45,9 @@ export const actionFields = [
   { name: "duration", label: "Duração (ms, summon)", type: "number" as const },
   { name: "attackPercent", label: "Ataque % (summon)", type: "number" as const },
   { name: "hpPercent", label: "HP % (summon)", type: "number" as const },
+  { name: "skillSlug", label: "Skill (slug, resetCooldown)", type: "text" as const, placeholder: "ex.: espadada" },
+  { name: "trigger", label: "Reset por tipo (skill/ultimate)", type: "select" as const, options: ["skill", "ultimate"] },
+  { name: "reduceMs", label: "Reduzir CD (ms; vazio = reset total)", type: "number" as const },
 ];
 
 // Ações disponíveis nos gatilhos de efeito (onMaxStacks / onExpire / onTick)
@@ -52,6 +58,7 @@ export const effectActionOptions = [
   "applyEffect",
   "removeEffect",
   "consumeStacks",
+  "resetCooldown",
 ];
 
 export const effectActionFields = [
@@ -62,6 +69,9 @@ export const effectActionFields = [
   { name: "target", label: "Alvo", type: "select" as const, options: targetOptions },
   { name: "damageType", label: "Tipo de Dano", type: "select" as const, options: damageTypeOptions },
   { name: "percent", label: "Percentual (heal %)", type: "number" as const },
+  { name: "skillSlug", label: "Skill (slug, resetCooldown)", type: "text" as const, placeholder: "ex.: espadada" },
+  { name: "trigger", label: "Reset por tipo (skill/ultimate)", type: "select" as const, options: ["skill", "ultimate"] },
+  { name: "reduceMs", label: "Reduzir CD (ms; vazio = reset total)", type: "number" as const },
 ];
 
 export const conditionFields = [

@@ -15,9 +15,21 @@ import {
 } from "./types";
 import { computeStats, computeMonsterStats, applyStatModifiers, StatsInput } from "./stat-calculator";
 import { processEffectStep, serializeEffects, EffectModifiers } from "./effect-manager";
-import { executeActions, ActionResult, evaluateConditions, describeConditions, emptyResult, absorbWithShield, reflectPercent, hitkillChanceOf, entityHasKind } from "./action-executor";
+import { executeActions, ActionResult, evaluateConditions, describeConditions, emptyResult, absorbWithShield, reflectPercent, hitkillChanceOf, entityHasKind, nukeStacksOf, nukeHitChancePenaltyOf } from "./action-executor";
 
 export const TICK_MS = 1000;
+
+// Multiplicador de stacks para ticks de DoT/HoT conforme o crescimento configurado:
+// linear (×stacks) | crescente (triangular: 1,3,6,10...) | multiplicativo (rate^stacks-1).
+export function stackGrowthMultiplier(effect: EffectDef, stacks: number): number {
+  const growth = effect.stackGrowth || "linear";
+  if (growth === "crescente") return (stacks * (stacks + 1)) / 2;
+  if (growth === "multiplicativo") {
+    const rate = effect.stackGrowthRate && effect.stackGrowthRate > 1 ? effect.stackGrowthRate : 1.15;
+    return Math.pow(rate, stacks - 1);
+  }
+  return stacks;
+}
 
 export interface BattleOptions {
   characterId: string;
@@ -58,6 +70,7 @@ interface EventHandler {
   actions: Action[];
   skillId?: string;
   passiveId?: string;
+  internalCooldownMs?: number;
 }
 
 export class Battle {
@@ -87,6 +100,7 @@ export class Battle {
   private effectsDirty = false;
   private monsterSkills: SkillDef[];
   private monsterSkillCooldowns: Map<string, number> = new Map();
+  private passiveLastTriggered: Map<string, number> = new Map();
 
   private opts: BattleOptions;
 
@@ -182,7 +196,13 @@ export class Battle {
     this.passiveHandlers = [];
     for (const p of this.unlockedPassives()) {
       for (const e of p.events || []) {
-        this.passiveHandlers.push({ event: e.event, conditions: e.conditions, actions: e.actions, passiveId: p.id });
+        this.passiveHandlers.push({
+          event: e.event,
+          conditions: e.conditions,
+          actions: e.actions,
+          passiveId: p.id,
+          internalCooldownMs: p.internalCooldownMs || 0,
+        });
       }
     }
   }
@@ -218,11 +238,18 @@ export class Battle {
 
   // ============ Eventos ============
   fire(event: string, ctx: { actor: BattleEntity; target: BattleEntity; skillId?: string }): void {
+    const now = Date.now();
     for (const handler of this.allHandlers()) {
       if (handler.event !== event) continue;
       if (handler.skillId && handler.skillId !== ctx.skillId) continue;
       if (handler.conditions && handler.conditions.length > 0) {
         if (!evaluateConditions(handler.conditions, { player: this.player, monster: this.monster, round: this.round })) continue;
+      }
+      // Cooldown interno da passiva (anti-loop): bloqueia gatilhos repetidos
+      if (handler.passiveId && handler.internalCooldownMs && handler.internalCooldownMs > 0) {
+        const last = this.passiveLastTriggered.get(handler.passiveId) || 0;
+        if (now - last < handler.internalCooldownMs) continue;
+        this.passiveLastTriggered.set(handler.passiveId, now);
       }
       const result = emptyResult();
       const battleCtx = this.buildActionContext(ctx.actor, ctx.target, result, ctx.skillId || "");
@@ -247,6 +274,30 @@ export class Battle {
       getSkillModifiers: () => this.skillModifiers.get(skillSlug) || this.skillModifiers.get("*") || null,
       onSummon: (name: string, attack: number, hp: number, duration: number) => {
         this.summons.push({ name, attack, hp, maxHp: hp, expiresAt: Date.now() + duration });
+      },
+      onResetCooldown: (opts: { skillSlug?: string; trigger?: "skill" | "ultimate"; reduceMs?: number }) => {
+        const now = Date.now();
+        const targets: string[] = [];
+        for (const s of this.skills) {
+          if (opts.skillSlug) {
+            if (s.slug === opts.skillSlug) targets.push(s.id);
+            continue;
+          }
+          if (opts.trigger === "ultimate") {
+            if (s.trigger === "ultimate") targets.push(s.id);
+          } else if (opts.trigger === "skill") {
+            if (s.trigger === "active" || s.trigger === "channel") targets.push(s.id);
+          }
+        }
+        for (const id of targets) {
+          const readyAt = this.cooldowns.get(id);
+          if (!readyAt) continue;
+          if (opts.reduceMs && opts.reduceMs > 0) {
+            this.cooldowns.set(id, Math.max(now, readyAt - opts.reduceMs));
+          } else {
+            this.cooldowns.delete(id);
+          }
+        }
       },
       onKill: () => {
         if (target.hp <= 0 && target.isPlayer === false && this.state === "active") {
@@ -466,7 +517,20 @@ export class Battle {
     const resist = Math.min(80, Math.max(0, (pStats.damageResistance || 0) + (pStats.physicalResistance || 0)));
     if (resist > 0) damage = Math.max(1, Math.floor(damage * (1 - resist / 100)));
 
-    const crit = Math.random() * 100 < mStats.critChance;
+    let crit = Math.random() * 100 < mStats.critChance;
+
+    // Nuke do monstro: stacks garantem crítico, mas reduzem a Hit Chance (risco)
+    const nukeStacks = nukeStacksOf(this.monster);
+    if (nukeStacks > 0) {
+      const missChance = Math.min(100, nukeHitChancePenaltyOf(this.monster));
+      if (Math.random() * 100 < missChance) {
+        this.pushMessage(`${this.monster.name} errou o ataque (risco do Nuke)!`);
+        this.fire("onDodge", { actor: this.player, target: this.monster });
+        return;
+      }
+      crit = true;
+      this.pushMessage(`${this.monster.name} disparou um Nuke...`);
+    }
     if (crit) damage = Math.floor(damage * (mStats.critDamage / 100));
 
     if (Math.random() * 100 < Math.min(60, pStats.dodge)) {
@@ -604,11 +668,12 @@ export class Battle {
         const mods = this.effectModifiers.get(ev.effect.slug) || this.effectModifiers.get("*");
         const raw = (ev.effect.tickHealing.base || 0) + (ev.effect.tickHealing.scaling || []).reduce((acc, s) => acc + (pStats[s.stat] || 0) * s.factor, 0);
         const boosted = raw * (1 + (pStats.healingPercent + (mods?.healPercent || 0)) / 100) * (1 + (mods?.tickPercent || 0) / 100);
+        const amount = Math.floor(boosted) * stackGrowthMultiplier(ev.effect, ev.stacks);
         const cap = Math.floor(this.player.maxHp * (1 + pStats.overhealPercent / 100));
-        const amount = Math.min(cap, Math.floor(this.player.hp + boosted)) - this.player.hp;
-        if (amount > 0) {
-          this.player.hp += amount;
-          this.pushMessage(`${ev.effect.name} curou ${amount} de vida`);
+        const applied = Math.min(cap, Math.floor(this.player.hp + amount)) - this.player.hp;
+        if (applied > 0) {
+          this.player.hp += applied;
+          this.pushMessage(`${ev.effect.name} curou ${applied} de vida${ev.stacks > 1 ? ` (${ev.stacks} stacks)` : ""}`);
         }
       }
       // onTick actions
@@ -638,7 +703,7 @@ export class Battle {
         const mods = this.effectModifiers.get(ev.effect.slug) || this.effectModifiers.get("*");
         const raw = (ev.effect.tickDamage.base || 0) + (ev.effect.tickDamage.scaling || []).reduce((acc, s) => acc + (pStats[s.stat] || 0) * s.factor, 0);
         const boosted = raw * (1 + (pStats.dotPercent + (mods?.damagePercent || 0)) / 100) * (1 + (mods?.tickPercent || 0) / 100);
-        const dmg = Math.max(1, Math.floor(boosted)) * ev.stacks;
+        const dmg = Math.max(1, Math.floor(boosted)) * stackGrowthMultiplier(ev.effect, ev.stacks);
         this.monster.hp = Math.max(0, this.monster.hp - dmg);
         this.pushMessage(`${ev.effect.name} causou ${dmg} de dano${ev.stacks > 1 ? ` (${ev.stacks} stacks)` : ""}`);
         if (this.monster.hp <= 0) {

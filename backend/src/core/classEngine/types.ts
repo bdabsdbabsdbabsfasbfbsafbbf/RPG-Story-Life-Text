@@ -9,7 +9,8 @@ export type Action =
   | { action: "removeEffect"; effect: string; stacks?: number; target?: "self" | "enemy" }
   | { action: "consumeStacks"; effect: string; stacks?: number; target?: "self" | "enemy" }
   | { action: "summon"; name: string; duration?: number; attackPercent?: number; hpPercent?: number }
-  | { action: "leech"; percent?: number };
+  | { action: "leech"; percent?: number }
+  | { action: "resetCooldown"; skillSlug?: string; trigger?: "skill" | "ultimate"; reduceMs?: number };
 
 export interface Scaling {
   stat: string;
@@ -63,6 +64,8 @@ export interface PassiveDef {
   effectModifiers: Array<{ effectSlug: string; durationPercent?: number; tickPercent?: number; damagePercent?: number; healPercent?: number; stacksBonus?: number }>;
   conditions: Condition[];
   events: SkillEvent[];
+  type: string; // permanente | condicional | reativa | combo
+  internalCooldownMs: number; // ms mínimos entre gatilhos reativos (anti-loop); 0 = sem limite
 }
 
 export interface EffectDef {
@@ -71,11 +74,14 @@ export interface EffectDef {
   slug: string;
   description: string;
   icon?: string | null;
-  kind: string; // buff, debuff, hot, dot, shield, reflect, hitkill, silence, stun
+  kind: string; // buff, debuff, hot, dot, shield, reflect, hitkill, silence, stun, nuke
   category: string;
   maxStacks: number;
   duration: number; // ms; 0 = permanente
   refreshBehavior: string; // refresh | extend | overwrite | stack
+  stackGrowth: string; // linear | crescente | multiplicativo — como stacks amplificam ticks
+  stackGrowthRate: number; // fator usado quando stackGrowth = multiplicativo
+  nukeHitChancePenalty: number; // % de Hit Chance perdida por stack (kind nuke)
   stackLoss: { intervalMs?: number; amount?: number };
   priority: number;
   tickInterval: number;

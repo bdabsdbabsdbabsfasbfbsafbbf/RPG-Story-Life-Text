@@ -53,6 +53,27 @@ export function hitkillChanceOf(entity: BattleEntity): number {
   return Math.min(100, total);
 }
 
+// Total de stacks de nuke ativos (cada stack: crit garantido, -% hit chance).
+export function nukeStacksOf(entity: BattleEntity): number {
+  let total = 0;
+  for (const e of entity.effects) {
+    if (!isEffectActive(e) || e.effect.kind !== "nuke") continue;
+    total += e.stacks;
+  }
+  return total;
+}
+
+// Penalidade total de Hit Chance aplicada pelos stacks de nuke (%).
+export function nukeHitChancePenaltyOf(entity: BattleEntity): number {
+  let total = 0;
+  for (const e of entity.effects) {
+    if (!isEffectActive(e) || e.effect.kind !== "nuke") continue;
+    const per = Number(e.effect.nukeHitChancePenalty) || 1;
+    total += per * e.stacks;
+  }
+  return total;
+}
+
 export interface ActionContext {
   actor: BattleEntity;
   target: BattleEntity;
@@ -68,6 +89,8 @@ export interface ActionContext {
   // callbacks para estados extras (summons, vitória)
   onSummon?: (name: string, attack: number, hp: number, duration: number) => void;
   onKill?: () => void;
+  // Skill Reset: zera ou reduz o cooldown de skills (skillSlug) ou ultimates (trigger)
+  onResetCooldown?: (opts: { skillSlug?: string; trigger?: "skill" | "ultimate"; reduceMs?: number }) => void;
 }
 
 export interface ActionResult {
@@ -113,14 +136,23 @@ export function computeDamageAmount(
 ): { amount: number; isCritical: boolean; isDodged: boolean } {
   const raw = scaleValue(action.amount ?? 0, action.scaling, actorStats);
 
-  // Hit Chance: chance do atacante acertar (100 = sempre acerta)
-  const hitChance = Math.min(100, actorStats.hitChance || 100);
+  // Nuke: cada stack ativo garante crítico (usa Critical Multiplier, ignora Critical Chance)
+  // e reduz a Hit Chance do atacante (risco do nuke: stacks demais → erro).
+  const nukeStacks = nukeStacksOf(actor);
+  let hitChance = Math.min(100, actorStats.hitChance || 100);
+  let forceCrit = false;
+  if (nukeStacks > 0) {
+    const penalty = nukeHitChancePenaltyOf(actor);
+    hitChance = Math.max(0, hitChance - penalty);
+    forceCrit = true;
+  }
+
   if (Math.random() * 100 >= hitChance) {
     return { amount: 0, isCritical: false, isDodged: true };
   }
 
   const critRoll = Math.random() * 100;
-  const isCritical = action.crit !== false && critRoll < actorStats.critChance;
+  const isCritical = forceCrit || (action.crit !== false && critRoll < actorStats.critChance);
   const isDodged = action.crit !== false && rollDodge(target, targetStats);
 
   if (isDodged) {
@@ -285,6 +317,22 @@ export function executeActions(actions: Action[], ctx: ActionContext, result: Ac
           result.healed += heal;
           result.messages.push(`Roubou ${heal} de vida`);
         }
+        break;
+      }
+      case "resetCooldown": {
+        ctx.onResetCooldown?.({
+          skillSlug: action.skillSlug,
+          trigger: action.trigger,
+          reduceMs: action.reduceMs,
+        });
+        const what = action.skillSlug
+          ? `${action.skillSlug}`
+          : action.trigger === "ultimate"
+            ? "Ultimates"
+            : "Skills";
+        result.messages.push(
+          action.reduceMs && action.reduceMs > 0 ? `Cooldown de ${what} reduzido em ${Math.round(action.reduceMs / 1000)}s` : `Cooldown de ${what} resetado!`
+        );
         break;
       }
     }

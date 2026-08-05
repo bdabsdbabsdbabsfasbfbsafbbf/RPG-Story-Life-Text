@@ -252,6 +252,10 @@ model Passive {
   conditions      Json     @default("[]")
   // events: [{ event, conditions?, actions }] — reações a eventos de combate
   events          Json     @default("[]")
+  // type: permanente | condicional | reativa | combo
+  type            String   @default("permanente")
+  // internalCooldownMs: ms mínimos entre gatilhos reativos (anti-loop); 0 = sem limite
+  internalCooldownMs Int   @default(0)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -267,11 +271,14 @@ model Effect {
   slug            String         @unique
   description     String
   icon            String?
-  kind            String         @default("buff") // buff, debuff, hot, dot
+  kind            String         @default("buff") // buff, debuff, hot, dot, shield, reflect, hitkill, silence, stun, nuke
   category        String         @default("utility") // defense, offense, control, mobility, utility, recovery
   maxStacks       Int            @default(1)
   duration        Int            @default(0) // ms; 0 = permanente
   refreshBehavior String         @default("refresh") // refresh, extend, overwrite, stack
+  stackGrowth     String         @default("linear") // linear, crescente, multiplicativo
+  stackGrowthRate Float          @default(1.15) // fator quando stackGrowth = multiplicativo
+  nukeHitChancePenalty Float     @default(1) // % de Hit Chance perdida por stack (kind nuke)
   stackLoss       Json           @default("{}") // { intervalMs, amount }
   priority        Int            @default(0)
   tickInterval    Int            @default(0) // ms; 0 = sem tick

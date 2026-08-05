@@ -13,6 +13,7 @@ import {
   kindOptions,
   triggerOptions,
   targetOptions,
+  passiveTypeOptions,
   passiveFlatGroups,
   passivePercentGroups,
   emptyStatModifiers,
@@ -65,6 +66,8 @@ const defaultPassive = {
   effectModifiers: [] as any[],
   conditions: [] as any[],
   events: [] as any[],
+  type: "permanente",
+  internalCooldownMs: 0,
 };
 
 export default function SkillsPage() {
@@ -241,6 +244,8 @@ export default function SkillsPage() {
       effectModifiers: parseJsonArray(p.effectModifiers),
       conditions: parseJsonArray(p.conditions),
       events: parseJsonArray(p.events),
+      type: p.type ?? "permanente",
+      internalCooldownMs: Number(p.internalCooldownMs) || 0,
     });
     setPassiveModalOpen(true);
   };
@@ -262,6 +267,8 @@ export default function SkillsPage() {
         effectModifiers: JSON.stringify(passiveForm.effectModifiers || []),
         conditions: JSON.stringify(passiveForm.conditions || []),
         events: JSON.stringify(passiveForm.events || []),
+        type: passiveForm.type || "permanente",
+        internalCooldownMs: Number(passiveForm.internalCooldownMs) || 0,
       };
       if (passiveEditing?.id) {
         await adminApi.passives.update(passiveEditing.id, payload);
@@ -544,6 +551,19 @@ export default function SkillsPage() {
                 <div>
                   <label className="block text-sm text-gray-400 mb-1.5">Rank Required</label>
                   <input type="number" min={1} value={passiveForm.rankRequired} onChange={(e) => setPassiveForm({ ...passiveForm, rankRequired: Number(e.target.value) })} className={inputClass} />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1.5">Tipo de Passiva</label>
+                  <select value={passiveForm.type} onChange={(e) => setPassiveForm({ ...passiveForm, type: e.target.value })} className={inputClass}>
+                    {passiveTypeOptions.map((opt) => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1.5">Cooldown Interno (ms; 0 = sem limite)</label>
+                  <input type="number" min={0} value={passiveForm.internalCooldownMs} onChange={(e) => setPassiveForm({ ...passiveForm, internalCooldownMs: Number(e.target.value) })} className={inputClass} />
+                  <p className="text-[11px] text-gray-600 mt-1">Tempo mínimo entre gatilhos dos events (anti-loop).</p>
                 </div>
                 <div>
                   <label className="block text-sm text-gray-400 mb-1.5">Sort Order</label>

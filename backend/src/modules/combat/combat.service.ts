@@ -61,6 +61,8 @@ function parsePassive(p: any): PassiveDef {
     effectModifiers: asActionArray(p.effectModifiers),
     conditions: asActionArray(p.conditions),
     events: asActionArray(p.events),
+    type: p.type || "permanente",
+    internalCooldownMs: Number(p.internalCooldownMs) || 0,
   };
 }
 
@@ -78,6 +80,9 @@ function parseEffect(e: any): EffectDef {
     maxStacks: Number(e.maxStacks) || 1,
     duration: Number(e.duration) || 0,
     refreshBehavior: e.refreshBehavior || "refresh",
+    stackGrowth: e.stackGrowth || "linear",
+    stackGrowthRate: Number(e.stackGrowthRate) > 1 ? Number(e.stackGrowthRate) : 1.15,
+    nukeHitChancePenalty: Number(e.nukeHitChancePenalty) > 0 ? Number(e.nukeHitChancePenalty) : 1,
     stackLoss: parseJson(e.stackLoss, {}),
     priority: Number(e.priority) || 0,
     tickInterval: Number(e.tickInterval) || 0,

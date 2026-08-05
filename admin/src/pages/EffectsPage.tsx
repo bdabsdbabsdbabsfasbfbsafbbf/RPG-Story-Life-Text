@@ -9,6 +9,7 @@ import {
   effectKindOptions,
   effectCategoryOptions,
   refreshBehaviorOptions,
+  stackGrowthOptions,
   damageTypeOptions,
   parseJsonArray,
 } from "../dslFields";
@@ -114,6 +115,9 @@ const defaultForm = {
   maxStacks: 1,
   duration: 0,
   refreshBehavior: "refresh",
+  stackGrowth: "linear",
+  stackGrowthRate: 1.15,
+  nukeHitChancePenalty: 1,
   stackLoss: {} as Record<string, number>,
   priority: 0,
   tickInterval: 0,
@@ -190,6 +194,9 @@ export default function EffectsPage() {
       maxStacks: e.maxStacks ?? 1,
       duration: e.duration ?? 0,
       refreshBehavior: e.refreshBehavior ?? "refresh",
+      stackGrowth: e.stackGrowth ?? "linear",
+      stackGrowthRate: Number(e.stackGrowthRate) > 1 ? Number(e.stackGrowthRate) : 1.15,
+      nukeHitChancePenalty: Number(e.nukeHitChancePenalty) > 0 ? Number(e.nukeHitChancePenalty) : 1,
       stackLoss: stackLoss && typeof stackLoss === "object" ? stackLoss : {},
       priority: e.priority ?? 0,
       tickInterval: e.tickInterval ?? 0,
@@ -255,6 +262,9 @@ export default function EffectsPage() {
       maxStacks: Number(form.maxStacks) || 1,
       duration: Number(form.duration) || 0,
       refreshBehavior: form.refreshBehavior,
+      stackGrowth: form.stackGrowth,
+      stackGrowthRate: Number(form.stackGrowthRate) > 1 ? Number(form.stackGrowthRate) : 1.15,
+      nukeHitChancePenalty: Number(form.nukeHitChancePenalty) > 0 ? Number(form.nukeHitChancePenalty) : 1,
       priority: Number(form.priority) || 0,
       tickInterval: Number(form.tickInterval) || 0,
       exclusiveGroup: form.exclusiveGroup || null,
@@ -442,6 +452,20 @@ export default function EffectsPage() {
                 {selectRow("kind", "Kind", effectKindOptions)}
                 {selectRow("category", "Category", effectCategoryOptions)}
                 {selectRow("refreshBehavior", "Refresh Behavior", refreshBehaviorOptions)}
+                {selectRow("stackGrowth", "Crescimento de Stacks (ticks)", stackGrowthOptions)}
+                {form.kind === "nuke" && (
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1.5">Nuke — Penalidade de Hit Chance por stack (%)</label>
+                    <input type="number" value={form.nukeHitChancePenalty} onChange={(e) => setForm({ ...form, nukeHitChancePenalty: Number(e.target.value) })} className={inputClass} />
+                    <p className="text-[11px] text-gray-500 mt-1">Cada stack garante crítico (usa Critical Multiplier, ignora Critical Chance) e reduz a Hit Chance do atacante neste valor. Ex.: 20 stacks × 1% = 80% de acerto.</p>
+                  </div>
+                )}
+                {form.stackGrowth === "multiplicativo" && (
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1.5">Fator Multiplicativo por stack (ex.: 1.15 = +15%)</label>
+                    <input type="number" step="0.01" value={form.stackGrowthRate} onChange={(e) => setForm({ ...form, stackGrowthRate: Number(e.target.value) })} className={inputClass} />
+                  </div>
+                )}
                 {row("maxStacks", "Max Stacks")}
                 {row("duration", "Duration (ms)")}
                 {row("tickInterval", "Tick Interval (ms)")}
