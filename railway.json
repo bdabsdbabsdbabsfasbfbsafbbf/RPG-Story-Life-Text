@@ -10,6 +10,6 @@
     "healthcheckTimeout": 300,
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 5,
-    "startCommand": "cd backend && npx prisma db push --skip-generate && npx prisma migrate diff --from-database --to-schema-datamodel prisma/schema.prisma --exit-code && node dist/server.js"
+    "startCommand": "cd backend && npx prisma db push --skip-generate && node dist/server.js"
   }
 }
