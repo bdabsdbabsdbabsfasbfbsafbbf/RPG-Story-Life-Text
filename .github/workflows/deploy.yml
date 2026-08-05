@@ -10,8 +10,8 @@ env:
   NODE_VERSION: 20
 
 jobs:
-  build:
-    name: Build (backend + frontend)
+  backend:
+    name: Backend (typecheck + build)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,11 +20,52 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Install root dependencies
-        run: npm install
+      - name: Install dependencies
+        run: cd backend && npm ci
 
-      - name: Build backend
-        run: cd backend && npm ci && npx prisma generate && npm run build
+      - name: Prisma generate
+        run: cd backend && npx prisma generate
 
-      - name: Build frontend
-        run: cd frontend && npm ci && npm run build
+      - name: Typecheck
+        run: cd backend && npx tsc --noEmit
+
+      - name: Build
+        run: cd backend && npm run build
+
+  frontend:
+    name: Frontend (typecheck + build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: cd frontend && npm ci
+
+      - name: Typecheck
+        run: cd frontend && npx tsc --noEmit
+
+      - name: Build
+        run: cd frontend && npm run build
+
+  admin:
+    name: Admin (typecheck + build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: cd admin && npm ci
+
+      - name: Typecheck
+        run: cd admin && npx tsc --noEmit
+
+      - name: Build
+        run: cd admin && npm run build
