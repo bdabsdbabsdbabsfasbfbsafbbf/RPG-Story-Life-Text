@@ -17,6 +17,7 @@
     "build:admin": "cd admin && npm ci --include=dev && npm run build",
     "build": "npm run build:backend && npm run build:frontend && npm run build:admin",
     "verify": "npm run typecheck:backend && npm run typecheck:frontend && npm run typecheck:admin",
+    "deploy": "node scripts/deploy.js",
     "typecheck:backend": "cd backend && npx tsc --noEmit",
     "typecheck:frontend": "cd frontend && npx tsc --noEmit",
     "typecheck:admin": "cd admin && npx tsc --noEmit",
