@@ -6,8 +6,7 @@ import { Character, Skill, ClassPassive } from "../types";
 import {
   Shield, Sword, Zap, Star, Clock, Droplets, Heart, Swords,
   ShieldCheck, Sparkles, Lock, ChevronRight, X, MapPin,
-  UserPlus, ShieldHalf, Flame, HeartPulse, Skull,
-  Ban, Crosshair, Scan, Wind, Gauge, Siren, Target, Percent, Brain, Crown,
+  UserPlus, HeartPulse, Skull, Crosshair, Wind, Gauge, Target, Crown,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -20,46 +19,6 @@ const rankNames: Record<number, string> = {
 function formatMs(ms: number): string {
   if (ms >= 1000) return `${(ms / 1000).toFixed(1)}s`;
   return `${ms}ms`;
-}
-
-const CORE_STATUS: { key: string; label: string; icon: any; color: string }[] = [
-  { key: "strength", label: "Strength", icon: Swords, color: "text-orange-400" },
-  { key: "intellect", label: "Intellect", icon: Sparkles, color: "text-purple-400" },
-  { key: "endurance", label: "Endurance", icon: Shield, color: "text-yellow-400" },
-  { key: "dexterity", label: "Dexterity", icon: Wind, color: "text-green-400" },
-  { key: "wisdom", label: "Wisdom", icon: Brain, color: "text-cyan-400" },
-  { key: "luck", label: "Luck", icon: Star, color: "text-pink-400" },
-];
-
-const CONVERSION_LABELS: Record<string, string> = {
-  attackPower: "Attack Power",
-  physicalBoost: "Physical Boost",
-  armorPenetration: "Armor Penetration",
-  spellPower: "Spell Power",
-  magicalBoost: "Magical Boost",
-  magicPenetration: "Magic Penetration",
-  maxHealth: "Max Health",
-  physicalResistance: "Physical Resistance",
-  magicalResistance: "Magical Resistance",
-  hitChance: "Hit Chance",
-  evasion: "Evasion",
-  mana: "Mana",
-  manaRegen: "Mana Regen",
-  healingBoost: "Healing Boost",
-  cooldownReduction: "CDR",
-  critChance: "Crit Chance",
-  critMultiplier: "Crit Multiplier",
-};
-
-const PERCENT_TARGETS = new Set([
-  "physicalBoost", "armorPenetration", "magicalBoost", "magicPenetration",
-  "physicalResistance", "magicalResistance", "hitChance", "evasion",
-  "manaRegen", "healingBoost", "cooldownReduction", "critChance", "critMultiplier",
-]);
-
-function formatFactor(f: number): string {
-  const n = Number(f) || 0;
-  return n % 1 === 0 ? `${n}` : n.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
 }
 
 interface ClassProgress {
@@ -77,7 +36,6 @@ export function ClassPage() {
   const [data, setData] = useState<Character | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
-  const [statPanel, setStatPanel] = useState<"core" | "modifiers" | "combat">("core");
 
   useEffect(() => {
     if (!slug && selectedCharacter?.class?.slug) {
@@ -130,8 +88,6 @@ export function ClassPage() {
   const actives = skills.filter((s) => s.trigger === "active");
   const ultimate = skills.find((s) => s.trigger === "ultimate");
   const stats: any = gameClass.stats || {};
-  const coreStats: any = stats.coreStats || {};
-  const conversion: any = stats.conversion || {};
 
   const skillSummary = (skill: Skill) => {
     let dmg = 0;
@@ -287,169 +243,75 @@ export function ClassPage() {
         ))}
       </div>
 
-      {/* Painéis detalhados: Core / Modifier / Combat Stats */}
+      {/* Atributos finais (calculados) */}
       <div className="panel p-4">
-        <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
-          <h3 className="font-display font-semibold flex items-center gap-2">
-            <Gauge size={16} className="text-yellow-400" /> Atributos detalhados
-          </h3>
-          <div className="flex gap-1">
-            {(["core", "modifiers", "combat"] as const).map((panel) => (
-              <button
-                key={panel}
-                onClick={() => setStatPanel(panel)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors capitalize ${
-                  statPanel === panel ? "bg-purple-500/20 text-purple-300" : "text-gray-500 hover:text-gray-300"
-                }`}
-              >
-                {panel === "core" ? "Status" : panel === "modifiers" ? "Modifiers" : "Combat"}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {statPanel === "core" && (
-          <div className="space-y-3">
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
-              {CORE_STATUS.map(({ key, label, icon: Icon, color }) => {
-                const value = coreStats[key] ?? 0;
-                const conv = conversion[key] || {};
-                return (
-                  <div key={key} className="bg-dark-800/50 rounded-lg p-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="flex items-center gap-1.5 text-xs font-medium text-gray-200">
-                        <Icon size={14} className={color} /> {label}
-                      </span>
-                      <span className="font-mono text-sm font-bold">{value}</span>
-                    </div>
-                    <div className="space-y-1">
-                      {Object.entries(conv).map(([target, factor]) => (
-                        <p key={target} className="text-[11px] text-gray-500 flex items-center justify-between">
-                          <span>{CONVERSION_LABELS[target] || target}</span>
-                          <span className="text-gray-300 font-mono">
-                            +{formatFactor(factor as number)}
-                            {PERCENT_TARGETS.has(target) ? "%" : ""} <span className="text-gray-600">/pt</span>
-                          </span>
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
+        <h3 className="font-display font-semibold mb-3 flex items-center gap-2">
+          <Gauge size={16} className="text-yellow-400" /> Atributos finais da classe
+        </h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <p className="col-span-full text-[10px] text-gray-500 uppercase tracking-wider">Vitalidade</p>
+          {[
+            { label: "HP Máximo", value: Number(stats.hp ?? 0).toLocaleString(), icon: Heart, color: "text-red-400" },
+            { label: "Mana Máxima", value: Number(stats.mana ?? 0).toLocaleString(), icon: Droplets, color: "text-blue-400" },
+            { label: "Mana Regen", value: `${stats.manaRegenPerTick ?? 0}/tick`, icon: Droplets, color: "text-blue-300" },
+            { label: "HP Regen", value: `${stats.healthRegenPerTick ?? 0}/tick`, icon: HeartPulse, color: "text-green-400" },
+          ].map((stat) => (
+            <div key={stat.label} className="bg-dark-800/50 rounded-lg p-3 flex items-center gap-2">
+              <stat.icon size={13} className={stat.color} />
+              <div className="flex-1">
+                <p className="text-xs text-gray-300">{stat.label}</p>
+                <p className="font-mono text-sm font-bold">{stat.value}</p>
+              </div>
             </div>
-            <p className="text-[11px] text-gray-600 leading-relaxed">
-              Os 6 Status Class são fixos e os únicos atributos da Classe. Itens somam seus valores ao total;
-              encantamentos <span className="text-yellow-500/80">substituem</span> os valores do item. Tudo é
-              convertido automaticamente pela Combat Engine.
-            </p>
-          </div>
-        )}
-
-        {statPanel === "modifiers" && (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            <p className="col-span-full text-[10px] text-gray-500 uppercase tracking-wider">Damage & Resistance</p>
-            {[
-              { label: "DMG Boost", icon: Flame, color: "text-red-400" },
-              { label: "DMG Resist", icon: Shield, color: "text-green-400" },
-              { label: "Physical Boost", icon: Swords, color: "text-orange-400" },
-              { label: "Magical Boost", icon: Sparkles, color: "text-purple-400" },
-              { label: "Physical Resist", icon: ShieldCheck, color: "text-yellow-400" },
-              { label: "Magical Resist", icon: ShieldHalf, color: "text-cyan-400" },
-              { label: "Healing Boost", icon: HeartPulse, color: "text-green-400" },
-              { label: "Healing Received", icon: Heart, color: "text-red-300" },
-              { label: "DoT Boost", icon: Skull, color: "text-purple-300" },
-              { label: "DoT Resist", icon: Ban, color: "text-green-300" },
-            ].map((stat) => (
-              <div key={stat.label} className="bg-dark-800/50 rounded-lg p-3 flex items-center gap-2">
-                <stat.icon size={13} className={stat.color} />
-                <div className="flex-1">
-                  <p className="text-xs text-gray-300">{stat.label}</p>
-                  <p className="font-mono text-xs text-gray-400">0%</p>
-                </div>
+          ))}
+          <p className="col-span-full text-[10px] text-gray-500 uppercase tracking-wider mt-2">Ataque</p>
+          {[
+            { label: "Ataque", value: Number(stats.attack ?? 0).toLocaleString(), icon: Swords, color: "text-orange-400" },
+            { label: "Attack Power", value: Number(stats.attackPower ?? 0).toLocaleString(), icon: Crosshair, color: "text-orange-300" },
+            { label: "Magia", value: Number(stats.magic ?? 0).toLocaleString(), icon: Sparkles, color: "text-purple-400" },
+            { label: "Spell Power", value: Number(stats.spellPower ?? 0).toLocaleString(), icon: Star, color: "text-purple-300" },
+            { label: "Vel. Ataque", value: `${((stats.attackSpeedMs ?? 2000) / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}s`, icon: Zap, color: "text-yellow-400" },
+          ].map((stat) => (
+            <div key={stat.label} className="bg-dark-800/50 rounded-lg p-3 flex items-center gap-2">
+              <stat.icon size={13} className={stat.color} />
+              <div className="flex-1">
+                <p className="text-xs text-gray-300">{stat.label}</p>
+                <p className="font-mono text-sm font-bold">{stat.value}</p>
               </div>
-            ))}
-            <p className="col-span-full text-[10px] text-gray-500 uppercase tracking-wider mt-2">Penetration</p>
-            {[
-              { label: "Armor Pen", icon: Crosshair, color: "text-orange-400" },
-              { label: "Magic Pen", icon: Crosshair, color: "text-purple-400" },
-              { label: "True Damage", icon: Skull, color: "text-red-400" },
-            ].map((stat) => (
-              <div key={stat.label} className="bg-dark-800/50 rounded-lg p-3 flex items-center gap-2">
-                <stat.icon size={13} className={stat.color} />
-                <div className="flex-1">
-                  <p className="text-xs text-gray-300">{stat.label}</p>
-                  <p className="font-mono text-xs text-gray-400">0</p>
-                </div>
+            </div>
+          ))}
+          <p className="col-span-full text-[10px] text-gray-500 uppercase tracking-wider mt-2">Defesa</p>
+          {[
+            { label: "Defesa", value: Number(stats.defense ?? 0).toLocaleString(), icon: Shield, color: "text-yellow-400" },
+            { label: "Res. Mágica", value: Number(stats.magicDefense ?? 0).toLocaleString(), icon: ShieldCheck, color: "text-cyan-400" },
+            { label: "Esquiva", value: `${(stats.dodge ?? 0).toFixed(1)}%`, icon: Wind, color: "text-green-400" },
+          ].map((stat) => (
+            <div key={stat.label} className="bg-dark-800/50 rounded-lg p-3 flex items-center gap-2">
+              <stat.icon size={13} className={stat.color} />
+              <div className="flex-1">
+                <p className="text-xs text-gray-300">{stat.label}</p>
+                <p className="font-mono text-sm font-bold">{stat.value}</p>
               </div>
-            ))}
-            <p className="col-span-full text-[10px] text-gray-500 uppercase tracking-wider mt-2">Utility</p>
-            {[
-              { label: "Life Steal", icon: Heart, color: "text-red-400" },
-              { label: "Mana Steal", icon: Droplets, color: "text-blue-400" },
-              { label: "CD Reduction", icon: Clock, color: "text-yellow-400" },
-              { label: "Haste", icon: Wind, color: "text-green-400" },
-              { label: "Mana Cost -", icon: Droplets, color: "text-blue-300" },
-            ].map((stat) => (
-              <div key={stat.label} className="bg-dark-800/50 rounded-lg p-3 flex items-center gap-2">
-                <stat.icon size={13} className={stat.color} />
-                <div className="flex-1">
-                  <p className="text-xs text-gray-300">{stat.label}</p>
-                  <p className="font-mono text-xs text-gray-400">0%</p>
-                </div>
+            </div>
+          ))}
+          <p className="col-span-full text-[10px] text-gray-500 uppercase tracking-wider mt-2">Crítico</p>
+          {[
+            { label: "Chance de Crítico", value: `${(stats.critChance ?? 0).toFixed(1)}%`, icon: Target, color: "text-yellow-400" },
+            { label: "Dano Crítico", value: `${stats.critDamage ?? 150}%`, icon: Skull, color: "text-red-400" },
+          ].map((stat) => (
+            <div key={stat.label} className="bg-dark-800/50 rounded-lg p-3 flex items-center gap-2">
+              <stat.icon size={13} className={stat.color} />
+              <div className="flex-1">
+                <p className="text-xs text-gray-300">{stat.label}</p>
+                <p className="font-mono text-sm font-bold">{stat.value}</p>
               </div>
-            ))}
-          </div>
-        )}
-
-        {statPanel === "combat" && (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            <p className="col-span-full text-[10px] text-gray-500 uppercase tracking-wider">Offense</p>
-            {[
-              { label: "Attack Power", value: stats.attackPower, icon: Swords, color: "text-orange-400" },
-              { label: "Spell Power", value: stats.spellPower, icon: Star, color: "text-purple-400" },
-              { label: "Crit Chance", value: `${(stats.critChance ?? 0).toFixed(1)}%`, icon: Target, color: "text-yellow-400" },
-              { label: "Crit Multiplier", value: `${stats.critDamage ?? 150}%`, icon: Crosshair, color: "text-red-400" },
-              { label: "Hit Chance", value: `${(stats.hitChance ?? 85).toFixed(1)}%`, icon: Scan, color: "text-green-400" },
-            ].map((stat) => (
-              <div key={stat.label} className="bg-dark-800/50 rounded-lg p-3 flex items-center gap-2">
-                <stat.icon size={13} className={stat.color} />
-                <div className="flex-1">
-                  <p className="text-xs text-gray-300">{stat.label}</p>
-                  <p className="font-mono text-sm font-bold">{stat.value}</p>
-                </div>
-              </div>
-            ))}
-            <p className="col-span-full text-[10px] text-gray-500 uppercase tracking-wider mt-2">Defense</p>
-            {[
-              { label: "Dodge", value: `${(stats.dodge ?? 0).toFixed(1)}%`, icon: Wind, color: "text-green-400" },
-              { label: "Max HP", value: stats.hp, icon: Heart, color: "text-red-400" },
-              { label: "Max Mana", value: stats.mana, icon: Droplets, color: "text-blue-400" },
-            ].map((stat) => (
-              <div key={stat.label} className="bg-dark-800/50 rounded-lg p-3 flex items-center gap-2">
-                <stat.icon size={13} className={stat.color} />
-                <div className="flex-1">
-                  <p className="text-xs text-gray-300">{stat.label}</p>
-                  <p className="font-mono text-sm font-bold">{stat.value}</p>
-                </div>
-              </div>
-            ))}
-            <p className="col-span-full text-[10px] text-gray-500 uppercase tracking-wider mt-2">Special</p>
-            {[
-              { label: "Attack Speed", value: `${(stats.attackSpeedMs ?? 2000) / 1000}s`, icon: Gauge, color: "text-yellow-400" },
-              { label: "Mana Regen", value: `${stats.manaRegenPerTick ?? 0}/tick`, icon: Droplets, color: "text-blue-400" },
-              { label: "HP Regen", value: `${stats.healthRegenPerTick ?? 0}/tick`, icon: HeartPulse, color: "text-green-400" },
-              { label: "Threat", value: "100%", icon: Siren, color: "text-red-400" },
-            ].map((stat) => (
-              <div key={stat.label} className="bg-dark-800/50 rounded-lg p-3 flex items-center gap-2">
-                <stat.icon size={13} className={stat.color} />
-                <div className="flex-1">
-                  <p className="text-xs text-gray-300">{stat.label}</p>
-                  <p className="font-mono text-sm">{stat.value}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+            </div>
+          ))}
+        </div>
+        <p className="text-[11px] text-gray-600 mt-3 leading-relaxed">
+          Valores finais calculados pela Combat Engine a partir dos 6 Status Class. Itens somam seus valores ao
+          total; encantamentos <span className="text-yellow-500/80">substituem</span> os valores do item.
+        </p>
       </div>
 
       {/* Skills */}
