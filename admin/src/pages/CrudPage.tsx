@@ -33,6 +33,7 @@ export interface CrudConfig {
   columns: ColumnConfig[];
   fields: FieldConfig[];
   extraActions?: (item: any) => React.ReactNode;
+  headerActions?: (reload: () => void) => React.ReactNode;
 }
 
 interface CrudPageProps {
@@ -301,12 +302,15 @@ export default function CrudPage({ config }: CrudPageProps) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">{config.title}</h1>
-        <button
-          onClick={openCreate}
-          className="flex items-center gap-2 px-4 py-2 bg-accent-600 hover:bg-accent-500 text-white rounded-lg text-sm font-medium transition-colors"
-        >
-          <span className="text-lg leading-none">+</span> New
-        </button>
+        <div className="flex items-center gap-2">
+          {config.headerActions && config.headerActions(load)}
+          <button
+            onClick={openCreate}
+            className="flex items-center gap-2 px-4 py-2 bg-accent-600 hover:bg-accent-500 text-white rounded-lg text-sm font-medium transition-colors"
+          >
+            <span className="text-lg leading-none">+</span> New
+          </button>
+        </div>
       </div>
 
       <div className="bg-dark-800 border border-dark-600 rounded-xl overflow-hidden">

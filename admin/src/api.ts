@@ -52,6 +52,8 @@ export const adminApi = {
     create: (data: any) => api.post("/admin/classes", data),
     update: (id: string, data: any) => api.put(`/admin/classes/${id}`, data),
     delete: (id: string) => api.delete(`/admin/classes/${id}`),
+    generate: (data: { prompt: string; count?: number }) => api.post("/admin/classes/generate", data),
+    aiConfig: () => api.get("/admin/ai/config"),
   },
   items: {
     list: () => api.get("/admin/items"),

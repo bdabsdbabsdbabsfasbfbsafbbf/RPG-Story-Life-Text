@@ -6,6 +6,7 @@ import { config } from "../../core/config";
 import { authenticate, requireRole, AuthPayload } from "../../core/middleware/auth";
 import { AppError } from "../../core/middleware/errorHandler";
 import { DEFAULT_GAME_LIMITS, invalidateGameLimits } from "../../core/gameLimits";
+import { aiProvidersAvailable, generateClass, persistGeneratedClass } from "../../core/ai/classGenerator";
 
 function requireAdmin(req: Request, res: Response, next: NextFunction) {
   authenticate(req, res, () => {
@@ -488,6 +489,33 @@ export function createAdminModule(app: Express): void {
 
   app.delete("/api/admin/classes/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try { await prisma.gameClass.delete({ where: { id: req.params.id } }); res.json({ message: "Deleted" }); } catch (err) { next(err); }
+  });
+
+  // IA: gerar classe automaticamente (rascunho) — Gemini com fallback Groq
+  app.get("/api/admin/ai/config", requireAdmin, async (_req: Request, res: Response, next: NextFunction) => {
+    try { res.json(aiProvidersAvailable()); } catch (err) { next(err); }
+  });
+
+  app.post("/api/admin/classes/generate", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { prompt, count } = req.body || {};
+      const idea = String(prompt || "").trim();
+      if (!idea) throw new AppError(400, "Descreva a classe que a IA deve criar (ex.: 'tanque de gelo com skill que reflete dano')");
+      if (!aiProvidersAvailable().gemini && !aiProvidersAvailable().groq) {
+        throw new AppError(503, "Gerador de IA desativado: defina GEMINI_API_KEY ou GROQ_API_KEY nas variáveis do Railway");
+      }
+      const n = Math.min(Math.max(1, Math.round(Number(count) || 1)), 5);
+      const providerLog: string[] = [];
+      const created: any[] = [];
+      for (let i = 0; i < n; i++) {
+        const gen = await generateClass(n > 1 ? `${idea} (variação ${i + 1})` : idea, providerLog);
+        const saved = await persistGeneratedClass(gen);
+        created.push(saved);
+      }
+      res.status(201).json({ data: created, providers: providerLog });
+    } catch (err) {
+      next(err);
+    }
   });
 
   // Stat models CRUD

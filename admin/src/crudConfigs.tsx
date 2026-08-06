@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Sparkles } from "lucide-react";
 import { CrudConfig } from "./pages/CrudPage";
+import AiClassGenerator from "./components/AiClassGenerator";
 
 const boolBadge = (v: any, yesClass = "bg-green-500/20 text-green-400", noClass = "bg-gray-600/20 text-gray-400") => (
   <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${v ? yesClass : noClass}`}>
@@ -74,6 +75,7 @@ export const crudConfigs: CrudConfig[] = [
   {
     key: "classes",
     title: "Classes",
+    headerActions: (reload) => <AiClassGenerator onGenerated={reload} />,
     columns: [
       idColumn,
       { key: "name", label: "Name", render: (v) => <span className="font-medium text-white">{v}</span> },
