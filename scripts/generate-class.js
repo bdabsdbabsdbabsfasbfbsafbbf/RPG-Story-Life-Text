@@ -10,7 +10,7 @@ const path = require("path");
 const ROOT = path.resolve(__dirname, "..");
 const SEED_FILE = path.join(ROOT, "backend", "prisma", "seed-content.js");
 const ENV_FILE = path.join(ROOT, ".env");
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-flash-latest";
 const GROQ_MODEL = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
 
 function loadEnv() {
@@ -275,8 +275,9 @@ function normalize(raw, errors) {
 
   const role = VALID_ROLES.includes(cls.role) ? cls.role : "hybrid";
   const category = VALID_CATEGORIES.includes(sm.category) ? sm.category : "hybrid";
-  const classSlug = slugify(cls.slug || cls.name);
-  const smSlug = slugify(sm.slug || `sm-${classSlug}`) || `sm-${classSlug}`;
+  // Slug SEMPRE derivado do nome (o modelo costuma inventar slugs inválidos).
+  const classSlug = slugify(cls.name);
+  const smSlug = `sm-${classSlug}`;
 
   const skills = Array.isArray(raw.skills) && raw.skills.length > 0 ? raw.skills : [];
   if (skills.length === 0) errors.push("Nenhuma skill gerada");
@@ -342,8 +343,20 @@ function normalize(raw, errors) {
       else errors.push(`Passiva "${p.name}": chave flat inválida "${k}"`);
     }
     for (const [k, v] of Object.entries(p.statModifiers?.percent || {})) {
+      // Chaves só suportadas como flat (resistências etc.) são movidas para flat,
+      // senão a passiva ficaria vazia e sem efeito no jogo.
       if (PERCENT_PASSIVE_KEYS.includes(k)) percent[k] = num(v, 0);
-      else errors.push(`Passiva "${p.name}": chave percent inválida "${k}"`);
+      else if (FLAT_PASSIVE_KEYS.includes(k)) {
+        flat[k] = num(v, 0);
+        errors.push(`Passiva "${p.name}": "${k}" em percent — movida para flat`);
+      } else {
+        errors.push(`Passiva "${p.name}": chave percent inválida "${k}"`);
+      }
+    }
+    // Garante que a passiva sempre tenha ao menos um modificador.
+    if (Object.keys(flat).length === 0 && Object.keys(percent).length === 0) {
+      flat.defense = 5;
+      errors.push(`Passiva "${p.name}": sem modificadores válidos — aplicado flat defense +5 como padrão`);
     }
     return {
       name: p.name,
