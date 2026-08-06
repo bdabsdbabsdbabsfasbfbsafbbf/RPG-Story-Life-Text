@@ -270,7 +270,6 @@ export function ClassPage() {
             { label: "Attack Power", value: Number(stats.attackPower ?? 0).toLocaleString(), icon: Crosshair, color: "text-orange-300" },
             { label: "Magia", value: Number(stats.magic ?? 0).toLocaleString(), icon: Sparkles, color: "text-purple-400" },
             { label: "Spell Power", value: Number(stats.spellPower ?? 0).toLocaleString(), icon: Star, color: "text-purple-300" },
-            { label: "Vel. Ataque", value: `${((stats.attackSpeedMs ?? 2000) / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}s`, icon: Zap, color: "text-yellow-400" },
           ].map((stat) => (
             <div key={stat.label} className="bg-dark-800/50 rounded-lg p-3 flex items-center gap-2">
               <stat.icon size={13} className={stat.color} />
@@ -310,7 +309,8 @@ export function ClassPage() {
         </div>
         <p className="text-[11px] text-gray-600 mt-3 leading-relaxed">
           Valores finais calculados pela Combat Engine a partir dos 6 Status Class. Itens somam seus valores ao
-          total; encantamentos <span className="text-yellow-500/80">substituem</span> os valores do item.
+          total; encantamentos <span className="text-yellow-500/80">substituem</span> os valores do item. A
+          velocidade de ataque vem da arma equipada.
         </p>
       </div>
 
