@@ -25,6 +25,7 @@ export function createRedeemModule(app: Express): void {
       if (already) throw new AppError(409, "Code already redeemed by this account");
 
       const grantedItems: { name: string; quantity: number }[] = [];
+      const warnings: string[] = [];
       const result = await prisma.$transaction(async (tx) => {
         await tx.redeemRedemption.create({
           data: { codeId: code.id, userId: req.user!.userId },
@@ -62,9 +63,12 @@ export function createRedeemModule(app: Express): void {
             const id = String(entry?.classId ?? "").trim();
             let gameClass = null;
             if (id) gameClass = await tx.gameClass.findUnique({ where: { id } });
-            if (!gameClass && slug) gameClass = await tx.gameClass.findFirst({ where: { slug, isActive: true } });
-            if (!gameClass && name) gameClass = await tx.gameClass.findFirst({ where: { name, isActive: true } });
-            if (!gameClass) continue;
+            if (!gameClass && slug) gameClass = await tx.gameClass.findFirst({ where: { slug } });
+            if (!gameClass && name) gameClass = await tx.gameClass.findFirst({ where: { name } });
+            if (!gameClass) {
+              warnings.push(`Classe "${name || slug || id}" não encontrada`);
+              continue;
+            }
             if (character) {
               await tx.characterClass.upsert({
                 where: {
@@ -74,6 +78,8 @@ export function createRedeemModule(app: Express): void {
                 create: { characterId: character.id, classId: gameClass.id, isActive: false },
               });
               grantedClasses.push(gameClass.name);
+            } else {
+              warnings.push(`Crie um personagem para receber a classe "${gameClass.name}"`);
             }
             continue;
           }
@@ -87,7 +93,7 @@ export function createRedeemModule(app: Express): void {
             continue;
           }
 
-          const gameClass = await tx.gameClass.findFirst({ where: { name, isActive: true } });
+          const gameClass = await tx.gameClass.findFirst({ where: { name } });
           if (gameClass) {
             if (character) {
               await tx.characterClass.upsert({
@@ -98,6 +104,8 @@ export function createRedeemModule(app: Express): void {
                 create: { characterId: character.id, classId: gameClass.id, isActive: false },
               });
               grantedClasses.push(gameClass.name);
+            } else {
+              warnings.push(`Crie um personagem para receber a classe "${gameClass.name}"`);
             }
           }
         }
@@ -107,6 +115,7 @@ export function createRedeemModule(app: Express): void {
           diamonds: code.diamonds,
           experience: Number(code.experience),
           classes: grantedClasses,
+          warnings,
         };
       });
 

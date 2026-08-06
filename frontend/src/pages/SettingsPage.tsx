@@ -78,7 +78,10 @@ export function SettingsPage() {
       const classesGranted = Array.isArray(data.classes) && data.classes.length > 0
         ? ` Classe(s) desbloqueada(s): ${data.classes.join(", ")}`
         : "";
-      toast.success(`Código resgatado! +${Number(data.gold).toLocaleString()} gold, +${data.diamonds} diamantes, +${Number(data.experience).toLocaleString()} XP${classesGranted}`);
+      const warnings = Array.isArray(data.warnings) && data.warnings.length > 0
+        ? ` | Avisos: ${data.warnings.join(" | ")}`
+        : "";
+      toast.success(`Código resgatado! +${Number(data.gold).toLocaleString()} gold, +${data.diamonds} diamantes, +${Number(data.experience).toLocaleString()} XP${classesGranted}${warnings}`);
       setCode("");
     } catch (err: any) {
       toast.error(err.response?.data?.error || "Código inválido");
