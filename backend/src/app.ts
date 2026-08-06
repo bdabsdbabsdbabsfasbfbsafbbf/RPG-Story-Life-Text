@@ -18,6 +18,7 @@ import { createShopModule } from "./modules/shop/shop.module";
 import { createRaidModule } from "./modules/raid/raid.module";
 import { createLeaderboardModule } from "./modules/leaderboard/leaderboard.module";
 import { createCraftModule } from "./modules/craft/craft.module";
+import { createGachaModule } from "./modules/gacha/gacha.module";
 
 export function registerModules(app: Express): void {
   createAuthModule(app);
@@ -38,5 +39,6 @@ export function registerModules(app: Express): void {
   createRaidModule(app);
   createLeaderboardModule(app);
   createCraftModule(app);
+  createGachaModule(app);
   createAdminModule(app);
 }

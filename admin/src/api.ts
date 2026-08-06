@@ -168,4 +168,14 @@ export const adminApi = {
     update: (id: string, data: any) => api.put(`/admin/patch-notes/${id}`, data),
     delete: (id: string) => api.delete(`/admin/patch-notes/${id}`),
   },
+  boosters: {
+    list: () => api.get("/admin/boosters"),
+    create: (data: any) => api.post("/admin/boosters", data),
+    update: (id: string, data: any) => api.put(`/admin/boosters/${id}`, data),
+    delete: (id: string) => api.delete(`/admin/boosters/${id}`),
+  },
+  gachaConfig: {
+    get: () => api.get("/admin/gacha-config"),
+    update: (data: any) => api.put("/admin/gacha-config", data),
+  },
 };

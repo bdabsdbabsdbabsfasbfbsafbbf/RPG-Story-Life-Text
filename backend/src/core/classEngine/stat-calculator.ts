@@ -202,6 +202,11 @@ export function computeStats(input: StatsInput): DerivedStats {
   stats.magicalResistance += num(bonuses.magicalResistance, 0) + flatPassiveMods(input.passives, "magicalResistance");
   stats.penetration += num(bonuses.penetration, 0) + flatPassiveMods(input.passives, "penetration");
 
+  // Boost de defesa (booster de anel/colar): +X% de resistência física E mágica
+  const defenseBoost = num(bonuses.defenseBoost, 0);
+  stats.physicalResistance += defenseBoost;
+  stats.magicalResistance += defenseBoost;
+
   // Percentuais aplicados aos núcleos (passivas "percent")
   stats.hp = Math.floor(applyPercent(stats.hp, percentPassiveMods(input.passives, "hp")));
   stats.mana = Math.floor(applyPercent(stats.mana, percentPassiveMods(input.passives, "mana")));

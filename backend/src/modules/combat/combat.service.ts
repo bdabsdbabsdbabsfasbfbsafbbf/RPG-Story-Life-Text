@@ -9,6 +9,7 @@ import { StatsInput } from "../../core/classEngine/stat-calculator";
 import { sumCoreStats } from "../../core/stats/coreStats";
 import { grantPassXp } from "../seasons/seasons.module";
 import { isVipActive, VIP_XP_BONUS, VIP_GOLD_BONUS } from "../../core/progression";
+import { getEquippedBoosterBonuses } from "../../core/boosters";
 
 function parseJson(value: any, fallback: any = null): any {
   if (value === null || value === undefined) return fallback;
@@ -224,6 +225,10 @@ export class CombatService {
       }),
     ]);
 
+    // Boosters equipados do jogador (anel/colar): dano e defesa entram no combate
+    const boosterBonuses = await getEquippedBoosterBonuses(character.userId);
+    const classBonuses = parseJson(gameClass.statModel?.bonuses, {});
+
     const statsInput: StatsInput = {
       level: character.level,
       statModel: {
@@ -234,7 +239,11 @@ export class CombatService {
         conversions: parseJson(gameClass.statModel?.conversions, []),
         attackIntervalBase: gameClass.statModel?.attackIntervalBase ?? 0,
         combatStatsBase: parseJson(gameClass.statModel?.combatStatsBase, {}),
-        bonuses: parseJson(gameClass.statModel?.bonuses, {}),
+        bonuses: {
+          ...classBonuses,
+          damageBoost: (Number(classBonuses.damageBoost) || 0) + boosterBonuses.damage,
+          defenseBoost: boosterBonuses.defense,
+        },
       },
       resource: parseJson(gameClass.resource, {}),
       passives,
@@ -761,6 +770,11 @@ export class CombatService {
     let xpGain = Math.floor(Number(monster.xpReward || 0)) * mult;
     let goldGain = Math.floor(Number(monster.goldReward || 0)) * mult;
 
+    // Boosters equipados (anel/colar): XP, Gold e XP de classe
+    const boosterBonuses = await getEquippedBoosterBonuses(character.userId);
+    if (boosterBonuses.xp > 0) xpGain = Math.floor(xpGain * (1 + boosterBonuses.xp / 100));
+    if (boosterBonuses.gold > 0) goldGain = Math.floor(goldGain * (1 + boosterBonuses.gold / 100));
+
     // VIP ativo: +10% XP e +10% ouro (bônus balanceado)
     const userForVip = await this.prisma.user.findUnique({
       where: { id: character.userId },
@@ -781,8 +795,9 @@ export class CombatService {
 
     let classXpGain = 0;
     if (character.classProgress && character.classProgress.length > 0) {
-      await grantClassXp(this.prisma, character.classProgress[0].id, xpGain);
-      classXpGain = xpGain;
+      const classXp = boosterBonuses.classXp > 0 ? Math.floor(xpGain * (1 + boosterBonuses.classXp / 100)) : xpGain;
+      await grantClassXp(this.prisma, character.classProgress[0].id, classXp);
+      classXpGain = classXp;
     }
 
     const user = await this.prisma.user.findUnique({
@@ -825,7 +840,8 @@ export class CombatService {
     for (const d of dropRows) {
       if (d.minLevel && character.level < d.minLevel) continue;
       if (d.maxLevel && character.level > d.maxLevel) continue;
-      if (!d.isGuaranteed && Math.random() * 100 >= d.dropChance) continue;
+      const effectiveChance = d.isGuaranteed ? 100 : d.dropChance * (1 + boosterBonuses.dropChance / 100);
+      if (!d.isGuaranteed && Math.random() * 100 >= effectiveChance) continue;
       const min = Math.max(1, d.minQuantity || 1);
       const max = Math.max(min, d.maxQuantity || min);
       const qty = min === max ? min : min + Math.floor(Math.random() * (max - min + 1));

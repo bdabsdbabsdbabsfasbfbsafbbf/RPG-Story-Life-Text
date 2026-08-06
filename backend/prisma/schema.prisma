@@ -41,6 +41,8 @@ model User {
   redeemRedemptions RedeemRedemption[]
   shopOrders        ShopOrder[]        @relation()
   userEnchantments  UserEnchantment[]  @relation()
+  userBoosters      UserBooster[]      @relation()
+  gachaTickets      Int                @default(3) // tickets de gacha disponíveis (início: 3 grátis)
 
   @@index([discordId])
   @@index([username])
@@ -467,6 +469,52 @@ model UserEnchantment {
 
   @@unique([userId, enchantmentId])
   @@index([userId])
+}
+
+// Booster (Anel/Colar de Gacha): fornece apenas boosts %, sem core stats e sem enchantments
+model Booster {
+  id          String        @id @default(uuid())
+  name        String
+  slug        String        @unique
+  description String        @default("")
+  icon        String?
+  type        String // ring | necklace
+  rarity      String // common | uncommon | rare | epic | legendary | mythic
+  boostType   String // defense | damage | dropChance | xp | gold | classXp
+  boostValue  Int           @default(0) // percentual do boost (limitado pela raridade)
+  isActive    Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  userBoosters UserBooster[]
+
+  @@index([type])
+  @@index([rarity])
+  @@index([boostType])
+}
+
+model UserBooster {
+  id         String   @id @default(uuid())
+  userId     String
+  boosterId  String
+  quantity   Int      @default(1)
+  equipped   Boolean  @default(false) // equipado: máx. 1 anel + 1 colar
+  acquiredAt DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  booster    Booster  @relation(fields: [boosterId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, boosterId])
+  @@index([userId])
+  @@index([equipped])
+}
+
+// Config global do Gacha (uma linha): tickets grátis, custo de ticket extra e chances por raridade
+model GachaConfig {
+  id          String   @id @default("gacha")
+  freeTickets Int      @default(3)
+  ticketCost  BigInt   @default(0) // ouro por ticket extra (0 = não vendável)
+  chances     Json     @default("{}") // { common: 40, uncommon: 25, rare: 15, epic: 10, legendary: 7, mythic: 3 }
+  active      Boolean  @default(true)
+  updatedAt   DateTime @updatedAt
 }
 
 model Inventory {

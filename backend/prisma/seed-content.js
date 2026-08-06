@@ -150,29 +150,60 @@ const items = [
   { name: "Manto de Veludo", description: "Um manto elegante dos nobres da vila.", type: "cape", rarity: "uncommon", level: 3, rank: 2, buyPrice: 130, sellPrice: 26, wisdom: 6, luck: 3, icon: "/icons/64x64/Capas/fc1824.png" },
   { name: "Capa do Vento", description: "Flutua como o vento e melhora os reflexos.", type: "cape", rarity: "rare", level: 6, rank: 3, buyPrice: 340, sellPrice: 68, dexterity: 8, luck: 4, icon: "/icons/64x64/Capas/fc1825.png" },
   // ===== Rings (LUK/STR ou INT) =====
-  { name: "Anel de Bronze", description: "Um anel simples, dizem que traz sorte.", type: "ring", rarity: "common", level: 1, rank: 1, buyPrice: 45, sellPrice: 9, luck: 2, strength: 1, icon: "/icons/64x64/Aneis/fc1843.png" },
-  { name: "Anel de Prata", description: "Anel prateado de um artesão habilidoso.", type: "ring", rarity: "uncommon", level: 3, rank: 2, buyPrice: 145, sellPrice: 29, luck: 5, strength: 3, icon: "/icons/64x64/Aneis/fc1844.png" },
-  { name: "Anel do Fogo", description: "Pulsa com energia ardente.", type: "ring", rarity: "rare", level: 6, rank: 3, buyPrice: 390, sellPrice: 78, intellect: 7, luck: 5, icon: "/icons/64x64/Aneis/fc1845.png" },
+  { name: "Anel de Bronze", description: "Um anel simples, dizem que traz sorte.", type: "ring", rarity: "common", level: 1, rank: 1, buyPrice: 45, sellPrice: 9, icon: "/icons/64x64/Aneis/fc1843.png" },
+  { name: "Anel de Prata", description: "Anel prateado de um artesão habilidoso.", type: "ring", rarity: "uncommon", level: 3, rank: 2, buyPrice: 145, sellPrice: 29, icon: "/icons/64x64/Aneis/fc1844.png" },
+  { name: "Anel do Fogo", description: "Pulsa com energia ardente.", type: "ring", rarity: "rare", level: 6, rank: 3, buyPrice: 390, sellPrice: 78, icon: "/icons/64x64/Aneis/fc1845.png" },
   // ===== Necklaces (WIS/LUK) =====
-  { name: "Colar de Contas", description: "Contas de madeira entalhadas à mão.", type: "necklace", rarity: "common", level: 1, rank: 1, buyPrice: 40, sellPrice: 8, wisdom: 2, luck: 1, icon: "/icons/64x64/Colares/fc1849.png" },
-  { name: "Amuleto da Sorte", description: "Um amuleto que afasta o azar.", type: "necklace", rarity: "uncommon", level: 3, rank: 2, buyPrice: 140, sellPrice: 28, luck: 5, wisdom: 3, icon: "/icons/64x64/Colares/fc1850.png" },
-  { name: "Colar Arcano", description: "Um colar banhado em energia mística.", type: "necklace", rarity: "rare", level: 6, rank: 3, buyPrice: 370, sellPrice: 74, wisdom: 8, intellect: 4, icon: "/icons/64x64/Colares/fc1851.png" },
+  { name: "Colar de Contas", description: "Contas de madeira entalhadas à mão.", type: "necklace", rarity: "common", level: 1, rank: 1, buyPrice: 40, sellPrice: 8, icon: "/icons/64x64/Colares/fc1849.png" },
+  { name: "Amuleto da Sorte", description: "Um amuleto que afasta o azar.", type: "necklace", rarity: "uncommon", level: 3, rank: 2, buyPrice: 140, sellPrice: 28, icon: "/icons/64x64/Colares/fc1850.png" },
+  { name: "Colar Arcano", description: "Um colar banhado em energia mística.", type: "necklace", rarity: "rare", level: 6, rank: 3, buyPrice: 370, sellPrice: 74, icon: "/icons/64x64/Colares/fc1851.png" },
   // ===== Consumables =====
   { name: "Poção de Vida", description: "Restaura 50 de vida.", type: "consumable", subtype: "potion", rarity: "common", level: 1, isStackable: true, maxStack: 99, buyPrice: 20, sellPrice: 4, effects: '{"heal": 50}', icon: "/icons/64x64/Potion/Vida.png" },
   { name: "Poção de Mana", description: "Restaura 40 de mana.", type: "consumable", subtype: "potion", rarity: "common", level: 1, isStackable: true, maxStack: 99, buyPrice: 25, sellPrice: 5, effects: '{"manaRestore": 40}', icon: "/icons/64x64/Potion/Mana.png" },
 ];
 
 // ===== Encantamentos (independentes dos itens, comprados na loja) =====
+// Só equipamentos de combate aceitam enchant: Arma, Armadura, Elmo e Capa.
+// Raridades: comum, raro, épico, lendário, mítico.
 const enchantments = [
-  { name: "Titã", slug: "titan", description: "Fortalece o corpo do portador, aumentando a força.", category: "physical", rarity: "common", minRank: 1, price: 5000, compatibleSlots: '["weapon","armor","ring","necklace"]', strength: 15 },
-  { name: "Mago", slug: "mage", description: "Amplifica o poder arcano do portador.", category: "magical", rarity: "common", minRank: 1, price: 5000, compatibleSlots: '["weapon","cape","ring","necklace"]', intellect: 15 },
-  { name: "Guardião", slug: "guardian", description: "Fortalece o corpo para resistir a golpes.", category: "defensive", rarity: "common", minRank: 1, price: 4500, compatibleSlots: '["helm","armor","necklace"]', endurance: 12 },
-  { name: "Caçador", slug: "hunter", description: "Aguça os reflexos do portador.", category: "utility", rarity: "common", minRank: 1, price: 4000, compatibleSlots: '["weapon","helm","cape","ring"]', dexterity: 10 },
-  { name: "Sábio", slug: "sage", description: "Expande a sabedoria e o equilíbrio do portador.", category: "magical", rarity: "common", minRank: 1, price: 4500, compatibleSlots: '["helm","cape","necklace"]', wisdom: 12 },
-  { name: "Fortuna", slug: "fortune", description: "Atrai a sorte para o portador.", category: "utility", rarity: "common", minRank: 1, price: 3500, compatibleSlots: '["ring","cape","necklace"]', luck: 8 },
-  { name: "Ventania", slug: "swift", description: "Movimento mais ágil e golpes mais precisos.", category: "utility", rarity: "uncommon", minRank: 2, price: 6000, compatibleSlots: '["weapon","cape","ring"]', dexterity: 6, luck: 2 },
-  { name: "Colosso", slug: "colossus", description: "Uma força descomunal para os mais fortes.", category: "physical", rarity: "rare", minRank: 3, price: 12000, compatibleSlots: '["weapon","armor"]', strength: 30 },
+  { name: "Titã", slug: "titan", description: "Fortalece o corpo do portador, aumentando a força.", category: "physical", rarity: "common", minRank: 1, price: 5000, compatibleSlots: '["weapon","armor"]', strength: 15 },
+  { name: "Mago", slug: "mage", description: "Amplifica o poder arcano do portador.", category: "magical", rarity: "common", minRank: 1, price: 5000, compatibleSlots: '["weapon","cape"]', intellect: 15 },
+  { name: "Guardião", slug: "guardian", description: "Fortalece o corpo para resistir a golpes.", category: "defensive", rarity: "common", minRank: 1, price: 4500, compatibleSlots: '["helm","armor"]', endurance: 12 },
+  { name: "Caçador", slug: "hunter", description: "Aguça os reflexos do portador.", category: "utility", rarity: "common", minRank: 1, price: 4000, compatibleSlots: '["weapon","helm"]', dexterity: 10 },
+  { name: "Sábio", slug: "sage", description: "Expande a sabedoria e o equilíbrio do portador.", category: "magical", rarity: "common", minRank: 1, price: 4500, compatibleSlots: '["helm","cape"]', wisdom: 12 },
+  { name: "Fortuna", slug: "fortune", description: "Atrai a sorte para o portador.", category: "utility", rarity: "common", minRank: 1, price: 3500, compatibleSlots: '["cape","armor"]', luck: 8 },
+  { name: "Ventania", slug: "swift", description: "Movimento mais ágil e golpes mais precisos.", category: "utility", rarity: "rare", minRank: 2, price: 6000, compatibleSlots: '["weapon","cape"]', dexterity: 6, luck: 2 },
+  { name: "Colosso", slug: "colossus", description: "Uma força descomunal para os mais fortes.", category: "physical", rarity: "legendary", minRank: 3, price: 12000, compatibleSlots: '["weapon","armor"]', strength: 30 },
 ];
+
+// ===== Boosters (Anel/Colar de Gacha) — só boosts %, sem core stats =====
+const BOOSTER_INFO = [
+  { boostType: "defense", label: "Defesa" },
+  { boostType: "damage", label: "Dano Geral" },
+  { boostType: "dropChance", label: "Chance de Drop" },
+  { boostType: "xp", label: "XP" },
+  { boostType: "gold", label: "Gold" },
+  { boostType: "classXp", label: "XP de Classe" },
+];
+const BOOSTER_MAX = { common: 5, uncommon: 10, rare: 15, epic: 20, legendary: 25, mythic: 30 };
+const BOOSTER_RARITY_LABEL = { common: "Comum", uncommon: "Incomum", rare: "Raro", epic: "Épico", legendary: "Lendário", mythic: "Mítico" };
+const boosters = [];
+for (const rarity of ["common", "uncommon", "rare", "epic", "legendary", "mythic"]) {
+  BOOSTER_INFO.forEach((info, i) => {
+    const isRing = i % 2 === 0;
+    const kind = isRing ? "Anel" : "Colar";
+    const value = BOOSTER_MAX[rarity];
+    boosters.push({
+      name: `${kind} ${info.label} ${BOOSTER_RARITY_LABEL[rarity]}`,
+      slug: `${isRing ? "anel" : "colar"}-${info.boostType}-${rarity}`,
+      description: `Aumenta ${info.label.toLowerCase()} em +${value}%.`,
+      type: isRing ? "ring" : "necklace",
+      rarity,
+      boostType: info.boostType,
+      boostValue: value,
+    });
+  });
+}
 
 const monsters = [
   { name: "Dummy de Treino", description: "Um boneco de madeira usado para treinar golpes na vila. Não revida.", level: 1, hp: 300, mana: 0, attack: 0, defense: 5, magic: 0, magicDefense: 5, speed: 1, xpReward: 0, goldReward: 0, attackSpeed: 99999 },
@@ -229,6 +260,7 @@ const maps = [
 const npcs = [
   { name: "Aurelia", description: "Vendedora de poções e equipamentos da vila.", type: "vendor", dialogue: "Bem-vindo à minha loja, aventureiro!" },
   { name: "Mestre Branko", description: "Um velho veterano que dá missões aos novatos.", type: "quest_giver", dialogue: "Precisa de trabalho? Tenho algumas tarefas para você." },
+  { name: "Mística", description: "A misteriosa dona do baú da sorte da cidade. Com seus tickets, rola Anéis e Colares com poderosos boosts.", type: "gacha", dialogue: "Quer tentar a sorte, aventureiro? Três tickets grátis para começar!" },
 ];
 
 const shopOffers = [
@@ -940,6 +972,26 @@ async function seedWorld() {
     const created = await upsertEnchantment(enchantment);
     console.log("  enchantment:", created.slug);
   }
+
+  console.log("Seeding boosters (gacha)...");
+  for (const booster of boosters) {
+    const existing = await prisma.booster.findFirst({
+      where: { OR: [{ slug: booster.slug }, { name: booster.name }] },
+    });
+    const created = existing
+      ? await prisma.booster.update({ where: { id: existing.id }, data: { ...booster } })
+      : await prisma.booster.create({ data: { ...booster } });
+    console.log("  booster:", created.slug);
+  }
+
+  console.log("Seeding gacha config...");
+  const gachaChances = { common: 40, uncommon: 25, rare: 15, epic: 10, legendary: 7, mythic: 3 };
+  await prisma.gachaConfig.upsert({
+    where: { id: "gacha" },
+    update: { freeTickets: 3, ticketCost: BigInt(5000), chances: gachaChances, active: true },
+    create: { id: "gacha", freeTickets: 3, ticketCost: BigInt(5000), chances: gachaChances, active: true },
+  });
+  console.log("  gachaConfig: ok");
 
   console.log("Seeding effects...");
   const effectMap = {};

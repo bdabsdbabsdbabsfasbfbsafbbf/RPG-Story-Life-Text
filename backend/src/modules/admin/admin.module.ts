@@ -769,6 +769,56 @@ export function createAdminModule(app: Express): void {
     try { await prisma.craftRecipe.delete({ where: { id: req.params.id } }); res.json({ message: "Deleted" }); } catch (err) { next(err); }
   });
 
+  // Boosters CRUD (catálogo do Gacha)
+  app.get("/api/admin/boosters", requireAdmin, async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      res.json(await prisma.booster.findMany({ orderBy: [{ rarity: "asc" }, { boostType: "asc" }] }));
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/admin/boosters", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try { res.status(201).json(await saveWithFk("booster", null, req.body)); } catch (err) { next(err); }
+  });
+
+  app.put("/api/admin/boosters/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try { res.json(await saveWithFk("booster", req.params.id, req.body)); } catch (err) { next(err); }
+  });
+
+  app.delete("/api/admin/boosters/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try { await prisma.booster.delete({ where: { id: req.params.id } }); res.json({ message: "Deleted" }); } catch (err) { next(err); }
+  });
+
+  // Config do Gacha (uma linha): tickets grátis, custo do ticket extra e chances por raridade
+  app.get("/api/admin/gacha-config", requireAdmin, async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const config = await prisma.gachaConfig.findUnique({ where: { id: "gacha" } });
+      res.json(config ? { ...config, ticketCost: Number(config.ticketCost) } : null);
+    } catch (err) { next(err); }
+  });
+
+  app.put("/api/admin/gacha-config", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { freeTickets, ticketCost, chances, active } = req.body;
+      const parsedChances = typeof chances === "string" ? JSON.parse(chances) : chances ?? {};
+      res.json(await prisma.gachaConfig.upsert({
+        where: { id: "gacha" },
+        update: {
+          freeTickets: Number(freeTickets) || 3,
+          ticketCost: BigInt(Number(ticketCost) || 0),
+          chances: parsedChances,
+          active: active !== false,
+        },
+        create: {
+          id: "gacha",
+          freeTickets: Number(freeTickets) || 3,
+          ticketCost: BigInt(Number(ticketCost) || 0),
+          chances: parsedChances,
+          active: active !== false,
+        },
+      }));
+    } catch (err) { next(err); }
+  });
+
   app.get("/api/admin/patch-notes", requireAdmin, async (_req: Request, res: Response, next: NextFunction) => {
     try {
       res.json(await prisma.patchNote.findMany({ orderBy: { createdAt: "desc" } }));

@@ -1,0 +1,174 @@
+import { Express, Request, Response, NextFunction } from "express";
+import { prisma } from "../../core/database";
+import { authenticate } from "../../core/middleware/auth";
+import { AppError } from "../../core/middleware/errorHandler";
+import {
+  BOOST_MAX_BY_RARITY,
+  RARITY_LABELS,
+  getGachaConfig,
+  rollBooster,
+  rollRarity,
+} from "../../core/boosters";
+
+const GACHA_TYPES = new Set(["gacha"]);
+
+export function createGachaModule(app: Express): void {
+  // Painel do gacha: config + tickets do jogador + catálogo + boosters obtidos
+  app.get("/api/npcs/:id/gacha", authenticate, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const npc = await prisma.npc.findUnique({ where: { id: req.params.id } });
+      if (!npc) throw new AppError(404, "NPC not found");
+      if (!GACHA_TYPES.has(npc.type)) throw new AppError(403, "Este NPC não é o Gacha.");
+
+      const [config, user, catalog, owned] = await Promise.all([
+        getGachaConfig(),
+        prisma.user.findUnique({ where: { id: req.user!.userId }, select: { id: true, gachaTickets: true, gold: true } }),
+        prisma.booster.findMany({ where: { isActive: true }, orderBy: [{ rarity: "asc" }, { boostType: "asc" }] }),
+        prisma.userBooster.findMany({
+          where: { userId: req.user!.userId },
+          include: { booster: true },
+          orderBy: { acquiredAt: "desc" },
+        }),
+      ]);
+      if (!user) throw new AppError(404, "User not found");
+
+      res.json({
+        npc: { id: npc.id, name: npc.name, description: npc.description, type: npc.type },
+        config: config ? { ...config, ticketCost: Number(config.ticketCost) } : null,
+        tickets: user.gachaTickets,
+        gold: Number(user.gold),
+        catalog,
+        owned: owned.map((ub) => ({ ...ub, booster: { ...ub.booster, boostValue: Math.min(ub.booster.boostValue, BOOST_MAX_BY_RARITY[ub.booster.rarity] ?? ub.booster.boostValue) } })),
+        rarityLabels: RARITY_LABELS,
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Rolar 1x: consome 1 ticket, sorteia raridade -> booster -> entrega
+  app.post("/api/npcs/:id/gacha/roll", authenticate, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const npc = await prisma.npc.findUnique({ where: { id: req.params.id }, select: { type: true } });
+      if (!npc) throw new AppError(404, "NPC not found");
+      if (!GACHA_TYPES.has(npc.type)) throw new AppError(403, "Este NPC não é o Gacha.");
+
+      const config = await getGachaConfig();
+      if (!config || !config.active) throw new AppError(400, "Gacha desativado no momento.");
+
+      const user = await prisma.user.findUnique({
+        where: { id: req.user!.userId },
+        select: { id: true, gachaTickets: true },
+      });
+      if (!user) throw new AppError(404, "User not found");
+      if (user.gachaTickets < 1) throw new AppError(400, "Você não tem tickets de gacha. Compre um no NPC.");
+
+      const rarity = rollRarity(config.chances);
+      const booster = await rollBooster(rarity);
+      if (!booster) throw new AppError(404, `Nenhuma recompensa configurada para a raridade ${RARITY_LABELS[rarity] ?? rarity}.`);
+
+      const boostValue = Math.min(booster.boostValue, BOOST_MAX_BY_RARITY[rarity] ?? booster.boostValue);
+
+      await prisma.$transaction([
+        prisma.user.update({ where: { id: user.id }, data: { gachaTickets: { decrement: 1 } } }),
+        prisma.userBooster.upsert({
+          where: { userId_boosterId: { userId: user.id, boosterId: booster.id } },
+          create: { userId: user.id, boosterId: booster.id, quantity: 1 },
+          update: { quantity: { increment: 1 } },
+        }),
+      ]);
+
+      const ticketsLeft = Math.max(0, user.gachaTickets - 1);
+      res.json({
+        rarity,
+        rarityLabel: RARITY_LABELS[rarity] ?? rarity,
+        booster: { ...booster, boostValue },
+        ticketsLeft,
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Comprar ticket extra com ouro (config: ticketCost > 0)
+  app.post("/api/npcs/:id/gacha/buy-ticket", authenticate, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const npc = await prisma.npc.findUnique({ where: { id: req.params.id }, select: { type: true } });
+      if (!npc) throw new AppError(404, "NPC not found");
+      if (!GACHA_TYPES.has(npc.type)) throw new AppError(403, "Este NPC não é o Gacha.");
+
+      const config = await getGachaConfig();
+      if (!config || !config.active) throw new AppError(400, "Gacha desativado no momento.");
+      const cost = Number(config.ticketCost) || 0;
+      if (cost <= 0) throw new AppError(400, "Tickets não podem ser comprados.");
+
+      const user = await prisma.user.findUnique({ where: { id: req.user!.userId }, select: { id: true, gold: true, gachaTickets: true } });
+      if (!user) throw new AppError(404, "User not found");
+      if (Number(user.gold) < cost) throw new AppError(400, `Gold insuficiente (precisa de ${cost}).`);
+
+      await prisma.$transaction([
+        prisma.user.update({ where: { id: user.id }, data: { gold: { decrement: cost } } }),
+        prisma.user.update({ where: { id: user.id }, data: { gachaTickets: { increment: 1 } } }),
+      ]);
+
+      res.json({ cost, ticketsLeft: user.gachaTickets + 1, goldLeft: Math.max(0, Number(user.gold) - cost) });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Meus boosters (todas as cópias do jogador)
+  app.get("/api/gacha/my", authenticate, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const [owned, config] = await Promise.all([
+        prisma.userBooster.findMany({
+          where: { userId: req.user!.userId },
+          include: { booster: true },
+          orderBy: { acquiredAt: "desc" },
+        }),
+        getGachaConfig(),
+      ]);
+      res.json({
+        owned: owned.map((ub) => ({ ...ub, booster: { ...ub.booster, boostValue: Math.min(ub.booster.boostValue, BOOST_MAX_BY_RARITY[ub.booster.rarity] ?? ub.booster.boostValue) } })),
+        config: config ? { ...config, ticketCost: Number(config.ticketCost) } : null,
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Equipar booster: máx. 1 anel + 1 colar equipados
+  app.post("/api/gacha/boosters/:id/equip", authenticate, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const owned = await prisma.userBooster.findUnique({
+        where: { id: req.params.id },
+        include: { booster: true },
+      });
+      if (!owned || owned.userId !== req.user!.userId) throw new AppError(404, "Booster não encontrado");
+      if (owned.quantity < 1) throw new AppError(400, "Você não possui este booster");
+
+      await prisma.$transaction([
+        prisma.userBooster.updateMany({
+          where: { userId: req.user!.userId, equipped: true, booster: { type: owned.booster.type } },
+          data: { equipped: false },
+        }),
+        prisma.userBooster.update({ where: { id: owned.id }, data: { equipped: true } }),
+      ]);
+
+      res.json({ message: "Booster equipado", id: owned.id, type: owned.booster.type });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.post("/api/gacha/boosters/:id/unequip", authenticate, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const owned = await prisma.userBooster.findUnique({ where: { id: req.params.id }, select: { userId: true } });
+      if (!owned || owned.userId !== req.user!.userId) throw new AppError(404, "Booster não encontrado");
+      await prisma.userBooster.update({ where: { id: req.params.id }, data: { equipped: false } });
+      res.json({ message: "Booster removido" });
+    } catch (err) {
+      next(err);
+    }
+  });
+}

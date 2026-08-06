@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { mapsApi, npcApi, questsApi, raidApi, craftApi, authApi } from "../services/api";
+import { mapsApi, npcApi, questsApi, raidApi, craftApi, authApi, gachaApi } from "../services/api";
 import { Map as MapType } from "../types";
 import { getSocket } from "../services/socket";
 import {
   ArrowLeft, Skull, Store, ScrollText, Navigation, Shield, Map as MapIcon,
   X, ShoppingBag, CheckCircle2, Clock, Gift, Lock, Swords, Hammer, Crown, Sparkles,
+  Dices, Ticket, Gem,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuthStore } from "../store/authStore";
@@ -42,6 +43,66 @@ interface CraftRecipe {
   isActive: boolean;
   resultItem?: { name: string } | null;
 }
+
+interface GachaBooster {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  icon?: string | null;
+  type: "ring" | "necklace";
+  rarity: string;
+  boostType: string;
+  boostValue: number;
+}
+
+interface OwnedBooster {
+  id: string;
+  quantity: number;
+  equipped: boolean;
+  booster: GachaBooster;
+}
+
+interface GachaData {
+  npc: { id: string; name: string; description: string; type: string };
+  config: { id: string; freeTickets: number; ticketCost: number; chances: Record<string, number>; active: boolean } | null;
+  tickets: number;
+  gold: number;
+  catalog: GachaBooster[];
+  owned: OwnedBooster[];
+  rarityLabels: Record<string, string>;
+}
+
+interface GachaRollResult {
+  rarity: string;
+  rarityLabel: string;
+  booster: GachaBooster;
+  ticketsLeft: number;
+}
+
+const GACHA_TYPES = new Set(["gacha"]);
+
+function isGachaNpc(type?: string | null) {
+  return !!type && GACHA_TYPES.has(type);
+}
+
+const BOOST_LABELS: Record<string, string> = {
+  defense: "Defesa",
+  damage: "Dano Geral",
+  dropChance: "Chance de Drop",
+  xp: "XP",
+  gold: "Gold",
+  classXp: "XP de Classe",
+};
+
+const BOOSTER_RARITY_BADGE: Record<string, string> = {
+  common: "bg-gray-600/30 text-gray-300",
+  uncommon: "bg-green-600/30 text-green-300",
+  rare: "bg-blue-600/30 text-blue-300",
+  epic: "bg-purple-600/30 text-purple-300",
+  legendary: "bg-yellow-600/30 text-yellow-300",
+  mythic: "bg-red-600/30 text-red-300",
+};
 
 function parseIngredients(raw: string): { itemName: string; quantity: number }[] {
   try {
@@ -95,6 +156,11 @@ export function MapPage() {
   const [crafts, setCrafts] = useState<CraftRecipe[]>([]);
   const [craftingId, setCraftingId] = useState<string | null>(null);
   const [vendorTab, setVendorTab] = useState<"items" | "enchantments" | "crafts">("items");
+  const [gachaData, setGachaData] = useState<GachaData | null>(null);
+  const [gachaLoading, setGachaLoading] = useState(false);
+  const [rolling, setRolling] = useState(false);
+  const [buyingTicket, setBuyingTicket] = useState(false);
+  const [lastRoll, setLastRoll] = useState<GachaRollResult | null>(null);
 
   const doneQuests = new Set(
     questProgress.filter((q) => q.status === "completed" || q.status === "claimed").map((q) => q.questId)
@@ -173,13 +239,70 @@ export function MapPage() {
     setNpcLoading(true);
     setNpc(null);
     setVendorTab("items");
+    setLastRoll(null);
+    setGachaData(null);
     try {
       const { data } = await npcApi.get(npcId);
       setNpc(data);
+      if (isGachaNpc(data.type)) loadGacha(npcId);
     } catch {
       toast.error("Failed to load NPC");
     } finally {
       setNpcLoading(false);
+    }
+  };
+
+  const loadGacha = async (npcId: string) => {
+    setGachaLoading(true);
+    try {
+      const { data } = await gachaApi.info(npcId);
+      setGachaData(data);
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Falha ao carregar o gacha.");
+    } finally {
+      setGachaLoading(false);
+    }
+  };
+
+  const rollGacha = async () => {
+    if (!npc) return;
+    setRolling(true);
+    try {
+      const { data } = await gachaApi.roll(npc.id);
+      setLastRoll(data);
+      if (gachaData) setGachaData({ ...gachaData, tickets: data.ticketsLeft });
+      loadGacha(npc.id);
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Falha na rolagem.");
+    } finally {
+      setRolling(false);
+    }
+  };
+
+  const buyTicket = async () => {
+    if (!npc) return;
+    setBuyingTicket(true);
+    try {
+      const { data } = await gachaApi.buyTicket(npc.id);
+      toast.success(`Ticket comprado por ${data.cost} gold.`);
+      loadGacha(npc.id);
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Falha ao comprar ticket.");
+    } finally {
+      setBuyingTicket(false);
+    }
+  };
+
+  const toggleBooster = async (owned: OwnedBooster) => {
+    try {
+      if (owned.equipped) {
+        await gachaApi.unequip(owned.id);
+      } else {
+        await gachaApi.equip(owned.id);
+      }
+      if (npc) loadGacha(npc.id);
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Falha ao equipar booster.");
     }
   };
 
@@ -388,6 +511,7 @@ export function MapPage() {
                   <div className="w-8 h-8 rounded-lg bg-dark-700 flex items-center justify-center">
                     {isShopNpc(mn.npc.type) ? <Store size={16} className="text-cyan-400" /> :
                      isQuestNpc(mn.npc.type) ? <ScrollText size={16} className="text-green-400" /> :
+                     isGachaNpc(mn.npc.type) ? <Dices size={16} className="text-yellow-400" /> :
                      <Shield size={16} className="text-purple-400" />}
                   </div>
                   <div>
@@ -673,7 +797,122 @@ export function MapPage() {
               </div>
             )}
 
-            {npc.type && !isShopNpc(npc.type) && !isQuestNpc(npc.type) && (
+            {isGachaNpc(npc.type) && (
+              <div className="space-y-4">
+                {gachaLoading && !gachaData ? (
+                  <p className="text-sm text-gray-500">Carregando o gacha...</p>
+                ) : gachaData?.config?.active === false ? (
+                  <p className="text-sm text-gray-500 flex items-center gap-2">
+                    <Lock size={14} /> O gacha está temporariamente desativado.
+                  </p>
+                ) : gachaData ? (
+                  <>
+                    {/* Tickets */}
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className="flex items-center gap-2 px-3 py-2 rounded-lg bg-dark-700 border border-dark-600 text-sm font-medium">
+                        <Ticket size={16} className="text-purple-400" />
+                        {gachaData.tickets} {gachaData.tickets === 1 ? "ticket" : "tickets"}
+                      </span>
+                      <button
+                        onClick={rollGacha}
+                        disabled={rolling || gachaData.tickets < 1}
+                        className="btn-primary text-xs px-4 py-2 flex items-center gap-2 disabled:opacity-50"
+                      >
+                        <Dices size={14} /> {rolling ? "Rolando..." : "Rolar (1 ticket)"}
+                      </button>
+                      {gachaData.config && Number(gachaData.config.ticketCost) > 0 && (
+                        <button
+                          onClick={buyTicket}
+                          disabled={buyingTicket}
+                          className="btn-secondary text-xs px-3 py-2 flex items-center gap-2 disabled:opacity-50"
+                        >
+                          <Gem size={14} /> Comprar ticket ({Number(gachaData.config.ticketCost).toLocaleString()} gold)
+                        </button>
+                      )}
+                    </div>
+                    {gachaData.tickets < 1 && (
+                      <p className="text-[11px] text-gray-500">Sem tickets? Compre mais ou espere novas formas de obtê-los (configurável).</p>
+                    )}
+
+                    {/* Última rolagem */}
+                    {lastRoll && (
+                      <div className={`card p-3 border ${BOOSTER_RARITY_BADGE[lastRoll.rarity] ?? "border-gray-600"}`}>
+                        <p className="text-xs text-gray-400 uppercase tracking-wide flex items-center gap-2">
+                          <Sparkles size={12} className="text-yellow-400" /> Última rolagem — {lastRoll.rarityLabel}
+                        </p>
+                        <p className="text-sm font-medium mt-1">{lastRoll.booster.name}</p>
+                        <p className="text-xs text-gray-400">{BOOST_LABELS[lastRoll.booster.boostType] ?? lastRoll.booster.boostType} +{lastRoll.booster.boostValue}%</p>
+                      </div>
+                    )}
+
+                    {/* Catálogo por raridade */}
+                    <div>
+                      <p className="text-xs text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                        <Gem size={12} className="text-cyan-400" /> Possíveis recompensas
+                      </p>
+                      <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                        {gachaData.catalog.map((b) => {
+                          const chance = gachaData.config?.chances?.[b.rarity] ?? null;
+                          return (
+                            <div key={b.id} className="flex items-center gap-2 text-xs">
+                              <span className={`px-2 py-0.5 rounded-full font-medium w-fit shrink-0 ${BOOSTER_RARITY_BADGE[b.rarity] ?? "bg-gray-600/30 text-gray-300"}`}>
+                                {gachaData.rarityLabels?.[b.rarity] ?? b.rarity}
+                              </span>
+                              <span className="text-gray-300">{BOOST_LABELS[b.boostType] ?? b.boostType} +{b.boostValue}%</span>
+                              {chance !== null && <span className="text-gray-500 ml-auto shrink-0">{chance}%</span>}
+                            </div>
+                          );
+                        })}
+                        {gachaData.catalog.length === 0 && <p className="text-xs text-gray-500">Catálogo vazio — aguarde o admin configurar.</p>}
+                      </div>
+                    </div>
+
+                    {/* Meus boosters */}
+                    <div>
+                      <p className="text-xs text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                        <Crown size={12} className="text-yellow-400" /> Meus Anéis e Colares ({gachaData.owned.length})
+                      </p>
+                      {gachaData.owned.length > 0 ? (
+                        <div className="space-y-1.5">
+                          {gachaData.owned.map((ub) => (
+                            <div key={ub.id} className={`card p-2.5 flex items-center gap-3 ${ub.equipped ? "border-purple-500/40" : ""}`}>
+                              <div className="w-8 h-8 rounded-lg bg-dark-700 flex items-center justify-center shrink-0">
+                                <Gem size={14} className={ub.booster.type === "ring" ? "text-yellow-400" : "text-orange-400"} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">
+                                  {ub.booster.name}
+                                  {ub.quantity > 1 && <span className="text-[10px] text-gray-400 ml-1">x{ub.quantity}</span>}
+                                </p>
+                                <p className="text-[11px] text-gray-500">
+                                  <span className={`px-1.5 py-px rounded-full text-[10px] mr-1 ${BOOSTER_RARITY_BADGE[ub.booster.rarity] ?? ""}`}>
+                                    {gachaData.rarityLabels?.[ub.booster.rarity] ?? ub.booster.rarity}
+                                  </span>
+                                  {BOOST_LABELS[ub.booster.boostType] ?? ub.booster.boostType} +{ub.booster.boostValue}% • {ub.booster.type === "ring" ? "Anel" : "Colar"}
+                                  {ub.equipped && <span className="text-purple-300 ml-1.5">• equipado</span>}
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => toggleBooster(ub)}
+                                className={`text-xs px-3 py-1.5 rounded-lg shrink-0 ${ub.equipped ? "btn-secondary" : "btn-primary"}`}
+                              >
+                                {ub.equipped ? "Remover" : "Equipar"}
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-500">Você ainda não rolou nenhum anel/colar. Use um ticket!</p>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-sm text-gray-500">Falha ao carregar o gacha.</p>
+                )}
+              </div>
+            )}
+
+            {npc.type && !isShopNpc(npc.type) && !isQuestNpc(npc.type) && !isGachaNpc(npc.type) && (
               <p className="text-sm text-gray-500 flex items-center gap-2">
                 <Lock size={14} /> Funcionalidade em breve.
               </p>

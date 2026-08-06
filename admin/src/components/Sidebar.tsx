@@ -21,6 +21,8 @@ import {
   Sparkles,
   ShoppingCart,
   Newspaper,
+  Dices,
+  Gem,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -44,6 +46,8 @@ const navItems: NavItem[] = [
   { to: '/npcs', icon: <Contact size={18} />, label: 'NPCs' },
   { to: '/shops', icon: <ShoppingBag size={18} />, label: 'Shops' },
   { to: '/shopProducts', icon: <ShoppingCart size={18} />, label: 'Loja do Game' },
+  { to: '/boosters', icon: <Dices size={18} />, label: 'Gacha (Anéis/Colares)' },
+  { to: '/gacha', icon: <Gem size={18} />, label: 'Gacha Config' },
   { to: '/patchNotes', icon: <Newspaper size={18} />, label: 'Patch Notes' },
   { to: '/statModels', icon: <Gauge size={18} />, label: 'Stat Models' },
   { to: '/users', icon: <Users size={18} />, label: 'Users' },
