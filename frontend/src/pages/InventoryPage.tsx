@@ -314,7 +314,7 @@ export function InventoryPage() {
                 <p className="text-xs text-gray-500 capitalize">{inv.item.type} {inv.item.level > 1 ? `• Lv.${inv.item.level}` : ""}</p>
                 {inv.item.type === "weapon" && (
                   <p className="text-[11px] text-orange-300/90">
-                    DPS {Number(inv.item.dps || 0).toLocaleString()} · {Number(inv.item.attackSpeedMs) > 0 ? `${(Number(inv.item.attackSpeedMs) / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}s` : "vel. da classe"}
+                    DPS {Number(inv.item.dps || 0).toLocaleString()} · {Number(inv.item.attackSpeedMs) > 0 ? `${(Number(inv.item.attackSpeedMs) / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}s` : "2s"}
                   </p>
                 )}
                 {inv.quantity > 1 && (
@@ -388,7 +388,7 @@ export function InventoryPage() {
                     <div className="col-span-2 flex items-center justify-between">
                       <span className="text-orange-300/90">Velocidade</span>
                       <span className="font-mono text-orange-300">
-                        {Number(selectedItem.item.attackSpeedMs) > 0 ? `${(Number(selectedItem.item.attackSpeedMs) / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}s` : "da classe"}
+                        {Number(selectedItem.item.attackSpeedMs) > 0 ? `${(Number(selectedItem.item.attackSpeedMs) / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}s` : "2s"}
                       </span>
                     </div>
                   )}

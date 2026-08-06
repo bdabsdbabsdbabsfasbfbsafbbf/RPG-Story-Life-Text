@@ -237,7 +237,6 @@ export class CombatService {
         scaling: parseJson(gameClass.statModel?.scaling, {}),
         coreStats: parseJson(gameClass.statModel?.coreStats, {}),
         conversions: parseJson(gameClass.statModel?.conversions, []),
-        attackIntervalBase: gameClass.statModel?.attackIntervalBase ?? 0,
         combatStatsBase: parseJson(gameClass.statModel?.combatStatsBase, {}),
         bonuses: {
           ...classBonuses,

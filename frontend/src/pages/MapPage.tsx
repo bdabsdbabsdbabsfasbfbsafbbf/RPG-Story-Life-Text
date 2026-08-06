@@ -629,7 +629,7 @@ export function MapPage() {
                             <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                               {!isEnchantment && offer.item?.type === "weapon" && (
                                 <span className="text-[10px] px-1.5 py-0.5 bg-orange-500/15 text-orange-300 rounded-md">
-                                  DPS {Number(offer.item.dps || 0).toLocaleString()} · {Number(offer.item.attackSpeedMs) > 0 ? `${(Number(offer.item.attackSpeedMs) / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}s` : "vel. da classe"}
+                                  DPS {Number(offer.item.dps || 0).toLocaleString()} · {Number(offer.item.attackSpeedMs) > 0 ? `${(Number(offer.item.attackSpeedMs) / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}s` : "2s"}
                                 </span>
                               )}
                               {offer.item?.requiredVip && (

@@ -64,7 +64,7 @@ function pickFrom(record: Record<string, any>, target: string): number {
 
 export interface StatConversion {
   stat: string; // strength, intellect, endurance, dexterity, wisdom, luck
-  target: string; // attackPower, spellPower, critChance, critDamage, dodge, hitChance, attackSpeedPercent, cooldownReduction, hp, mana, defense, magicDefense
+  target: string; // attackPower, spellPower, critChance, critDamage, dodge, hitChance, cooldownReduction, hp, mana, defense, magicDefense
   factor: number;
 }
 
@@ -78,14 +78,13 @@ export interface StatsInput {
     scaling?: Record<string, any>;
     coreStats?: Record<string, any>;
     conversions?: StatConversion[];
-    attackIntervalBase?: number;
     combatStatsBase?: Record<string, any>;
     bonuses?: Record<string, any>;
   };
   resource?: Record<string, any>;
   passives: PassiveDef[]; // apenas passivas desbloqueadas pelo rank
   coreStats?: CoreStats; // Core Stats vindos de equipamentos + encantamentos
-  attackSpeedMs?: number; // override vindo da arma equipada (0 = usa o scaling da classe)
+  attackSpeedMs?: number; // ÚNICA fonte de velocidade de ataque: a arma equipada (sem arma = 2000ms)
   weaponDps?: number; // DPS natural da arma equipada (soma ao attack power)
 }
 
@@ -173,13 +172,9 @@ export function computeStats(input: StatsInput): DerivedStats {
   stats.dodge = Math.min(60, Math.max(0, num(combatStatsBase.evasion, 0) + stats.speed * num(scaling.dodgePerSpeed, 0.02) + (conversions.dodge || 0) + flatPassiveMods(input.passives, "dodge") + percentPassiveMods(input.passives, "dodge")));
   stats.cooldownReduction = num(combatStatsBase.cooldownReduction, 0) + (conversions.cooldownReduction || 0) + flatPassiveMods(input.passives, "cooldownReduction") + percentPassiveMods(input.passives, "cooldownReduction");
 
-  // Attack Speed: NUNCA redução direta em ms. Intervalo final = Base ÷ (1 + AttackSpeed%).
-  const attackIntervalBase = Math.max(100, input.statModel?.attackIntervalBase ? num(input.statModel.attackIntervalBase, 1000) : num(scaling.attackSpeedMs, 2000));
-  const attackSpeedPercent = (conversions.attackSpeedPercent || 0) + percentPassiveMods(input.passives, "attackSpeed") + num(bonuses.attackSpeed, 0);
-  stats.attackSpeedMs = Math.max(100, Math.round(attackIntervalBase / (1 + attackSpeedPercent / 100)));
-  if (input.attackSpeedMs && input.attackSpeedMs > 0) {
-    stats.attackSpeedMs = Math.max(100, input.attackSpeedMs);
-  }
+  // Attack Speed: definida EXCLUSIVAMENTE pela arma equipada (attackSpeedMs do item).
+  // A classe NÃO define intervalo nem velocidade de ataque. Sem arma: 2000ms padrão.
+  stats.attackSpeedMs = Math.max(100, Math.round(input.attackSpeedMs && input.attackSpeedMs > 0 ? input.attackSpeedMs : 2000));
 
   stats.manaRegenPerTick = num(resource.manaRegenPerTick, num(scaling.manaRegenPerTick, 5)) + flatPassiveMods(input.passives, "manaRegen");
   stats.healthRegenPerTick = num(scaling.healthRegenPerTick, 0) + flatPassiveMods(input.passives, "healthRegen");

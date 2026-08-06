@@ -159,7 +159,8 @@ model GameClass {
 }
 
 // Stat model da classe: identidade (nome/categoria) + os 6 core stats (base e por nível)
-// + conversões de atributos + ritmo de ataque. A Combat Engine calcula todos os derivados.
+// + conversões de atributos. A Combat Engine calcula todos os derivados.
+// A velocidade de ataque é definida EXCLUSIVAMENTE pela arma equipada (Item.attackSpeedMs).
 model StatModel {
   id          String      @id @default(uuid())
   name        String      @unique
@@ -181,11 +182,8 @@ coreStatsPerLevel Json  @default("{}")
   // conversions: [{ stat, target, factor }] — como os atributos viram Combat Stats.
   // Ex.: { stat: "strength", target: "attackPower", factor: 1.5 },
   //      { stat: "endurance", target: "hp", factor: 15 },
-  //      { stat: "dexterity", target: "attackSpeedPercent", factor: 0.2 },
   //      { stat: "luck", target: "critChance", factor: 0.1 }
   conversions Json        @default("[]")
-  // attackIntervalBase: ms naturais entre auto-ataques (ex.: 500 melee, 700 tank, 400 dodge)
-  attackIntervalBase Int  @default(1000)
   // combatStatsBase: { hitChance, critChance, critMultiplier, evasion, cooldownReduction }
   combatStatsBase Json   @default("{}")
   // bonuses: LEGADO (fallback opcional) — removido do editor
@@ -371,7 +369,7 @@ model Item {
   sellPrice     BigInt   @default(0)
   effects       String? // apenas consumíveis (ex: {"heal":50})
   // Natural da arma (apenas weapon): 0 = usa o scaling da classe
-  attackSpeedMs  Int     @default(0) // ms entre ataques (velocidade natural)
+  attackSpeedMs  Int     @default(0) // ÚNICA fonte de velocidade de ataque do jogador (a arma); 0 = padrão 2000ms
   dps            Float   @default(0) // dano por segundo natural da arma
   // Core Stats — únicos atributos que equipamentos fornecem
   strength      Int      @default(0)
