@@ -6,10 +6,11 @@
   },
   "deploy": {
     "numReplicas": 1,
+    "preDeployCommand": "cd backend && npx prisma db push --skip-generate && node prisma/seed-content.js",
     "healthcheckPath": "/api/health",
     "healthcheckTimeout": 300,
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 5,
-    "startCommand": "cd backend && npx prisma db push --skip-generate && node prisma/seed-content.js && node dist/server.js"
+    "startCommand": "cd backend && node dist/server.js"
   }
 }
