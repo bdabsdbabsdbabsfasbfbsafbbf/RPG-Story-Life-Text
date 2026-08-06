@@ -543,6 +543,9 @@ export const crudConfigs: CrudConfig[] = [
       { name: "itemId", label: "Item (tipo item)", type: "select", optionsFrom: "items", visibleIf: { field: "type", values: ["item"] } },
       { name: "classId", label: "Classe (tipo class)", type: "select", optionsFrom: "classes", visibleIf: { field: "type", values: ["class"] } },
       { name: "quantity", label: "Quantidade (tipo item)", type: "number", defaultValue: 1, visibleIf: { field: "type", values: ["item"] }, hint: "Quantas unidades do item o jogador recebe por compra" },
+      { name: "requiredLevel", label: "Nível mínimo", type: "number", defaultValue: 0, hint: "Nível do personagem ativo para comprar (0 = qualquer)" },
+      { name: "requiredVip", label: "Exclusivo VIP", type: "boolean", defaultValue: false },
+      { name: "requiredQuestIds", label: "Quests para desbloquear (ids, JSON array)", type: "text", hint: "ex: [\"3f2a1b\", \"8c4d5e\"] — o jogador precisa ter concluído todas para comprar" },
       { name: "icon", label: "Ícone", type: "text" },
       { name: "sortOrder", label: "Sort Order", type: "number", defaultValue: 0 },
       { name: "isActive", label: "Active", type: "boolean", defaultValue: true },
@@ -592,6 +595,7 @@ export const crudConfigs: CrudConfig[] = [
       { name: "resultItemId", label: "Item resultado", type: "select", required: true, optionsFrom: "items", hint: "Item entregue ao craftar" },
       { name: "resultQuantity", label: "Quantidade do resultado", type: "number", defaultValue: 1 },
       { name: "requiredLevel", label: "Nível mínimo", type: "number", defaultValue: 1 },
+      { name: "requiredQuestIds", label: "Quests para desbloquear (ids, JSON array)", type: "text", hint: "ex: [\"3f2a1b\"] — o jogador precisa ter concluído para craftar" },
       {
         name: "ingredients",
         label: "Ingredientes",

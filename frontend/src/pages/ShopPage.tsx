@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { shopApi, authApi } from "../services/api";
+import { shopApi, authApi, questsApi } from "../services/api";
 import {
-  ShoppingBag, Gem, Crown, Trophy, Coins, Sparkles, Package, Swords, Layers,
+  ShoppingBag, Gem, Crown, Trophy, Coins, Sparkles, Package, Swords, Layers, Lock,
 } from "lucide-react";
 import { useAuthStore } from "../store/authStore";
 import toast from "react-hot-toast";
@@ -49,6 +49,9 @@ interface ShopProduct {
   diamondAmount: number;
   vipDays: number;
   quantity: number;
+  requiredLevel?: number;
+  requiredVip?: boolean;
+  requiredQuestIds?: string | null;
   enchantmentId?: string | null;
   enchantment?: ShopEnchantment | null;
   itemId?: string | null;
@@ -77,7 +80,19 @@ const rarityColor: Record<string, string> = {
   artifact: "text-cyan-400",
 };
 
+function parseQuestIdList(raw?: string | null): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed.map((x: unknown) => String(x)).filter(Boolean);
+  } catch {
+    /* não é JSON — tenta formato separado por vírgula */
+  }
+  return String(raw).split(",").map((x) => x.trim()).filter(Boolean);
+}
+
 function productVip(product: ShopProduct): boolean {
+  if (product.requiredVip) return true;
   if (product.type === "item") return !!product.item?.requiredVip;
   if (product.type === "enchantment") return !!product.enchantment?.requiredVip;
   if (product.type === "class") return !!product.gameClass?.requiredVip;
@@ -114,6 +129,7 @@ export function ShopPage() {
   const [confirm, setConfirm] = useState<ShopProduct | null>(null);
   const [buying, setBuying] = useState(false);
   const [tab, setTab] = useState<TabKey>("items");
+  const [doneQuests, setDoneQuests] = useState<Set<string>>(new Set());
   const { user, setUser } = useAuthStore();
 
   useEffect(() => {
@@ -122,6 +138,16 @@ export function ShopPage() {
       .then(({ data }) => setProducts(Array.isArray(data) ? data : []))
       .catch(() => {})
       .finally(() => setLoading(false));
+    questsApi
+      .progress()
+      .then(({ data }) => {
+        if (Array.isArray(data)) {
+          setDoneQuests(
+            new Set(data.filter((q: any) => q.status === "completed" || q.status === "claimed").map((q: any) => q.questId))
+          );
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const refreshUser = async () => {
@@ -148,6 +174,19 @@ export function ShopPage() {
   };
 
   const vipActive = !!user?.vipUntil && new Date(user.vipUntil).getTime() > Date.now();
+
+  const characterLevel = user?.characters?.[0]?.level ?? user?.level ?? 0;
+
+  const questLocked = (product: ShopProduct) => {
+    const ids = parseQuestIdList(product.requiredQuestIds);
+    return ids.length > 0 && !ids.every((id) => doneQuests.has(id));
+  };
+
+  const levelLocked = (product: ShopProduct) =>
+    Number(product.requiredLevel) > 0 && characterLevel < Number(product.requiredLevel);
+
+  const productLocked = (product: ShopProduct) =>
+    (productVip(product) && !vipActive) || questLocked(product) || levelLocked(product);
 
   if (loading) {
     return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" /></div>;
@@ -235,6 +274,7 @@ export function ShopPage() {
             const subtitle = productSubtitle(product);
             const enough = enoughFor(product);
             const inGameCurrency = product.currency === "diamond" || product.currency === "gold";
+            const locked = productLocked(product);
             return (
               <div key={product.id} className="panel p-4 flex flex-col">
                 <div className="flex items-center gap-3 mb-2">
@@ -257,6 +297,16 @@ export function ShopPage() {
                           {product.item.rarity}
                         </span>
                       )}
+                      {Number(product.requiredLevel) > 0 && (
+                        <span className="text-[10px] px-1.5 py-0.5 bg-yellow-500/15 text-yellow-300 rounded-md">
+                          Nv. {product.requiredLevel}+
+                        </span>
+                      )}
+                      {questLocked(product) && (
+                        <span className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 bg-sky-500/15 text-sky-300 rounded-md">
+                          <Lock size={9} /> Quest
+                        </span>
+                      )}
                     </div>
                     {subtitle && <p className="text-[11px] text-green-400">{subtitle}</p>}
                   </div>
@@ -264,9 +314,11 @@ export function ShopPage() {
                 <p className="text-xs text-gray-400 mb-4 flex-1">{product.description}</p>
                 <button
                   onClick={() => setConfirm(product)}
-                  disabled={inGameCurrency && !enough}
+                  disabled={locked || (inGameCurrency && !enough)}
                   className={`w-full text-sm px-3 py-2 rounded-lg font-medium transition-colors ${
-                    inGameCurrency
+                    locked
+                      ? "bg-dark-700 text-gray-500"
+                      : inGameCurrency
                       ? enough
                         ? "bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:opacity-90"
                         : "bg-dark-700 text-gray-500"
@@ -274,8 +326,17 @@ export function ShopPage() {
                   }`}
                 >
                   <span className="flex items-center justify-center gap-1.5">
-                    {product.currency === "diamond" ? <Gem size={14} className="text-cyan-300" /> : <Coins size={14} className="text-yellow-400" />}
-                    {priceLabel(product)}
+                    {locked ? (
+                      <>
+                        <Lock size={14} />
+                        {questLocked(product) ? "Requer quest" : levelLocked(product) ? `Requer Nv. ${product.requiredLevel}` : "Requer VIP"}
+                      </>
+                    ) : (
+                      <>
+                        {product.currency === "diamond" ? <Gem size={14} className="text-cyan-300" /> : <Coins size={14} className="text-yellow-400" />}
+                        {priceLabel(product)}
+                      </>
+                    )}
                   </span>
                 </button>
               </div>

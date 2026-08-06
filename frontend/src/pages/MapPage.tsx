@@ -14,7 +14,7 @@ interface NpcDetail {
   id: string;
   name: string;
   type: string;
-  shopItems?: { id: string; price: string | number; currency?: string; itemId?: string | null; enchantmentId?: string | null; classId?: string | null; requiredLevel?: number; class?: { name: string; slug: string } | null; item: { id: string; name: string; description: string; type: string; rarity: string; icon?: string | null; attackSpeedMs?: number; dps?: number; requiredVip?: boolean } | null; enchantment?: { name: string; slug: string; description: string; icon?: string | null; requiredVip?: boolean } | null }[];
+  shopItems?: { id: string; price: string | number; currency?: string; itemId?: string | null; enchantmentId?: string | null; classId?: string | null; requiredLevel?: number; requiredVip?: boolean; requiredQuestIds?: string | null; class?: { name: string; slug: string } | null; item: { id: string; name: string; description: string; type: string; rarity: string; icon?: string | null; attackSpeedMs?: number; dps?: number; requiredVip?: boolean } | null; enchantment?: { name: string; slug: string; description: string; icon?: string | null; requiredVip?: boolean } | null }[];
   quests?: { id: string; title: string; description: string; requiredLevel: number; requiredRank: number; requiredQuestIds?: string | null; xpReward: string | number; goldReward: string | number }[];
 }
 
@@ -37,6 +37,7 @@ interface CraftRecipe {
   resultItemId: string;
   resultQuantity: number;
   requiredLevel: number;
+  requiredQuestIds?: string | null;
   ingredients: string;
   isActive: boolean;
   resultItem?: { name: string } | null;
@@ -56,6 +57,17 @@ function formatRaidReset(ms: number): string {
   const h = Math.floor(ms / 3600000);
   const m = Math.floor((ms % 3600000) / 60000);
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+function parseQuestIdList(raw?: string | null): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed.map((x: unknown) => String(x)).filter(Boolean);
+  } catch {
+    /* não é JSON — tenta formato separado por vírgula */
+  }
+  return String(raw).split(",").map((x) => x.trim()).filter(Boolean);
 }
 
 const SHOP_TYPES = new Set(["vendor", "shop"]);
@@ -83,6 +95,11 @@ export function MapPage() {
   const [crafts, setCrafts] = useState<CraftRecipe[]>([]);
   const [craftingId, setCraftingId] = useState<string | null>(null);
   const [vendorTab, setVendorTab] = useState<"items" | "enchantments" | "crafts">("items");
+
+  const doneQuests = new Set(
+    questProgress.filter((q) => q.status === "completed" || q.status === "claimed").map((q) => q.questId)
+  );
+  const vipActive = !!user?.vipUntil && new Date(user.vipUntil).getTime() > Date.now();
 
   const refreshUser = async () => {
     try {
@@ -459,6 +476,11 @@ export function MapPage() {
                       const isEnchantment = !!offer.enchantmentId;
                       const label = isEnchantment ? offer.enchantment?.name ?? "Encantamento" : offer.item?.name ?? "-";
                       const description = isEnchantment ? offer.enchantment?.description ?? "" : offer.item?.description ?? "";
+                      const questIds = parseQuestIdList(offer.requiredQuestIds);
+                      const questLocked = questIds.length > 0 && !questIds.every((id) => doneQuests.has(id));
+                      const requiresVip = offer.requiredVip || offer.item?.requiredVip || offer.enchantment?.requiredVip;
+                      const vipLocked = !!requiresVip && !vipActive;
+                      const locked = questLocked || vipLocked;
                       return (
                         <div key={offer.id} className="card p-3 flex items-center gap-3">
                           <div className={`w-9 h-9 rounded-lg flex items-center justify-center overflow-hidden ${isEnchantment ? "bg-purple-500/20" : "bg-dark-700"}`}>
@@ -496,6 +518,16 @@ export function MapPage() {
                                   <Crown size={9} /> VIP
                                 </span>
                               )}
+                              {offer.requiredVip && (
+                                <span className="text-[10px] px-1.5 py-0.5 bg-yellow-500/15 text-yellow-300 rounded-md flex items-center gap-1">
+                                  <Crown size={9} /> VIP
+                                </span>
+                              )}
+                              {questLocked && (
+                                <span className="text-[10px] px-1.5 py-0.5 bg-sky-500/15 text-sky-300 rounded-md flex items-center gap-1">
+                                  <Lock size={9} /> Quest
+                                </span>
+                              )}
                               {offer.class && (
                                 <span className="text-[10px] px-1.5 py-0.5 bg-purple-500/15 text-purple-300 rounded-md flex items-center gap-1">
                                   <Shield size={9} /> Classe: {offer.class.name}
@@ -517,10 +549,11 @@ export function MapPage() {
                             )}
                             <button
                               onClick={() => buyItem(offer)}
-                              disabled={buyingItemId === (isEnchantment ? offer.enchantmentId : offer.itemId)}
+                              disabled={buyingItemId === (isEnchantment ? offer.enchantmentId : offer.itemId) || locked}
                               className="btn-secondary text-xs px-3 py-1 mt-1 disabled:opacity-50"
+                              title={locked ? (questLocked ? "Requer concluir uma quest" : "Requer VIP") : undefined}
                             >
-                              {buyingItemId === (isEnchantment ? offer.enchantmentId : offer.itemId) ? "..." : "Comprar"}
+                              {buyingItemId === (isEnchantment ? offer.enchantmentId : offer.itemId) ? "..." : locked ? (questLocked ? "Quest bloqueada" : "VIP") : "Comprar"}
                             </button>
                           </div>
                         </div>
@@ -538,6 +571,8 @@ export function MapPage() {
                     <div className="space-y-2">
                       {crafts.map((recipe) => {
                         const ings = parseIngredients(recipe.ingredients);
+                        const questIds = parseQuestIdList(recipe.requiredQuestIds);
+                        const craftLocked = questIds.length > 0 && !questIds.every((id) => doneQuests.has(id));
                         return (
                           <div key={recipe.id} className="card p-3 flex items-center gap-3">
                             <div className="w-9 h-9 rounded-lg bg-orange-500/15 flex items-center justify-center shrink-0">
@@ -557,14 +592,20 @@ export function MapPage() {
                                     {ing.quantity}x {ing.itemName}
                                   </span>
                                 ))}
+                                {craftLocked && (
+                                  <span className="text-[10px] px-1.5 py-0.5 bg-sky-500/15 text-sky-300 rounded-md flex items-center gap-1">
+                                    <Lock size={9} /> Quest
+                                  </span>
+                                )}
                               </div>
                             </div>
                             <button
                               onClick={() => craftItem(recipe)}
-                              disabled={craftingId === recipe.id}
+                              disabled={craftingId === recipe.id || craftLocked}
                               className="btn-secondary text-xs px-3 py-1 mt-1 shrink-0 disabled:opacity-50"
+                              title={craftLocked ? "Requer concluir uma quest" : undefined}
                             >
-                              {craftingId === recipe.id ? "..." : "Craftar"}
+                              {craftingId === recipe.id ? "..." : craftLocked ? "Quest bloqueada" : "Craftar"}
                             </button>
                           </div>
                         );

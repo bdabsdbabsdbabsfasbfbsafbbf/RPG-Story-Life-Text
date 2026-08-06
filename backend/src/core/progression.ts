@@ -1,10 +1,74 @@
 import { Prisma } from "@prisma/client";
+import { prisma } from "./database";
+import { AppError } from "./middleware/errorHandler";
 import { GameLimits } from "./gameLimits";
 
 // ===== VIP (bônus balanceados: +10% XP e +10% ouro) =====
 
 export function isVipActive(user: { vipUntil?: Date | null } | null | undefined): boolean {
   return !!user?.vipUntil && user.vipUntil.getTime() > Date.now();
+}
+
+// ===== Desbloqueios via quests (compras/crafts) =====
+
+// Lê uma lista de ids de quests armazenada como JSON string (ou separada por vírgula).
+export function parseQuestIds(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed.map((x) => String(x)).filter(Boolean);
+  } catch {
+    /* não é JSON — tenta formato simples */
+  }
+  return String(raw)
+    .split(",")
+    .map((x) => x.trim())
+    .filter(Boolean);
+}
+
+// Retorna o conjunto de quests concluídas (completed/claimed) do jogador.
+export async function getCompletedQuestIds(userId: string): Promise<Set<string>> {
+  const rows = await prisma.questProgress.findMany({
+    where: { userId, status: { in: ["completed", "claimed"] } },
+    select: { questId: true },
+  });
+  return new Set(rows.map((r) => r.questId));
+}
+
+// Valida requisitos compartilhados de compra/craft: level do personagem ativo, VIP e quests.
+export async function assertPurchaseRequirements(
+  userId: string,
+  options: { requiredLevel?: number; requiredVip?: boolean; requiredQuestIds?: string | null }
+): Promise<void> {
+  if (!options.requiredLevel && !options.requiredVip && !parseQuestIds(options.requiredQuestIds).length) return;
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { vipUntil: true },
+  });
+  if (options.requiredVip && !isVipActive(user)) {
+    throw new AppError(403, "Este item é exclusivo para VIP.");
+  }
+
+  const questIds = parseQuestIds(options.requiredQuestIds);
+  if (questIds.length > 0) {
+    const done = await getCompletedQuestIds(userId);
+    const missing = questIds.filter((id) => !done.has(id));
+    if (missing.length > 0) {
+      throw new AppError(403, "Requer concluir uma quest para desbloquear este item.");
+    }
+  }
+
+  if (Number(options.requiredLevel) > 0) {
+    const character = await prisma.character.findFirst({
+      where: { userId },
+      orderBy: { updatedAt: "desc" },
+      select: { level: true },
+    });
+    if (character && character.level < Number(options.requiredLevel)) {
+      throw new AppError(400, `Requer nível ${options.requiredLevel} para comprar este item.`);
+    }
+  }
 }
 
 export const VIP_XP_BONUS = 0.1;

@@ -87,7 +87,7 @@ export default function ShopsPage() {
   const mapName = (id: string) => maps.find((m) => m.id === id)?.name ?? id;
 
   const resetItemForm = () => {
-    setItemForm({ itemId: "", enchantmentId: "", price: 0, currency: "gold", stock: -1, rotationDays: 0, classId: "", requiredLevel: 0 });
+    setItemForm({ itemId: "", enchantmentId: "", price: 0, currency: "gold", stock: -1, rotationDays: 0, classId: "", requiredLevel: 0, requiredVip: false, requiredQuestIds: "" });
     setEditingItem(null);
   };
 
@@ -107,6 +107,8 @@ export default function ShopsPage() {
       rotationDays: Number(s.rotationDays) || 0,
       classId: s.classId ?? "",
       requiredLevel: Number(s.requiredLevel) || 0,
+      requiredVip: !!s.requiredVip,
+      requiredQuestIds: s.requiredQuestIds ?? "",
     });
   };
 
@@ -137,6 +139,8 @@ export default function ShopsPage() {
         rotationDays: Number(itemForm.rotationDays) || 0,
         classId: itemForm.classId || null,
         requiredLevel: Number(itemForm.requiredLevel) || 0,
+        requiredVip: !!itemForm.requiredVip,
+        requiredQuestIds: itemForm.requiredQuestIds?.trim() ? itemForm.requiredQuestIds.trim() : null,
       };
       if (editingItem?.id) {
         await adminApi.shopItems.update(editingItem.id, payload);
@@ -332,6 +336,27 @@ export default function ShopsPage() {
                   <label className={labelClass}>Nível mín.</label>
                   <input type="number" value={itemForm.requiredLevel ?? 0} onChange={(e) => setItemForm({ ...itemForm, requiredLevel: Number(e.target.value) })} className={inputClass} />
                 </div>
+                <div className="flex items-end">
+                  <label className="flex items-center gap-2 text-sm text-gray-300 pb-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={!!itemForm.requiredVip}
+                      onChange={(e) => setItemForm({ ...itemForm, requiredVip: e.target.checked })}
+                      className="w-4 h-4 accent-yellow-500"
+                    />
+                    Exclusivo VIP
+                  </label>
+                </div>
+                <div className="col-span-2 sm:col-span-3">
+                  <label className={labelClass}>Quest para desbloquear (ids separados por vírgula)</label>
+                  <input
+                    type="text"
+                    value={itemForm.requiredQuestIds ?? ""}
+                    onChange={(e) => setItemForm({ ...itemForm, requiredQuestIds: e.target.value })}
+                    placeholder="ex: 3f2a1b..., 8c4d5e... (opcional)"
+                    className={inputClass}
+                  />
+                </div>
                 <div className="col-span-2 sm:col-span-6 flex justify-end gap-2">
                   {editingItem && (
                     <button type="button" onClick={resetItemForm} className="px-3 py-2 text-sm text-gray-400 hover:text-white hover:bg-dark-700 rounded-lg transition-colors">
@@ -353,6 +378,8 @@ export default function ShopsPage() {
                       <th className="text-left py-2.5 px-4 text-gray-400 font-medium">Moeda</th>
                       <th className="text-left py-2.5 px-4 text-gray-400 font-medium">Classe</th>
                       <th className="text-left py-2.5 px-4 text-gray-400 font-medium">Nv. mín</th>
+                      <th className="text-left py-2.5 px-4 text-gray-400 font-medium">VIP</th>
+                      <th className="text-left py-2.5 px-4 text-gray-400 font-medium">Quest</th>
                       <th className="text-left py-2.5 px-4 text-gray-400 font-medium">Estoque</th>
                       <th className="text-right py-2.5 px-4 text-gray-400 font-medium">Ações</th>
                     </tr>
@@ -382,6 +409,20 @@ export default function ShopsPage() {
                           )}
                         </td>
                         <td className="py-2.5 px-4 font-mono text-xs">{Number(s.requiredLevel) > 0 ? s.requiredLevel : "-"}</td>
+                        <td className="py-2.5 px-4">
+                          {s.requiredVip ? (
+                            <span className="px-2 py-0.5 rounded-full text-xs bg-yellow-500/20 text-yellow-300">VIP</span>
+                          ) : (
+                            <span className="text-xs text-gray-500">-</span>
+                          )}
+                        </td>
+                        <td className="py-2.5 px-4">
+                          {s.requiredQuestIds ? (
+                            <span className="px-2 py-0.5 rounded-full text-xs bg-sky-500/20 text-sky-300">Quest</span>
+                          ) : (
+                            <span className="text-xs text-gray-500">-</span>
+                          )}
+                        </td>
                         <td className="py-2.5 px-4 font-mono text-xs">{s.stock}</td>
                         <td className="py-2.5 px-4 text-right whitespace-nowrap">
                           <button onClick={() => openEditItem(s)} className="text-blue-400 hover:text-blue-300 mr-3">Edit</button>
@@ -391,7 +432,7 @@ export default function ShopsPage() {
                     ))}
                     {selectedShopItems.length === 0 && (
                       <tr>
-                        <td colSpan={7} className="py-6 text-center text-gray-500">Nenhum item na loja deste NPC</td>
+                        <td colSpan={9} className="py-6 text-center text-gray-500">Nenhum item na loja deste NPC</td>
                       </tr>
                     )}
                   </tbody>

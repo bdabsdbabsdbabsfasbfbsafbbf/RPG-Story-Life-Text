@@ -2,6 +2,7 @@ import { Express, Request, Response, NextFunction } from "express";
 import { prisma } from "../../core/database";
 import { authenticate } from "../../core/middleware/auth";
 import { AppError } from "../../core/middleware/errorHandler";
+import { assertPurchaseRequirements } from "../../core/progression";
 
 export function createCraftModule(app: Express): void {
   // Receitas de craft ativas
@@ -27,13 +28,11 @@ export function createCraftModule(app: Express): void {
       });
       if (!recipe) throw new AppError(404, "Receita não encontrada");
 
-      const character = await prisma.character.findFirst({
-        where: { userId: req.user!.userId },
-        orderBy: { updatedAt: "desc" },
+      const userId = req.user!.userId;
+      await assertPurchaseRequirements(userId, {
+        requiredLevel: recipe.requiredLevel,
+        requiredQuestIds: recipe.requiredQuestIds,
       });
-      if (character && character.level < recipe.requiredLevel) {
-        throw new AppError(400, `Requer nível ${recipe.requiredLevel} para craftar.`);
-      }
 
       let ingredients: { itemName: string; quantity: number }[] = [];
       try {
@@ -44,7 +43,6 @@ export function createCraftModule(app: Express): void {
       }
       if (ingredients.length === 0) throw new AppError(400, "Receita sem ingredientes");
 
-      const userId = req.user!.userId;
       const inventory = await prisma.inventory.findMany({
         where: { userId },
         include: { item: true },

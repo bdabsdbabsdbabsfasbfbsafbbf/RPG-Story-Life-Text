@@ -415,6 +415,7 @@ model CraftRecipe {
   resultItemId   String
   resultQuantity Int      @default(1)
   requiredLevel  Int      @default(1) // nível mínimo do personagem para craftar
+  requiredQuestIds String? // JSON: ids de quests que o jogador precisa ter concluído
   ingredients    String   @default("[]") // JSON: [{ "itemName": "Ossos", "quantity": 3 }]
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
@@ -621,21 +622,23 @@ model Npc {
 }
 
 model ShopItem {
-  id            String       @id @default(uuid())
-  npcId         String
-  itemId        String? // vende um Item (null quando vende encantamento)
-  enchantmentId String? // vende um Enchantment direto (userEnchantment)
-  price         BigInt
-  currency      String       @default("gold")
-  stock         Int          @default(-1)
-  rotationDays  Int          @default(0)
-  classId       String? // classe restrita (null = qualquer classe)
-  requiredLevel Int          @default(0)
-  createdAt     DateTime     @default(now())
-  npc           Npc          @relation(fields: [npcId], references: [id])
-  item          Item?        @relation(fields: [itemId], references: [id])
-  enchantment   Enchantment? @relation(fields: [enchantmentId], references: [id])
-  class         GameClass?   @relation(fields: [classId], references: [id])
+  id               String       @id @default(uuid())
+  npcId            String
+  itemId           String? // vende um Item (null quando vende encantamento)
+  enchantmentId    String? // vende um Enchantment direto (userEnchantment)
+  price            BigInt
+  currency         String       @default("gold")
+  stock            Int          @default(-1)
+  rotationDays     Int          @default(0)
+  classId          String? // classe restrita (null = qualquer classe)
+  requiredLevel    Int          @default(0)
+  requiredVip      Boolean      @default(false) // exclusivo para VIP
+  requiredQuestIds String? // JSON: ids de quests que o jogador precisa ter concluído
+  createdAt        DateTime     @default(now())
+  npc              Npc          @relation(fields: [npcId], references: [id])
+  item             Item?        @relation(fields: [itemId], references: [id])
+  enchantment      Enchantment? @relation(fields: [enchantmentId], references: [id])
+  class            GameClass?   @relation(fields: [classId], references: [id])
 
   @@index([npcId])
 }
@@ -1069,6 +1072,9 @@ model ShopProduct {
   itemId        String? // item entregue (type=item)
   classId       String? // classe desbloqueada (type=class)
   quantity      Int          @default(1) // quantidade entregue (type=item)
+  requiredLevel Int          @default(0) // nível mínimo do personagem para comprar
+  requiredVip   Boolean      @default(false) // exclusivo para VIP
+  requiredQuestIds String? // JSON: ids de quests que o jogador precisa ter concluído
   icon          String?
   isActive      Boolean      @default(true)
   sortOrder     Int          @default(0)

@@ -2,7 +2,7 @@ import { Express, Request, Response, NextFunction } from "express";
 import { prisma } from "../../core/database";
 import { authenticate } from "../../core/middleware/auth";
 import { AppError } from "../../core/middleware/errorHandler";
-import { isVipActive } from "../../core/progression";
+import { isVipActive, assertPurchaseRequirements } from "../../core/progression";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -114,8 +114,23 @@ export function createShopModule(app: Express): void {
   // Compra: custo em diamantes (deduz na hora) ou em dinheiro (mock até integrar gateway).
   app.post("/api/shop/purchase/:productId", authenticate, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const product = await prisma.shopProduct.findUnique({ where: { id: req.params.productId } });
+      const product = await prisma.shopProduct.findUnique({
+        where: { id: req.params.productId },
+        include: { item: true, enchantment: true, gameClass: true },
+      });
       if (!product || !product.isActive) throw new AppError(404, "Produto não encontrado");
+
+      // Requisitos de compra: VIP, quests concluídas e nível do personagem ativo
+      const requiresVip =
+        product.requiredVip ||
+        product.item?.requiredVip ||
+        product.enchantment?.requiredVip ||
+        product.gameClass?.requiredVip;
+      await assertPurchaseRequirements(req.user!.userId, {
+        requiredLevel: Number(product.requiredLevel) || 0,
+        requiredVip: !!requiresVip,
+        requiredQuestIds: product.requiredQuestIds,
+      });
 
       if (product.currency === "diamond") {
         const user = await prisma.user.findUnique({

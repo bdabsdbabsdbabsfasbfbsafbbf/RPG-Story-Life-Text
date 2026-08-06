@@ -2,6 +2,10 @@ import { Express, Request, Response, NextFunction } from "express";
 import { prisma } from "../../core/database";
 import { authenticate } from "../../core/middleware/auth";
 import { AppError } from "../../core/middleware/errorHandler";
+import { assertPurchaseRequirements } from "../../core/progression";
+
+const SHOP_TYPES = new Set(["vendor", "shop"]);
+const QUEST_TYPES = new Set(["quest_giver", "quest"]);
 
 export function createNpcModule(app: Express): void {
   app.get("/api/npcs", async (req: Request, res: Response, next: NextFunction) => {
@@ -19,6 +23,10 @@ export function createNpcModule(app: Express): void {
           quests: true,
         },
       });
+      for (const npc of npcs) {
+        if (!SHOP_TYPES.has(npc.type)) (npc as any).shopItems = [];
+        if (!QUEST_TYPES.has(npc.type)) (npc as any).quests = [];
+      }
       res.json(npcs);
     } catch (err) {
       next(err);
@@ -39,6 +47,8 @@ export function createNpcModule(app: Express): void {
         res.status(404).json({ error: "NPC not found" });
         return;
       }
+      if (!SHOP_TYPES.has(npc.type)) (npc as any).shopItems = [];
+      if (!QUEST_TYPES.has(npc.type)) (npc as any).quests = [];
       res.json(npc);
     } catch (err) {
       next(err);
@@ -47,6 +57,12 @@ export function createNpcModule(app: Express): void {
 
   app.get("/api/npcs/:id/shop", async (req: Request, res: Response, next: NextFunction) => {
     try {
+      const npc = await prisma.npc.findUnique({ where: { id: req.params.id }, select: { type: true } });
+      if (!npc) throw new AppError(404, "NPC not found");
+      if (!SHOP_TYPES.has(npc.type)) {
+        res.json([]);
+        return;
+      }
       const shop = await prisma.shopItem.findMany({
         where: { npcId: req.params.id },
         include: { item: true, enchantment: true, class: true },
@@ -64,6 +80,12 @@ export function createNpcModule(app: Express): void {
       if (!itemId && !enchantmentId) throw new AppError(400, "itemId ou enchantmentId required");
       const qty = Math.max(1, Math.floor(Number(quantity) || 1));
 
+      const npc = await prisma.npc.findUnique({ where: { id: req.params.id }, select: { type: true } });
+      if (!npc) throw new AppError(404, "NPC not found");
+      if (!SHOP_TYPES.has(npc.type)) {
+        throw new AppError(403, "Este NPC não é um vendedor.");
+      }
+
       const shopOffer = enchantmentId
         ? await prisma.shopItem.findFirst({
             where: { npcId: req.params.id, enchantmentId },
@@ -77,31 +99,27 @@ export function createNpcModule(app: Express): void {
 
       const user = await prisma.user.findUnique({
         where: { id: req.user!.userId },
-        select: { id: true, gold: true, diamonds: true, vipOwned: true },
+        select: { id: true, gold: true, diamonds: true, vipUntil: true },
       });
       if (!user) throw new AppError(404, "User not found");
 
-      // Itens/encantamentos exclusivos para VIP
-      const requiresVip = shopOffer.item?.requiredVip || shopOffer.enchantment?.requiredVip;
-      if (requiresVip && !user.vipOwned) {
-        throw new AppError(403, `Este item é exclusivo para VIP.`);
-      }
+      // Requisitos de compra: VIP, quests concluídas e nível do personagem ativo
+      const requiresVip = shopOffer.requiredVip || shopOffer.item?.requiredVip || shopOffer.enchantment?.requiredVip;
+      await assertPurchaseRequirements(user.id, {
+        requiredLevel: Number(shopOffer.requiredLevel) || 0,
+        requiredVip: !!requiresVip,
+        requiredQuestIds: shopOffer.requiredQuestIds,
+      });
 
-      // Restrição de classe/nível: usa o personagem ativo (mais recente)
-      if (shopOffer.classId || Number(shopOffer.requiredLevel) > 0) {
+      // Restrição de classe: usa o personagem ativo (mais recente)
+      if (shopOffer.classId) {
         const character = await prisma.character.findFirst({
           where: { userId: user.id },
           orderBy: { updatedAt: "desc" },
           include: { class: true },
         });
-        if (shopOffer.classId && character && character.classId !== shopOffer.classId) {
+        if (!character || character.classId !== shopOffer.classId) {
           throw new AppError(403, `Este item é exclusivo para a classe ${shopOffer.class?.name ?? "restrita"}.`);
-        }
-        if (shopOffer.classId && !character) {
-          throw new AppError(403, `Este item é exclusivo para a classe ${shopOffer.class?.name ?? "restrita"}.`);
-        }
-        if (Number(shopOffer.requiredLevel) > 0 && character && character.level < Number(shopOffer.requiredLevel)) {
-          throw new AppError(400, `Requer nível ${shopOffer.requiredLevel} para comprar este item.`);
         }
       }
 
