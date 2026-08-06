@@ -28,6 +28,10 @@ process.on("unhandledRejection", (reason) => {
 const app = express();
 const server = http.createServer(app);
 
+// Railway (e proxies em geral) terminam o TLS — sem isso o req.ip é o IP do
+// proxy para TODOS os usuários e o rate limit global vira um único balde compartilhado.
+app.set("trust proxy", 1);
+
 app.use((_req, res, next) => {
   res.json = (body: unknown) => {
     res.setHeader("Content-Type", "application/json");
