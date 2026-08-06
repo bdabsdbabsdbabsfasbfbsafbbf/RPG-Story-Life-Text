@@ -531,6 +531,17 @@ export function createAdminModule(app: Express): void {
     } catch (err) { next(err); }
   });
 
+  // Ativar todas as classes rascunho (isActive: false)
+  app.post("/api/admin/classes/activate-all", requireAdmin, async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { count } = await prisma.gameClass.updateMany({
+        where: { isActive: false },
+        data: { isActive: true },
+      });
+      res.json({ activated: count });
+    } catch (err) { next(err); }
+  });
+
   // Stat models CRUD
   app.get("/api/admin/statmodels", requireAdmin, async (_req: Request, res: Response, next: NextFunction) => {
     try { res.json(await prisma.statModel.findMany({ orderBy: { name: "asc" } })); } catch (err) { next(err); }

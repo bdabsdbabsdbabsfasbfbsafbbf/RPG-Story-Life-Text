@@ -88,6 +88,20 @@ export default function AiClassGenerator({ onGenerated }: { onGenerated: () => v
     }
   };
 
+  const handleActivateAllHeader = async () => {
+    setActivatingAll(true);
+    try {
+      const { data } = await adminApi.classes.activateAll();
+      const n = Number(data?.activated || 0);
+      toast.success(n > 0 ? `${n} classe(s) rascunho ativada(s)!` : "Nenhum rascunho para ativar");
+      onGenerated();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || err.message || "Falha ao ativar classes");
+    } finally {
+      setActivatingAll(false);
+    }
+  };
+
   const coreLabel: Record<string, string> = {
     strength: "Força",
     intellect: "Intelecto",
@@ -124,6 +138,15 @@ export default function AiClassGenerator({ onGenerated }: { onGenerated: () => v
 
   return (
     <>
+      <button
+        onClick={handleActivateAllHeader}
+        disabled={activatingAll}
+        className="flex items-center gap-2 px-4 py-2 bg-green-600/20 hover:bg-green-600/30 text-green-400 border border-green-600/40 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+        title="Ativa todas as classes que estão como rascunho (isActive: false)"
+      >
+        {activatingAll ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+        {activatingAll ? "Ativando..." : "Ativar todas"}
+      </button>
       <button
         onClick={() => setOpen(true)}
         className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-500 hover:to-purple-500 text-white rounded-lg text-sm font-medium transition-colors"
