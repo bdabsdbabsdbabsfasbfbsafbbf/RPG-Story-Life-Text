@@ -96,6 +96,14 @@ const VALID_TRIGGERS = ["auto", "active", "ultimate"];
 const VALID_TARGETS = ["enemy", "self", "ally"];
 const VALID_DAMAGE_TYPES = ["physical", "magic", "true"];
 const VALID_ACTIONS = ["damage", "heal", "applyEffect", "mana"];
+const DEFAULT_SKILL_ICONS: Record<string, string> = {
+  attack: "Swords",
+  buff: "ShieldCheck",
+  debuff: "Skull",
+  heal: "Heart",
+  shield: "Shield",
+  utility: "Zap",
+};
 const VALID_EFFECT_KINDS = ["buff", "debuff", "hot", "dot", "shield", "reflect", "hitkill", "silence", "stun", "nuke"];
 const VALID_SCALE_STATS = ["attack", "magic", "defense", "hp", "mana"];
 const FLAT_PASSIVE_KEYS = ["attack", "defense", "magic", "magicDefense", "hp", "mana", "speed", "critChance", "critDamage", "dodge", "hitChance", "manaRegenPerTick", "healthRegenPerTick", "cooldownReduction", "attackPower", "spellPower", "physicalResistance", "magicalResistance", "damageResistance", "penetration"];
@@ -301,7 +309,7 @@ function normalize(raw: any, errors: string[]): GeneratedClass {
       name: s.name,
       slug: slugify(s.slug || s.name),
       description: s.description || "",
-      icon: s.icon || null,
+      icon: s.icon || DEFAULT_SKILL_ICONS[s.kind] || "Zap",
       kind: VALID_KINDS.includes(s.kind) ? s.kind : "attack",
       trigger: VALID_TRIGGERS.includes(s.trigger) ? s.trigger : "active",
       target: VALID_TARGETS.includes(s.target) ? s.target : "enemy",

@@ -655,11 +655,20 @@ export function createAdminModule(app: Express): void {
   });
 
   app.post("/api/admin/classes/:classId/skills", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
-    try { res.status(201).json(await prisma.skill.create({ data: { ...normalizeBody("skill", req.body), classId: req.params.classId } })); } catch (err) { next(err); }
+    try {
+      const icon = String(req.body?.icon ?? "").trim();
+      if (!icon) throw new AppError(400, "Ícone da skill é obrigatório — escolha um ícone antes de salvar");
+      res.status(201).json(await prisma.skill.create({ data: { ...normalizeBody("skill", req.body), classId: req.params.classId } }));
+    } catch (err) { next(err); }
   });
 
   app.put("/api/admin/skills/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
-    try { res.json(await prisma.skill.update({ where: { id: req.params.id }, data: normalizeBody("skill", req.body) })); } catch (err) { next(err); }
+    try {
+      const body = normalizeBody("skill", req.body);
+      const icon = String(body?.icon ?? "").trim();
+      if (!icon) throw new AppError(400, "Ícone da skill é obrigatório — escolha um ícone antes de salvar");
+      res.json(await prisma.skill.update({ where: { id: req.params.id }, data: body }));
+    } catch (err) { next(err); }
   });
 
   app.delete("/api/admin/skills/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {

@@ -192,6 +192,10 @@ export default function SkillsPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!String(form.icon || "").trim()) {
+      toast.error("Ícone é obrigatório — escolha o ícone principal da skill");
+      return;
+    }
     setSaving(true);
     try {
       const payload = buildPayload();

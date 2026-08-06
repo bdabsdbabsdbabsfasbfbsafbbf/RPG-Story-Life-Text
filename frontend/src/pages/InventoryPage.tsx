@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { inventoryApi, authApi, marketApi } from "../services/api";
+import { inventoryApi, authApi, marketApi, classesApi } from "../services/api";
 import { InventoryItem, UserEnchantment } from "../types";
 import {
   Backpack, Search, Star, Coins, Lock,
-  Sword, Crown, HardHat, Shield, Wind, Gem, Link2, Sparkles, X,
+  Sword, Crown, HardHat, Shield, Wind, Gem, Link2, Sparkles, X, Swords,
 } from "lucide-react";
 import { useGameStore } from "../store/gameStore";
 import { useAuthStore } from "../store/authStore";
@@ -45,7 +45,9 @@ export function InventoryPage() {
   const [listQty, setListQty] = useState(1);
   const [ownedEnchants, setOwnedEnchants] = useState<UserEnchantment[]>([]);
   const [enchantBusy, setEnchantBusy] = useState(false);
-  const { selectedCharacter } = useGameStore();
+  const [unlockedClasses, setUnlockedClasses] = useState<any[]>([]);
+  const [switchingClass, setSwitchingClass] = useState<string | null>(null);
+  const { selectedCharacter, setCharacter } = useGameStore();
   const { user, setUser } = useAuthStore();
 
   const loadItems = () => {
@@ -66,6 +68,36 @@ export function InventoryPage() {
       .then(({ data }) => setOwnedEnchants(Array.isArray(data) ? data : []))
       .catch(() => {});
   }, []);
+
+  const loadClasses = () => {
+    if (!selectedCharacter?.id) return;
+    classesApi.listClasses(selectedCharacter.id)
+      .then(({ data }) => setUnlockedClasses(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    loadClasses();
+  }, [selectedCharacter?.id]);
+
+  const handleSwitchClass = async (gc: any) => {
+    if (!selectedCharacter) return;
+    setSwitchingClass(gc.id);
+    try {
+      const { data } = await classesApi.switchClass(selectedCharacter.id, gc.id);
+      setCharacter({
+        ...selectedCharacter,
+        classId: data.classId,
+        class: { name: gc.name, slug: gc.slug, icon: gc.icon || null },
+      });
+      toast.success(`Classe trocada para ${gc.name}!`);
+      loadClasses();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Falha ao trocar de classe");
+    } finally {
+      setSwitchingClass(null);
+    }
+  };
 
   const refreshUser = async () => {
     try {
@@ -242,6 +274,49 @@ export function InventoryPage() {
             );
           })}
         </div>
+      </div>
+
+      <div className="panel p-4">
+        <h2 className="font-display font-semibold mb-3 flex items-center gap-2">
+          <Swords size={16} className="text-purple-400" /> Classes desbloqueadas ({unlockedClasses.length})
+        </h2>
+        {unlockedClasses.length === 0 ? (
+          <p className="text-xs text-gray-500">Nenhuma classe desbloqueada ainda — resgate um código ou compre na loja.</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {unlockedClasses.map((cp: any) => {
+              const gc = cp.gameClass || {};
+              const equipped = !!cp.isActive;
+              return (
+                <div key={cp.id} className={`bg-dark-800/50 rounded-xl p-3 border ${equipped ? "border-purple-500/40" : "border-dark-600"}`}>
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <p className="font-medium text-sm text-white">{gc.name}</p>
+                    {equipped && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-purple-500/20 text-purple-300">Equipada</span>
+                    )}
+                  </div>
+                  <div className="flex gap-1.5 flex-wrap mb-2">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-dark-700 text-gray-300 capitalize">{gc.role || "-"}</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-dark-700 text-gray-300 capitalize">{gc.combatType || "-"}</span>
+                    {gc.price > 0 && <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-yellow-500/15 text-yellow-300">{gc.price} gold</span>}
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] text-gray-500">Rank {cp.rank ?? 1}</span>
+                    {!equipped && (
+                      <button
+                        onClick={() => handleSwitchClass(gc)}
+                        disabled={switchingClass !== null}
+                        className="text-xs px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                      >
+                        {switchingClass === gc.id ? "Trocando..." : "Equipar"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-3">
