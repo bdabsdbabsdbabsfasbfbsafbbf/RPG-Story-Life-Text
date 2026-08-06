@@ -54,6 +54,7 @@ export const adminApi = {
     delete: (id: string) => api.delete(`/admin/classes/${id}`),
     generate: (data: { prompt: string; count?: number }) => api.post("/admin/classes/generate", data),
     aiConfig: () => api.get("/admin/ai/config"),
+    activate: (id: string) => api.post(`/admin/classes/${id}/activate`),
   },
   items: {
     list: () => api.get("/admin/items"),

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { Sparkles, Wand2, Loader2, AlertTriangle } from "lucide-react";
+import { Sparkles, Wand2, Loader2, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { adminApi } from "../api";
 
 interface GeneratedClassResult {
@@ -26,6 +26,8 @@ export default function AiClassGenerator({ onGenerated }: { onGenerated: () => v
   const [busy, setBusy] = useState(false);
   const [providers, setProviders] = useState<{ gemini: boolean; groq: boolean } | null>(null);
   const [results, setResults] = useState<GeneratedClassResult[]>([]);
+  const [activating, setActivating] = useState<string | null>(null);
+  const [activatingAll, setActivatingAll] = useState(false);
 
   useEffect(() => {
     adminApi.classes
@@ -52,6 +54,37 @@ export default function AiClassGenerator({ onGenerated }: { onGenerated: () => v
       toast.error(err.response?.data?.message || err.message || "Falha ao gerar classe");
     } finally {
       setBusy(false);
+    }
+  };
+
+  const handleActivate = async (id: string) => {
+    setActivating(id);
+    try {
+      await adminApi.classes.activate(id);
+      const name = results.find((r) => r.id === id)?.name || "";
+      setResults((prev) => prev.filter((r) => r.id !== id));
+      toast.success(`Classe "${name}" ativada!`);
+      onGenerated();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || err.message || "Falha ao ativar classe");
+    } finally {
+      setActivating(null);
+    }
+  };
+
+  const handleActivateAll = async () => {
+    setActivatingAll(true);
+    try {
+      for (const r of results) {
+        await adminApi.classes.activate(r.id);
+      }
+      toast.success(`${results.length} classe(s) ativada(s)!`);
+      setResults([]);
+      onGenerated();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || err.message || "Falha ao ativar classes");
+    } finally {
+      setActivatingAll(false);
     }
   };
 
@@ -115,7 +148,7 @@ export default function AiClassGenerator({ onGenerated }: { onGenerated: () => v
 
             <p className="text-xs text-gray-500 mb-3">
               Modelos: Gemini {providers?.gemini ? "✓" : "✗"} · Groq {providers?.groq ? "✓" : "✗"} — Gemini primeiro, Groq de fallback.
-              A classe nasce como <span className="text-yellow-400">rascunho (inativa)</span>: revise e ative no editor.
+              A classe nasce como <span className="text-yellow-400">rascunho (inativa)</span>: revise e clique em Confirmar para ativar, ou edite no editor de Classes.
             </p>
 
             <textarea
@@ -150,6 +183,19 @@ export default function AiClassGenerator({ onGenerated }: { onGenerated: () => v
 
             {results.length > 0 && (
               <div className="mt-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-gray-400">
+                    {results.length} rascunho(s) — revise e confirme para ativar
+                  </p>
+                  <button
+                    onClick={handleActivateAll}
+                    disabled={activatingAll || activating !== null}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600/20 hover:bg-green-600/30 text-green-400 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                  >
+                    {activatingAll ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
+                    {activatingAll ? "Ativando..." : "Ativar todas"}
+                  </button>
+                </div>
                 {results.map((r) => (
                   <div key={r.id} className="bg-dark-900/60 border border-dark-600 rounded-xl p-4">
                     <div className="flex items-center gap-2 flex-wrap mb-2">
@@ -194,6 +240,16 @@ export default function AiClassGenerator({ onGenerated }: { onGenerated: () => v
                         ))}
                       </div>
                     )}
+                    <div className="mt-3 flex justify-end">
+                      <button
+                        onClick={() => handleActivate(r.id)}
+                        disabled={activating !== null}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                      >
+                        {activating === r.id ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
+                        {activating === r.id ? "Ativando..." : "Confirmar"}
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

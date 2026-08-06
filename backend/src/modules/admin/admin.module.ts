@@ -518,6 +518,19 @@ export function createAdminModule(app: Express): void {
     }
   });
 
+  // Ativar classe rascunho gerada por IA (confirmar)
+  app.post("/api/admin/classes/:id/activate", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const existing = await prisma.gameClass.findUnique({ where: { id: req.params.id } });
+      if (!existing) throw new AppError(404, "Classe não encontrada");
+      const updated = await prisma.gameClass.update({
+        where: { id: req.params.id },
+        data: { isActive: true },
+      });
+      res.json(updated);
+    } catch (err) { next(err); }
+  });
+
   // Stat models CRUD
   app.get("/api/admin/statmodels", requireAdmin, async (_req: Request, res: Response, next: NextFunction) => {
     try { res.json(await prisma.statModel.findMany({ orderBy: { name: "asc" } })); } catch (err) { next(err); }
