@@ -223,7 +223,7 @@ export function InventoryPage() {
     .filter(i => !search || i.item.name.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => (rarityOrder[b.item.rarity] || 0) - (rarityOrder[a.item.rarity] || 0));
 
-  const types = ["all", ...new Set(items.map(i => i.item.type))];
+  const types = ["all", "classes", ...new Set(items.map(i => i.item.type))];
 
   if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" /></div>;
 
@@ -276,15 +276,38 @@ export function InventoryPage() {
         </div>
       </div>
 
-      <div className="panel p-4">
-        <h2 className="font-display font-semibold mb-3 flex items-center gap-2">
-          <Swords size={16} className="text-purple-400" /> Classes desbloqueadas ({unlockedClasses.length})
-        </h2>
-        {unlockedClasses.length === 0 ? (
-          <p className="text-xs text-gray-500">Nenhuma classe desbloqueada ainda — resgate um código ou compre na loja.</p>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {unlockedClasses.map((cp: any) => {
+      <div className="flex flex-wrap gap-3">
+        <div className="relative flex-1 max-w-xs">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder={filterType === "classes" ? "Buscar classe..." : "Search items..."}
+            className="input-rpg pl-9"
+          />
+        </div>
+        <div className="flex gap-1 flex-wrap">
+          {types.map(type => (
+            <button
+              key={type}
+              onClick={() => setFilterType(type)}
+              className={`px-3 py-1.5 text-xs rounded-lg font-medium transition-colors ${
+                filterType === type
+                  ? "bg-purple-600 text-white"
+                  : "bg-dark-700 text-gray-400 hover:text-gray-200"
+              }`}
+            >
+              {type === "all" ? "All" : type.charAt(0).toUpperCase() + type.slice(1)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {filterType === "classes" ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {unlockedClasses
+            .filter((cp: any) => !search || (cp.gameClass?.name || "").toLowerCase().includes(search.toLowerCase()))
+            .map((cp: any) => {
               const gc = cp.gameClass || {};
               const equipped = !!cp.isActive;
               return (
@@ -315,39 +338,10 @@ export function InventoryPage() {
                 </div>
               );
             })}
-          </div>
-        )}
-      </div>
-
-      <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1 max-w-xs">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search items..."
-            className="input-rpg pl-9"
-          />
         </div>
-        <div className="flex gap-1 flex-wrap">
-          {types.map(type => (
-            <button
-              key={type}
-              onClick={() => setFilterType(type)}
-              className={`px-3 py-1.5 text-xs rounded-lg font-medium transition-colors ${
-                filterType === type
-                  ? "bg-purple-600 text-white"
-                  : "bg-dark-700 text-gray-400 hover:text-gray-200"
-              }`}
-            >
-              {type === "all" ? "All" : type.charAt(0).toUpperCase() + type.slice(1)}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-        {filtered.map(inv => (
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          {filtered.map(inv => (
           <button
             key={inv.id}
             onClick={() => setSelectedItem(inv)}
@@ -399,12 +393,20 @@ export function InventoryPage() {
             </div>
           </button>
         ))}
-      </div>
+        </div>
+      )}
 
-      {filtered.length === 0 && (
+      {filterType !== "classes" && filtered.length === 0 && (
         <div className="text-center py-12 text-gray-500">
           <Backpack size={48} className="mx-auto mb-3 opacity-50" />
           <p>No items found</p>
+        </div>
+      )}
+
+      {filterType === "classes" && unlockedClasses.length === 0 && (
+        <div className="text-center py-12 text-gray-500">
+          <Swords size={48} className="mx-auto mb-3 opacity-50" />
+          <p>Nenhuma classe desbloqueada ainda — resgate um código ou compre na loja.</p>
         </div>
       )}
 
