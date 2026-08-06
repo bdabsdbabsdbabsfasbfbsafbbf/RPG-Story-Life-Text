@@ -1,7 +1,7 @@
 import { Express, Request, Response, NextFunction } from "express";
 import { prisma } from "../../core/database";
 import { authenticate } from "../../core/middleware/auth";
-import { computeStats } from "../../core/classEngine/stat-calculator";
+import { computeStats, CLASS_STAT_CONVERSION } from "../../core/classEngine/stat-calculator";
 import { applyClassXp, classXpToNextRank } from "../../core/progression";
 
 function parseJson(value: any, fallback: any = null): any {
@@ -17,10 +17,11 @@ function parseJson(value: any, fallback: any = null): any {
 // Stats de exibição (nível 1) calculados a partir do StatModel da classe.
 export function displayStats(gameClass: any): any {
   const statModel = gameClass.statModel || {};
+  const coreStats = parseJson(statModel.coreStats, {});
   const stats = computeStats({
     level: 1,
     statModel: {
-      coreStats: parseJson(statModel.coreStats, {}),
+      coreStats,
     },
     resource: parseJson(gameClass.resource, {}),
     passives: [],
@@ -41,6 +42,8 @@ export function displayStats(gameClass: any): any {
     attackSpeedMs: stats.attackSpeedMs,
     manaRegenPerTick: stats.manaRegenPerTick,
     healthRegenPerTick: stats.healthRegenPerTick,
+    coreStats,
+    conversion: CLASS_STAT_CONVERSION,
   };
 }
 

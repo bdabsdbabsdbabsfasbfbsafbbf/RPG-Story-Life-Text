@@ -6,7 +6,7 @@ import { Character, Skill, ClassPassive } from "../types";
 import {
   Shield, Sword, Zap, Star, Clock, Droplets, Heart, Swords,
   ShieldCheck, Sparkles, Lock, ChevronRight, X, MapPin,
-  UserPlus, Activity, Footprints, ShieldHalf, Flame, HeartPulse, Skull,
+  UserPlus, ShieldHalf, Flame, HeartPulse, Skull,
   Ban, Crosshair, Scan, Wind, Gauge, Siren, Target, Percent, Brain, Crown,
 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -20,6 +20,46 @@ const rankNames: Record<number, string> = {
 function formatMs(ms: number): string {
   if (ms >= 1000) return `${(ms / 1000).toFixed(1)}s`;
   return `${ms}ms`;
+}
+
+const CORE_STATUS: { key: string; label: string; icon: any; color: string }[] = [
+  { key: "strength", label: "Strength", icon: Swords, color: "text-orange-400" },
+  { key: "intellect", label: "Intellect", icon: Sparkles, color: "text-purple-400" },
+  { key: "endurance", label: "Endurance", icon: Shield, color: "text-yellow-400" },
+  { key: "dexterity", label: "Dexterity", icon: Wind, color: "text-green-400" },
+  { key: "wisdom", label: "Wisdom", icon: Brain, color: "text-cyan-400" },
+  { key: "luck", label: "Luck", icon: Star, color: "text-pink-400" },
+];
+
+const CONVERSION_LABELS: Record<string, string> = {
+  attackPower: "Attack Power",
+  physicalBoost: "Physical Boost",
+  armorPenetration: "Armor Penetration",
+  spellPower: "Spell Power",
+  magicalBoost: "Magical Boost",
+  magicPenetration: "Magic Penetration",
+  maxHealth: "Max Health",
+  physicalResistance: "Physical Resistance",
+  magicalResistance: "Magical Resistance",
+  hitChance: "Hit Chance",
+  evasion: "Evasion",
+  mana: "Mana",
+  manaRegen: "Mana Regen",
+  healingBoost: "Healing Boost",
+  cooldownReduction: "CDR",
+  critChance: "Crit Chance",
+  critMultiplier: "Crit Multiplier",
+};
+
+const PERCENT_TARGETS = new Set([
+  "physicalBoost", "armorPenetration", "magicalBoost", "magicPenetration",
+  "physicalResistance", "magicalResistance", "hitChance", "evasion",
+  "manaRegen", "healingBoost", "cooldownReduction", "critChance", "critMultiplier",
+]);
+
+function formatFactor(f: number): string {
+  const n = Number(f) || 0;
+  return n % 1 === 0 ? `${n}` : n.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
 }
 
 interface ClassProgress {
@@ -90,6 +130,8 @@ export function ClassPage() {
   const actives = skills.filter((s) => s.trigger === "active");
   const ultimate = skills.find((s) => s.trigger === "ultimate");
   const stats: any = gameClass.stats || {};
+  const coreStats: any = stats.coreStats || {};
+  const conversion: any = stats.conversion || {};
 
   const skillSummary = (skill: Skill) => {
     let dmg = 0;
@@ -260,36 +302,46 @@ export function ClassPage() {
                   statPanel === panel ? "bg-purple-500/20 text-purple-300" : "text-gray-500 hover:text-gray-300"
                 }`}
               >
-                {panel === "core" ? "Core" : panel === "modifiers" ? "Modifiers" : "Combat"}
+                {panel === "core" ? "Status" : panel === "modifiers" ? "Modifiers" : "Combat"}
               </button>
             ))}
           </div>
         </div>
 
         {statPanel === "core" && (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            <div className="bg-dark-800/50 rounded-lg p-3">
-              <p className="text-[10px] text-gray-500 uppercase tracking-wider">Weapon Damage</p>
-              <p className="font-mono text-sm font-bold text-orange-400">{stats.attack * 2} - {stats.attack * 4}</p>
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
+              {CORE_STATUS.map(({ key, label, icon: Icon, color }) => {
+                const value = coreStats[key] ?? 0;
+                const conv = conversion[key] || {};
+                return (
+                  <div key={key} className="bg-dark-800/50 rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="flex items-center gap-1.5 text-xs font-medium text-gray-200">
+                        <Icon size={14} className={color} /> {label}
+                      </span>
+                      <span className="font-mono text-sm font-bold">{value}</span>
+                    </div>
+                    <div className="space-y-1">
+                      {Object.entries(conv).map(([target, factor]) => (
+                        <p key={target} className="text-[11px] text-gray-500 flex items-center justify-between">
+                          <span>{CONVERSION_LABELS[target] || target}</span>
+                          <span className="text-gray-300 font-mono">
+                            +{formatFactor(factor as number)}
+                            {PERCENT_TARGETS.has(target) ? "%" : ""} <span className="text-gray-600">/pt</span>
+                          </span>
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            {[
-              { label: "Base HP", value: stats.hp, icon: Heart, color: "text-red-400" },
-              { label: "Base Mana", value: stats.mana, icon: Droplets, color: "text-blue-400" },
-              { label: "Attack", value: stats.attack, icon: Swords, color: "text-orange-400" },
-              { label: "Defense", value: stats.defense, icon: ShieldCheck, color: "text-yellow-400" },
-              { label: "Magic", value: stats.magic, icon: Star, color: "text-purple-400" },
-              { label: "Magic Def", value: stats.magicDefense, icon: ShieldHalf, color: "text-cyan-400" },
-              { label: "Speed", value: stats.speed, icon: Footprints, color: "text-green-400" },
-              { label: "Mana Recovery", value: stats.manaRegenPerTick, icon: Droplets, color: "text-blue-400" },
-            ].map((stat) => (
-              <div key={stat.label} className="bg-dark-800/50 rounded-lg p-3 flex items-center gap-2">
-                <stat.icon size={14} className={stat.color} />
-                <div className="flex-1">
-                  <p className="text-xs text-gray-300">{stat.label}</p>
-                  <p className="font-mono text-sm font-bold">{stat.value}</p>
-                </div>
-              </div>
-            ))}
+            <p className="text-[11px] text-gray-600 leading-relaxed">
+              Os 6 Status Class são fixos e os únicos atributos da Classe. Itens somam seus valores ao total;
+              encantamentos <span className="text-yellow-500/80">substituem</span> os valores do item. Tudo é
+              convertido automaticamente pela Combat Engine.
+            </p>
           </div>
         )}
 
@@ -357,7 +409,7 @@ export function ClassPage() {
               { label: "Spell Power", value: stats.spellPower, icon: Star, color: "text-purple-400" },
               { label: "Crit Chance", value: `${(stats.critChance ?? 0).toFixed(1)}%`, icon: Target, color: "text-yellow-400" },
               { label: "Crit Multiplier", value: `${stats.critDamage ?? 150}%`, icon: Crosshair, color: "text-red-400" },
-              { label: "Hit Chance", value: "95%", icon: Scan, color: "text-green-400" },
+              { label: "Hit Chance", value: `${(stats.hitChance ?? 85).toFixed(1)}%`, icon: Scan, color: "text-green-400" },
             ].map((stat) => (
               <div key={stat.label} className="bg-dark-800/50 rounded-lg p-3 flex items-center gap-2">
                 <stat.icon size={13} className={stat.color} />
