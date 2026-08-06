@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
 import { inventoryApi, authApi, marketApi, classesApi } from "../services/api";
 import { InventoryItem, UserEnchantment } from "../types";
 import {
@@ -49,6 +50,7 @@ export function InventoryPage() {
   const [switchingClass, setSwitchingClass] = useState<string | null>(null);
   const { selectedCharacter, setCharacter } = useGameStore();
   const { user, setUser } = useAuthStore();
+  const navigate = useNavigate();
 
   const loadItems = () => {
     inventoryApi.list()
@@ -242,6 +244,36 @@ export function InventoryPage() {
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
           {SLOTS.map((slot) => {
+            if (slot.key === "class") {
+              const cls = selectedCharacter?.class;
+              const Icon = slot.icon;
+              return (
+                <button
+                  key={slot.key}
+                  onClick={() => cls && navigate(`/class/${cls.slug}`)}
+                  className={`card-hover p-3 text-center min-h-[110px] flex flex-col items-center justify-center gap-2 ${
+                    cls ? "border-purple-500/40" : "border-dashed border-dark-600"
+                  }`}
+                >
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                    cls ? "bg-gradient-to-br from-purple-600 to-blue-600" : "bg-dark-800/60"
+                  }`}>
+                    <Icon size={18} className={cls ? "text-white" : "text-gray-600"} />
+                  </div>
+                  {cls ? (
+                    <>
+                      <p className="text-xs font-medium leading-tight">{cls.name}</p>
+                      <p className="text-[10px] text-purple-300">Equipada</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-xs font-medium text-gray-500">{slot.label}</p>
+                      <p className="text-[10px] text-gray-600">Vazio</p>
+                    </>
+                  )}
+                </button>
+              );
+            }
             const inv = equippedMap[slot.key];
             const Icon = slot.icon;
             return (
