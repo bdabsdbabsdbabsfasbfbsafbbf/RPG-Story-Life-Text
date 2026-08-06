@@ -61,11 +61,10 @@ interface ShopProduct {
   icon?: string | null;
 }
 
-type TabKey = "items" | "enchantments" | "classes" | "offers";
+type TabKey = "items" | "classes" | "offers";
 
 const TABS: { key: TabKey; label: string; icon: any }[] = [
   { key: "items", label: "Itens", icon: Package },
-  { key: "enchantments", label: "Encantamentos", icon: Sparkles },
   { key: "classes", label: "Classes", icon: Swords },
   { key: "offers", label: "Ofertas", icon: Layers },
 ];
@@ -194,7 +193,6 @@ export function ShopPage() {
 
   const byTab = (key: TabKey) => {
     if (key === "items") return products.filter((p) => p.type === "item");
-    if (key === "enchantments") return products.filter((p) => p.type === "enchantment");
     if (key === "classes") return products.filter((p) => p.type === "class");
     return products.filter((p) => ["diamond_pack", "vip", "pass_premium"].includes(p.type));
   };

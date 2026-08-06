@@ -448,7 +448,7 @@ export function InventoryPage() {
                   </div>
                 )}
                 {compatibleEnchants(selectedItem).length === 0 && !selectedItem.item.enchantment && (
-                  <p className="text-[11px] text-gray-600">Nenhum encantamento compatível na sua mochila. Compre na Loja (aba Encantamentos).</p>
+                  <p className="text-[11px] text-gray-600">Nenhum encantamento compatível na sua mochila.</p>
                 )}
               </div>
             )}
