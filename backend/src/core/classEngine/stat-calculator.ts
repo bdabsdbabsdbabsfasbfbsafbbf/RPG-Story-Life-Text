@@ -1,7 +1,7 @@
 import { DerivedStats, PassiveDef } from "./types";
-import { CoreStats, sumCoreStats } from "../stats/coreStats";
+import { CORE_STAT_KEYS, CoreStats, sumCoreStats } from "../stats/coreStats";
 
-const CORE_KEYS = ["hp", "mana", "attack", "defense", "magic", "magicDefense", "speed"] as const;
+// Bases mínimas da engine (floor): o resto vem dos Status Class via conversão fixa.
 const BASE_STATS: DerivedStats = {
   level: 1,
   hp: 100,
@@ -11,15 +11,15 @@ const BASE_STATS: DerivedStats = {
   magic: 10,
   magicDefense: 10,
   speed: 10,
-  attackPower: 10,
-  spellPower: 10,
-  hitChance: 100,
-  critChance: 5,
+  attackPower: 0,
+  spellPower: 0,
+  hitChance: 85,
+  critChance: 2,
   critDamage: 150,
-  dodge: 2,
+  dodge: 3,
   attackSpeedMs: 2000,
   manaRegenPerTick: 5,
-  healthRegenPerTick: 0,
+  healthRegenPerTick: 1,
   threatPerAttack: 1,
   aggroPerHit: 1,
   damagePercent: 0,
@@ -62,11 +62,40 @@ function pickFrom(record: Record<string, any>, target: string): number {
   return 0;
 }
 
-export interface StatConversion {
-  stat: string; // strength, intellect, endurance, dexterity, wisdom, luck
-  target: string; // attackPower, spellPower, critChance, critDamage, dodge, hitChance, cooldownReduction, hp, mana, defense, magicDefense
-  factor: number;
-}
+// ===== Conversão OFICIAL e ÚNICA de Status Class → Combat Stats =====
+// O criador da Classe preenche apenas os 6 Status Class (coreStats).
+// Regras por ponto aplicado (fatores configuráveis na engine para balanceamento):
+//   • Flat: Attack Power, Spell Power, Max Health e Mana = +0,5 por ponto.
+//   • %: chances, boosts, resistências, penetração e cooldown = +0,25% por ponto.
+export const CLASS_STAT_CONVERSION: Record<string, Record<string, number>> = {
+  strength: { attackPower: 0.5, physicalBoost: 0.25, armorPenetration: 0.25 },
+  intellect: { spellPower: 0.5, magicalBoost: 0.25, magicPenetration: 0.25 },
+  endurance: { maxHealth: 0.5, physicalResistance: 0.25, magicalResistance: 0.25 },
+  dexterity: { hitChance: 0.25, evasion: 0.25 },
+  wisdom: { mana: 0.5, manaRegen: 0.25, healingBoost: 0.25, cooldownReduction: 0.25 },
+  luck: { critChance: 0.25, critMultiplier: 0.25 },
+};
+
+// Onde cada alvo da conversão cai dentro de DerivedStats.
+const CONVERSION_TARGETS: Record<string, keyof DerivedStats> = {
+  attackPower: "attackPower",
+  physicalBoost: "physicalDamagePercent",
+  armorPenetration: "penetration",
+  spellPower: "spellPower",
+  magicalBoost: "magicalDamagePercent",
+  magicPenetration: "penetration",
+  maxHealth: "hp",
+  physicalResistance: "physicalResistance",
+  magicalResistance: "magicalResistance",
+  hitChance: "hitChance",
+  evasion: "dodge",
+  mana: "mana",
+  manaRegen: "manaRegenPerTick",
+  healingBoost: "healingPercent",
+  cooldownReduction: "cooldownReduction",
+  critChance: "critChance",
+  critMultiplier: "critDamage",
+};
 
 export interface StatsInput {
   level: number;
@@ -77,13 +106,11 @@ export interface StatsInput {
     perLevel?: Record<string, any>;
     scaling?: Record<string, any>;
     coreStats?: Record<string, any>;
-    conversions?: StatConversion[];
-    combatStatsBase?: Record<string, any>;
-    bonuses?: Record<string, any>;
+    bonuses?: Record<string, any>; // usado apenas para injetar boosters (damageBoost/defenseBoost)
   };
   resource?: Record<string, any>;
   passives: PassiveDef[]; // apenas passivas desbloqueadas pelo rank
-  coreStats?: CoreStats; // Core Stats vindos de equipamentos + encantamentos
+  coreStats?: CoreStats; // Core Stats vindos de itens/encantamentos equipados
   attackSpeedMs?: number; // ÚNICA fonte de velocidade de ataque: a arma equipada (sem arma = 2000ms)
   weaponDps?: number; // DPS natural da arma equipada (soma ao attack power)
 }
@@ -108,42 +135,27 @@ function applyPercent(stat: number, totalPercent: number): number {
   return stat * (1 + totalPercent / 100);
 }
 
-// Conversões de atributos (core stats) -> combat stats definidas pelo Stat Model.
-// Retorna { combatKey: valor } somando cada conversão do modelo sobre o total de atributos.
-function applyConversions(conversions: StatConversion[] | undefined, core: CoreStats): Record<string, number> {
-  const out: Record<string, number> = {};
-  if (!conversions) return out;
-  for (const c of conversions) {
-    const value = num(core[c.stat as keyof CoreStats], 0) * num(c.factor, 0);
-    if (value === 0) continue;
-    out[c.target] = (out[c.target] || 0) + value;
+// Aplica a matriz fixa sobre o total de Status Class (classe + itens + encantamentos).
+function applyCoreConversion(core: CoreStats, stats: DerivedStats): void {
+  for (const stat of CORE_STAT_KEYS) {
+    const value = num(core[stat], 0);
+    if (!value) continue;
+    const table = CLASS_STAT_CONVERSION[stat];
+    if (!table) continue;
+    for (const [target, factor] of Object.entries(table)) {
+      const derivedKey = CONVERSION_TARGETS[target];
+      if (derivedKey) stats[derivedKey] += value * factor;
+    }
   }
-  return out;
 }
 
 export function computeStats(input: StatsInput): DerivedStats {
-  const base = input.statModel?.base || {};
-  const perLevel = input.statModel?.perLevel || {};
-  const scaling = input.statModel?.scaling || {};
   const resource = input.resource || {};
-  const level = Math.max(1, input.level);
   const coreStatsBase = input.statModel?.coreStats || {};
 
   const stats: DerivedStats = { ...BASE_STATS };
 
-  for (const key of CORE_KEYS) {
-    stats[key] = Math.max(0, Math.floor(pickFrom(base, key) + pickFrom(perLevel, key) * (level - 1)));
-  }
-
-  stats.hp += flatPassiveMods(input.passives, "hp");
-  stats.mana += flatPassiveMods(input.passives, "mana");
-  stats.attack += flatPassiveMods(input.passives, "attack");
-  stats.defense += flatPassiveMods(input.passives, "defense");
-  stats.magic += flatPassiveMods(input.passives, "magic");
-  stats.magicDefense += flatPassiveMods(input.passives, "magicDefense");
-  stats.speed += flatPassiveMods(input.passives, "speed");
-
-  // Core stats do modelo: FIXOS (concedidos no nível 1, não crescem por nível) + equipamentos/encantamentos
+  // Status Class totais = classe (fixos) + itens/encantamentos equipados
   const modelCore = sumCoreStats([
     {
       strength: pickFrom(coreStatsBase, "strength"),
@@ -156,51 +168,47 @@ export function computeStats(input: StatsInput): DerivedStats {
   ]);
   const totalCore = sumCoreStats([modelCore, input.coreStats]);
 
-  const combatStatsBase = input.statModel?.combatStatsBase || {};
-  const bonuses = input.statModel?.bonuses || {};
-  const conversions = applyConversions(input.statModel?.conversions, totalCore);
+  // Conversão central: Status Class → Combat Stats (matriz fixa da engine)
+  applyCoreConversion(totalCore, stats);
 
-  // Conversões que alimentam os núcleos
-  stats.hp += conversions.hp || 0;
-  stats.mana += conversions.mana || 0;
-  stats.defense += conversions.defense || 0;
-  stats.magicDefense += conversions.magicDefense || 0;
-
-  stats.hitChance = Math.min(100, num(combatStatsBase.hitChance, 100) + (conversions.hitChance || 0) + flatPassiveMods(input.passives, "hitChance") + percentPassiveMods(input.passives, "hitChance"));
-  stats.critChance = Math.max(0, num(combatStatsBase.critChance, 0) + stats.speed * num(scaling.critChancePerSpeed, 0.05) + (conversions.critChance || 0) + flatPassiveMods(input.passives, "critChance") + percentPassiveMods(input.passives, "critChance"));
-  stats.critDamage = Math.max(50, num(combatStatsBase.critMultiplier, num(scaling.critDamageBase, 150)) + (conversions.critDamage || 0) + flatPassiveMods(input.passives, "critDamage") + percentPassiveMods(input.passives, "critDamage"));
-  stats.dodge = Math.min(60, Math.max(0, num(combatStatsBase.evasion, 0) + stats.speed * num(scaling.dodgePerSpeed, 0.02) + (conversions.dodge || 0) + flatPassiveMods(input.passives, "dodge") + percentPassiveMods(input.passives, "dodge")));
-  stats.cooldownReduction = num(combatStatsBase.cooldownReduction, 0) + (conversions.cooldownReduction || 0) + flatPassiveMods(input.passives, "cooldownReduction") + percentPassiveMods(input.passives, "cooldownReduction");
+  // Passivas de classe (flat) — modificadores sobre os derivados
+  stats.hp += flatPassiveMods(input.passives, "hp");
+  stats.mana += flatPassiveMods(input.passives, "mana");
+  stats.attack += flatPassiveMods(input.passives, "attack");
+  stats.defense += flatPassiveMods(input.passives, "defense");
+  stats.magic += flatPassiveMods(input.passives, "magic");
+  stats.magicDefense += flatPassiveMods(input.passives, "magicDefense");
+  stats.speed += flatPassiveMods(input.passives, "speed");
+  stats.hitChance += flatPassiveMods(input.passives, "hitChance") + percentPassiveMods(input.passives, "hitChance");
+  stats.critChance += flatPassiveMods(input.passives, "critChance") + percentPassiveMods(input.passives, "critChance");
+  stats.critDamage += flatPassiveMods(input.passives, "critDamage") + percentPassiveMods(input.passives, "critDamage");
+  stats.dodge += flatPassiveMods(input.passives, "dodge") + percentPassiveMods(input.passives, "dodge");
+  stats.cooldownReduction += flatPassiveMods(input.passives, "cooldownReduction") + percentPassiveMods(input.passives, "cooldownReduction");
+  stats.damagePercent += flatPassiveMods(input.passives, "damagePercent") + percentPassiveMods(input.passives, "damagePercent");
+  stats.physicalDamagePercent += flatPassiveMods(input.passives, "physicalDamagePercent") + percentPassiveMods(input.passives, "physicalDamagePercent");
+  stats.magicalDamagePercent += flatPassiveMods(input.passives, "magicDamagePercent") + percentPassiveMods(input.passives, "magicDamagePercent");
+  stats.healingPercent += flatPassiveMods(input.passives, "healingPercent") + percentPassiveMods(input.passives, "healingPercent");
+  stats.dotPercent += flatPassiveMods(input.passives, "dotPercent") + percentPassiveMods(input.passives, "dotPercent");
+  stats.overhealPercent += flatPassiveMods(input.passives, "overhealPercent") + percentPassiveMods(input.passives, "overhealPercent");
+  stats.manaCostReduction += flatPassiveMods(input.passives, "manaCostReduction") + percentPassiveMods(input.passives, "manaCostReduction");
+  stats.physicalResistance += flatPassiveMods(input.passives, "physicalResistance");
+  stats.magicalResistance += flatPassiveMods(input.passives, "magicalResistance");
+  stats.damageResistance += flatPassiveMods(input.passives, "damageResistance");
+  stats.penetration += flatPassiveMods(input.passives, "penetration");
+  stats.manaRegenPerTick += flatPassiveMods(input.passives, "manaRegen") + num(resource.manaRegenPerTick, 0);
+  stats.healthRegenPerTick += flatPassiveMods(input.passives, "healthRegen");
+  stats.threatPerAttack = num(resource.threatPerAttack, 1);
+  stats.aggroPerHit = num(resource.aggroPerHit, 1);
 
   // Attack Speed: definida EXCLUSIVAMENTE pela arma equipada (attackSpeedMs do item).
   // A classe NÃO define intervalo nem velocidade de ataque. Sem arma: 2000ms padrão.
   stats.attackSpeedMs = Math.max(100, Math.round(input.attackSpeedMs && input.attackSpeedMs > 0 ? input.attackSpeedMs : 2000));
 
-  stats.manaRegenPerTick = num(resource.manaRegenPerTick, num(scaling.manaRegenPerTick, 5)) + flatPassiveMods(input.passives, "manaRegen");
-  stats.healthRegenPerTick = num(scaling.healthRegenPerTick, 0) + flatPassiveMods(input.passives, "healthRegen");
-  stats.threatPerAttack = num(scaling.threatPerAttack, 1);
-  stats.aggroPerHit = num(scaling.aggroPerHit, 1);
-
-  // Amplificadores: modelo (bônus) + passivas (flat e percent)
-  stats.damagePercent += num(bonuses.damageBoost, 0) + flatPassiveMods(input.passives, "damagePercent") + percentPassiveMods(input.passives, "damagePercent");
-  stats.physicalDamagePercent += num(bonuses.physicalBoost, 0) + flatPassiveMods(input.passives, "physicalDamagePercent") + percentPassiveMods(input.passives, "physicalDamagePercent");
-  stats.magicalDamagePercent += num(bonuses.magicalBoost, 0) + flatPassiveMods(input.passives, "magicDamagePercent") + percentPassiveMods(input.passives, "magicDamagePercent");
-  stats.healingPercent += num(bonuses.healingBoost, 0) + flatPassiveMods(input.passives, "healingPercent") + percentPassiveMods(input.passives, "healingPercent");
-  stats.dotPercent += flatPassiveMods(input.passives, "dotPercent") + percentPassiveMods(input.passives, "dotPercent");
-  stats.overhealPercent += flatPassiveMods(input.passives, "overhealPercent") + percentPassiveMods(input.passives, "overhealPercent");
-  stats.manaCostReduction += flatPassiveMods(input.passives, "manaCostReduction") + percentPassiveMods(input.passives, "manaCostReduction");
-  stats.cooldownReduction += flatPassiveMods(input.passives, "cooldownReduction") + percentPassiveMods(input.passives, "cooldownReduction");
-
-  // Resistências e penetração do modelo
-  stats.damageResistance += num(bonuses.damageResistance, 0) + flatPassiveMods(input.passives, "damageResistance");
-  stats.physicalResistance += num(bonuses.physicalResistance, 0) + flatPassiveMods(input.passives, "physicalResistance");
-  stats.magicalResistance += num(bonuses.magicalResistance, 0) + flatPassiveMods(input.passives, "magicalResistance");
-  stats.penetration += num(bonuses.penetration, 0) + flatPassiveMods(input.passives, "penetration");
-
-  // Boost de defesa (booster de anel/colar): +X% de resistência física E mágica
-  const defenseBoost = num(bonuses.defenseBoost, 0);
-  stats.physicalResistance += defenseBoost;
-  stats.magicalResistance += defenseBoost;
+  // Boosters equipados (gacha): dano e defesa — único uso do `bonuses` no modelo
+  const bonuses = input.statModel?.bonuses || {};
+  stats.damagePercent += num(bonuses.damageBoost, 0);
+  stats.physicalResistance += num(bonuses.defenseBoost, 0);
+  stats.magicalResistance += num(bonuses.defenseBoost, 0);
 
   // Percentuais aplicados aos núcleos (passivas "percent")
   stats.hp = Math.floor(applyPercent(stats.hp, percentPassiveMods(input.passives, "hp")));
@@ -211,18 +219,22 @@ export function computeStats(input: StatsInput): DerivedStats {
   stats.magicDefense = Math.floor(applyPercent(stats.magicDefense, percentPassiveMods(input.passives, "magicDefense")));
   stats.speed = Math.floor(applyPercent(stats.speed, percentPassiveMods(input.passives, "speed")));
 
-  // Attack/Skill Power: base do modelo + conversões de atributos
-  const modelAttackBase = applyPercent(stats.attack, percentPassiveMods(input.passives, "attackPower"));
-  stats.attackPower = Math.max(1, Math.floor(modelAttackBase * num(scaling.attackPowerPerAttack, 1) + (conversions.attackPower || 0)));
-  const modelSpellBase = applyPercent(stats.magic, percentPassiveMods(input.passives, "spellPower"));
-  stats.spellPower = Math.max(1, Math.floor(modelSpellBase * num(scaling.spellPowerPerMagic, 1) + (conversions.spellPower || 0)));
-  stats.maxHp = stats.hp;
-  stats.maxMana = stats.mana;
-  stats.attackPower = Math.floor(applyPercent(stats.attackPower, percentPassiveMods(input.passives, "attackPowerPercent")));
-  stats.spellPower = Math.floor(applyPercent(stats.spellPower, percentPassiveMods(input.passives, "spellPowerPercent")));
+  // Attack/Spell Power: conversão + passivas + DPS da arma (vira dano físico por ataque)
+  stats.attackPower = Math.max(1, Math.floor(applyPercent(stats.attackPower, percentPassiveMods(input.passives, "attackPowerPercent")) + flatPassiveMods(input.passives, "attackPower")));
+  stats.spellPower = Math.max(1, Math.floor(applyPercent(stats.spellPower, percentPassiveMods(input.passives, "spellPowerPercent")) + flatPassiveMods(input.passives, "spellPower")));
   if (input.weaponDps) {
     stats.attackPower = Math.floor(stats.attackPower + (input.weaponDps * stats.attackSpeedMs) / 1000);
   }
+
+  stats.maxHp = stats.hp;
+  stats.maxMana = stats.mana;
+
+  // Clamps de sanidade
+  stats.hitChance = Math.min(100, Math.max(0, stats.hitChance));
+  stats.critChance = Math.max(0, stats.critChance);
+  stats.critDamage = Math.max(50, stats.critDamage);
+  stats.dodge = Math.min(60, Math.max(0, stats.dodge));
+  stats.cooldownReduction = Math.max(0, stats.cooldownReduction);
 
   return stats;
 }

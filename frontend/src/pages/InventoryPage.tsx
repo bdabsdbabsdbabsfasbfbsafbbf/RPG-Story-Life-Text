@@ -365,15 +365,15 @@ export function InventoryPage() {
                 <p className="text-xs text-gray-500 mb-2">Core Stats</p>
                 <div className="grid grid-cols-2 gap-1 text-sm">
                   {CORE_STAT_LABELS.map(({ key, label, color }) => {
-                    const value = (selectedItem.item as any)[key] ?? 0;
-                    if (!value && !selectedItem.item.enchantment) return null;
-                    const enchValue = (selectedItem.item.enchantment as any)?.[key] ?? 0;
+                    const ench = selectedItem.item.enchantment;
+                    const value = ench ? ((ench as any)[key] ?? 0) : ((selectedItem.item as any)[key] ?? 0);
+                    if (!value) return null;
                     return (
                       <div key={key} className="flex items-center justify-between">
                         <span className={`text-gray-400 ${color}`}>{label}</span>
                         <span className="font-mono text-green-400">
                           +{value}
-                          {enchValue > 0 && <span className="text-yellow-400"> (+{enchValue})</span>}
+                          {ench && <span className="text-yellow-400 text-xs"> (enc.)</span>}
                         </span>
                       </div>
                     );
@@ -401,6 +401,7 @@ export function InventoryPage() {
                 <p className="text-xs text-gray-500 mb-2 flex items-center gap-1.5">
                   <Sparkles size={12} className="text-yellow-400" /> Encantamento
                 </p>
+                <p className="text-[11px] text-gray-600 mb-2">Ao encantar, os core stats do encantamento substituem os do item.</p>
                 {selectedItem.item.enchantment ? (
                   <div className="flex items-center justify-between gap-2 mb-3">
                     <div className="min-w-0">

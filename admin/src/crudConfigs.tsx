@@ -397,46 +397,10 @@ export const crudConfigs: CrudConfig[] = [
       },
       {
         name: "coreStats",
-        label: "Core Stats base (nível 1)",
+        label: "Status Class base (nível 1)",
         type: "json",
         jsonSchema: { mode: "fixed-record", fields: CORE_STAT_FIELDS },
-        hint: "Pontos dos 6 atributos que o modelo concede no nível 1. São fixos — não há crescimento por nível. Ex.: Strength 150, Intellect 20, Endurance 100...",
-      },
-      {
-        name: "conversions",
-        label: "Conversões de atributos",
-        type: "json",
-        jsonSchema: {
-          mode: "object-array",
-          addLabel: "Adicionar conversão",
-          fields: [
-            { name: "stat", label: "Atributo", type: "select", options: ["strength", "intellect", "endurance", "dexterity", "wisdom", "luck"] },
-            {
-              name: "target",
-              label: "Combat Stat",
-              type: "select",
-              options: ["attackPower", "spellPower", "critChance", "critDamage", "dodge", "hitChance", "cooldownReduction", "hp", "mana", "defense", "magicDefense"],
-            },
-            { name: "factor", label: "Multiplicador", type: "number", step: "0.1" },
-          ],
-        },
-        hint: "Como cada Core Stat influencia os Combat Stats. Ex.: strength → attackPower ×1.50 | endurance → hp ×12 | wisdom → mana ×8 | luck → critChance +0.10 por ponto. A velocidade de ataque vem da arma (Item.attackSpeedMs), não da classe.",
-      },
-      {
-        name: "combatStatsBase",
-        label: "Combat Stats Base",
-        type: "json",
-        jsonSchema: {
-          mode: "fixed-record",
-          fields: [
-            { key: "hitChance", label: "Hit Chance (%)" },
-            { key: "critChance", label: "Crit Chance (%)" },
-            { key: "critMultiplier", label: "Crit Multiplier (%)" },
-            { key: "evasion", label: "Evasion (%)" },
-            { key: "cooldownReduction", label: "CDR (%)" },
-          ],
-        },
-        hint: "Valores base que definem o comportamento da classe. Nada além destes 5.",
+        hint: "ÚNICOS atributos configuráveis: os 6 Status Class, fixos no nível 1 (não crescem por nível). A Combat Engine converte automaticamente: flat (Attack/Spell Power, Max Health, Mana) = +0,5 por ponto; chances/boosts/resistências/penetração = +0,25% por ponto.",
       },
       { name: "isActive", label: "Active", type: "boolean", defaultValue: true },
     ],

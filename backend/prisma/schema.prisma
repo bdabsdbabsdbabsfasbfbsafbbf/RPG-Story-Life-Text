@@ -158,9 +158,11 @@ model GameClass {
   shopProducts  ShopProduct[]
 }
 
-// Stat model da classe: identidade (nome/categoria) + os 6 core stats (base e por nível)
-// + conversões de atributos. A Combat Engine calcula todos os derivados.
-// A velocidade de ataque é definida EXCLUSIVAMENTE pela arma equipada (Item.attackSpeedMs).
+// Stat model da classe: identidade (nome/categoria) + os 6 Status Class (coreStats).
+// O criador preenche APENAS os 6 core stats — a Combat Engine converte tudo
+// automaticamente (0,5 flat / 0,25% por ponto). Velocidade de ataque vem só da arma.
+// Campos abaixo de base/perLevel/scaling/coreStatsPerLevel/conversions/
+// combatStatsBase/bonuses são LEGADO (mantidos por compatibilidade de dados).
 model StatModel {
   id          String      @id @default(uuid())
   name        String      @unique
@@ -168,25 +170,22 @@ model StatModel {
   description String      @default("")
   // Categoria de combate: melee, caster, hybrid, support, tank
   category    String      @default("hybrid")
-  // base: { hp, mana, attack, defense, magic, magicDefense, speed } — LEGADO (fallback opcional)
+  // base: { hp, mana, attack, defense, magic, magicDefense, speed } — LEGADO (ignorado)
   base        Json        @default("{}")
-  // perLevel: mesmo shape de base — LEGADO (fallback opcional)
+  // perLevel: mesmo shape de base — LEGADO (ignorado)
   perLevel    Json        @default("{}")
-  // scaling: LEGADO (fallback opcional) — os derivados agora vêm das conversões
+  // scaling: LEGADO (ignorado)
   scaling     Json        @default("{}")
-// coreStats: { strength, intellect, endurance, dexterity, wisdom, luck } — pontos no nível 1.
+// coreStats: { strength, intellect, endurance, dexterity, wisdom, luck } — ÚNICO campo usado.
 // FIXOS: não há crescimento por nível.
 coreStats   Json        @default("{}")
 // coreStatsPerLevel: LEGADO (não é mais usado — atributos não crescem por nível)
 coreStatsPerLevel Json  @default("{}")
-  // conversions: [{ stat, target, factor }] — como os atributos viram Combat Stats.
-  // Ex.: { stat: "strength", target: "attackPower", factor: 1.5 },
-  //      { stat: "endurance", target: "hp", factor: 15 },
-  //      { stat: "luck", target: "critChance", factor: 0.1 }
+  // conversions: LEGADO — a conversão é FIXA na Combat Engine (CLASS_STAT_CONVERSION)
   conversions Json        @default("[]")
-  // combatStatsBase: { hitChance, critChance, critMultiplier, evasion, cooldownReduction }
+  // combatStatsBase: LEGADO — bases agora são constantes da engine
   combatStatsBase Json   @default("{}")
-  // bonuses: LEGADO (fallback opcional) — removido do editor
+  // bonuses: LEGADO — apenas a engine injeta boosts (boosters de gacha)
   bonuses       Json      @default("{}")
   isActive      Boolean     @default(true)
   createdAt     DateTime    @default(now())

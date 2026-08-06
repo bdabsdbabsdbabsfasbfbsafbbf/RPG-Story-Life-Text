@@ -20,9 +20,7 @@ export function displayStats(gameClass: any): any {
   const stats = computeStats({
     level: 1,
     statModel: {
-      base: parseJson(statModel.base, {}),
-      perLevel: parseJson(statModel.perLevel, {}),
-      scaling: parseJson(statModel.scaling, {}),
+      coreStats: parseJson(statModel.coreStats, {}),
     },
     resource: parseJson(gameClass.resource, {}),
     passives: [],

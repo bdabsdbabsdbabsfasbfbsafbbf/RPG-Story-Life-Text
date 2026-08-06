@@ -209,38 +209,34 @@ export class CombatService {
       .filter((p: any) => (p.rankRequired ?? 1) <= rank)
       .map(parsePassive);
 
-    // Core Stats de equipamento (item + encantamento equipado) — conversão centralizada no Combat Engine
+    // Core Stats de equipamento — o encantamento SUBSTITUI os valores do item:
+    // sem encantamento, soma os valores do item; encantado, vale só o encantamento.
+    // Total = classe (fixa) + itens — convertido pela Combat Engine.
     const coreStats = sumCoreStats([
       ...["weapon", "classItem", "helm", "armor", "cape", "ring", "necklace"].map((slot) => {
         const item = (character.equipment as any)?.[slot];
         if (!item) return null;
+        const src = item.enchantment || item;
         return {
-          strength: (item.strength ?? 0) + (item.enchantment?.strength ?? 0),
-          intellect: (item.intellect ?? 0) + (item.enchantment?.intellect ?? 0),
-          endurance: (item.endurance ?? 0) + (item.enchantment?.endurance ?? 0),
-          dexterity: (item.dexterity ?? 0) + (item.enchantment?.dexterity ?? 0),
-          wisdom: (item.wisdom ?? 0) + (item.enchantment?.wisdom ?? 0),
-          luck: (item.luck ?? 0) + (item.enchantment?.luck ?? 0),
+          strength: src.strength ?? 0,
+          intellect: src.intellect ?? 0,
+          endurance: src.endurance ?? 0,
+          dexterity: src.dexterity ?? 0,
+          wisdom: src.wisdom ?? 0,
+          luck: src.luck ?? 0,
         };
       }),
     ]);
 
     // Boosters equipados do jogador (anel/colar): dano e defesa entram no combate
     const boosterBonuses = await getEquippedBoosterBonuses(character.userId);
-    const classBonuses = parseJson(gameClass.statModel?.bonuses, {});
 
     const statsInput: StatsInput = {
       level: character.level,
       statModel: {
-        base: parseJson(gameClass.statModel?.base, {}),
-        perLevel: parseJson(gameClass.statModel?.perLevel, {}),
-        scaling: parseJson(gameClass.statModel?.scaling, {}),
         coreStats: parseJson(gameClass.statModel?.coreStats, {}),
-        conversions: parseJson(gameClass.statModel?.conversions, []),
-        combatStatsBase: parseJson(gameClass.statModel?.combatStatsBase, {}),
         bonuses: {
-          ...classBonuses,
-          damageBoost: (Number(classBonuses.damageBoost) || 0) + boosterBonuses.damage,
+          damageBoost: boosterBonuses.damage,
           defenseBoost: boosterBonuses.defense,
         },
       },

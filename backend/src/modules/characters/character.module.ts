@@ -51,9 +51,7 @@ export function createCharacterModule(app: Express): void {
           const stats = computeStats({
             level: 1,
             statModel: {
-              base: parseJson(c.statModel?.base, {}),
-              perLevel: parseJson(c.statModel?.perLevel, {}),
-              scaling: parseJson(c.statModel?.scaling, {}),
+              coreStats: parseJson(c.statModel?.coreStats, {}),
             },
             resource: parseJson(c.resource, {}),
             passives: [],
