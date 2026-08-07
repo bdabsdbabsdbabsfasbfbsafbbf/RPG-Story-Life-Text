@@ -25,7 +25,7 @@ const SPRITE_POS: Record<
   necklace: { top: "24%", left: "34%", width: "32%", height: "15%", z: 30 },
   armor: { top: "27%", left: "8%", width: "84%", height: "36%", z: 30 },
   cape: { top: "4%", left: "-10%", width: "120%", height: "52%", z: 0 },
-  weapon: { top: "32%", left: "54%", width: "42%", height: "40%", rotate: 12, z: 30 },
+  weapon: { top: "44%", left: "58%", width: "38%", height: "44%", rotate: 12, z: 30 },
   ring: { top: "58%", left: "2%", width: "22%", height: "22%", z: 30 },
 };
 

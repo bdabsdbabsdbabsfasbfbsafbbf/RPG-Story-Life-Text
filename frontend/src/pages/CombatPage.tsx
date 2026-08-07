@@ -252,6 +252,11 @@ export function CombatPage() {
         if (r?.drops && r.drops.length > 0) line += ` • Drops: ${r.drops.map((d) => `${d.quantity}x ${d.name}`).join(", ")}`;
         setCombatLog(prev => [...prev.slice(-19), line]);
         refreshUser();
+      } else if (data.state === "error") {
+        setInCombat(false);
+        setLoading(false);
+        toast.error("O combate travou — inicie novamente");
+        setCombatLog(prev => [...prev.slice(-19), "O combate travou por um erro interno. Inicie novamente."]);
       }
     });
 

@@ -19,6 +19,16 @@ import { executeActions, ActionResult, evaluateConditions, describeConditions, e
 
 export const TICK_MS = 1000;
 
+// Garante que nenhum stat inválido (NaN/Infinity) congele o combate:
+// comparações com NaN nunca disparam ataques e o combate "trava".
+function finiteStats(stats: DerivedStats): DerivedStats {
+  const out: DerivedStats = { ...stats };
+  for (const [k, v] of Object.entries(out)) {
+    if (typeof v === "number" && !Number.isFinite(v)) out[k] = 0;
+  }
+  return out;
+}
+
 // Multiplicador de stacks para ticks de DoT/HoT conforme o crescimento configurado:
 // linear (×stacks) | crescente (triangular: 1,3,6,10...) | multiplicativo (rate^stacks-1).
 export function stackGrowthMultiplier(effect: EffectDef, stacks: number): number {
@@ -43,8 +53,7 @@ export interface BattleOptions {
   monster: any;
   monsterSkills?: SkillDef[];
   classResource: Record<string, any>;
-  onEnd: (state: "won" | "lost") => void;
-  syncPlayerEffects: (effects: ActiveEffectRuntime[]) => Promise<void>;
+  onEnd: (state: "won" | "lost") => void;  syncPlayerEffects: (effects: ActiveEffectRuntime[]) => Promise<void>;
 }
 
 export interface SkillUseResult {
@@ -77,7 +86,7 @@ export class Battle {
   id: string;
   characterId: string;
   monsterId: string;
-  state: "active" | "won" | "lost" = "active";
+  state: "active" | "won" | "lost" | "error" = "active";
   startedAt: number;
   lastTick: number;
   round = 0;
@@ -221,7 +230,7 @@ export class Battle {
       if (f) for (const [k, v] of Object.entries(f)) flat[k] = (flat[k] || 0) + Number(v) || 0;
       if (p) for (const [k, v] of Object.entries(p)) percent[k] = (percent[k] || 0) + Number(v) || 0;
     }
-    return applyStatModifiers(this.player.stats, { flat, percent });
+    return finiteStats(applyStatModifiers(this.player.stats, { flat, percent }));
   }
 
   private effectiveMonsterStats(): DerivedStats {
@@ -233,7 +242,7 @@ export class Battle {
       if (f) for (const [k, v] of Object.entries(f)) flat[k] = (flat[k] || 0) + Number(v) || 0;
       if (p) for (const [k, v] of Object.entries(p)) percent[k] = (percent[k] || 0) + Number(v) || 0;
     }
-    return applyStatModifiers(this.monster.stats, { flat, percent });
+    return finiteStats(applyStatModifiers(this.monster.stats, { flat, percent }));
   }
 
   // ============ Eventos ============
@@ -578,6 +587,16 @@ export class Battle {
   // ============ Tick principal ============
   tick(): void {
     if (this.state !== "active") return;
+    try {
+      this.tickInner();
+    } catch (err) {
+      console.error("[battle] tick falhou — encerrando combate para evitar travamento:", err);
+      this.state = "error";
+      this.pushMessage("O combate travou por um erro interno. Inicie novamente.");
+    }
+  }
+
+  private tickInner(): void {
     const now = Date.now();
     this.lastTick = now;
     this.round++;

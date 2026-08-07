@@ -138,7 +138,7 @@ interface ActiveCombat {
   monster: any;
   skills: SkillDef[];
   monsterSkills: SkillDef[];
-  state: "active" | "won" | "lost" | "fled";
+  state: "active" | "won" | "lost" | "fled" | "error";
   characterHp: number;
   characterMana: number;
   monsterHp: number;
@@ -481,7 +481,24 @@ export class CombatService {
     const entry = this.activeCombats.get(combatId);
     if (!entry) return;
 
-    entry.battle.tick();
+    try {
+      entry.battle.tick();
+    } catch (err) {
+      console.error(`[combat] tick error (${combatId}):`, err);
+      clearInterval(entry.tickInterval);
+      this.activeCombats.delete(combatId);
+      this.clearSession(combatId).catch(() => {});
+      if (this.onTickListener) {
+        this.onTickListener({
+          combatId,
+          characterId: entry.characterId,
+          state: "error",
+          monsterName: entry.monster.name,
+          messages: ["O combate travou por um erro interno. Inicie novamente."],
+        });
+      }
+      return;
+    }
 
     if (entry.state === "active" && entry.battle.state !== "active") {
       entry.state = entry.battle.state;

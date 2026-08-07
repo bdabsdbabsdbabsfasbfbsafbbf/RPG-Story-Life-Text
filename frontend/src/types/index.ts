@@ -640,7 +640,7 @@ export interface CombatUpdate {
   combatId: string;
   skillId?: string;
   skillName?: string;
-  state: 'active' | 'won' | 'lost' | 'fled';
+  state: 'active' | 'won' | 'lost' | 'fled' | 'error';
   characterHp: number;
   characterMana?: number;
   maxHp?: number;
