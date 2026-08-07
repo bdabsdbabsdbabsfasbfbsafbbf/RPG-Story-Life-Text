@@ -10,12 +10,22 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuthStore } from "../store/authStore";
+import { effectiveEnchantmentStats } from "../lib/enchantmentStats";
+
+const ENCH_STAT_LABELS: { key: string; label: string }[] = [
+  { key: "strength", label: "Força" },
+  { key: "intellect", label: "Intelecto" },
+  { key: "endurance", label: "Vigor" },
+  { key: "dexterity", label: "Destreza" },
+  { key: "wisdom", label: "Sabedoria" },
+  { key: "luck", label: "Sorte" },
+];
 
 interface NpcDetail {
   id: string;
   name: string;
   type: string;
-  shopItems?: { id: string; price: string | number; currency?: string; itemId?: string | null; enchantmentId?: string | null; classId?: string | null; requiredLevel?: number; requiredVip?: boolean; requiredQuestIds?: string | null; class?: { name: string; slug: string } | null; item: { id: string; name: string; description: string; type: string; rarity: string; icon?: string | null; attackSpeedMs?: number; dps?: number; requiredVip?: boolean } | null; enchantment?: { name: string; slug: string; description: string; icon?: string | null; requiredVip?: boolean } | null }[];
+  shopItems?: { id: string; price: string | number; currency?: string; itemId?: string | null; enchantmentId?: string | null; classId?: string | null; requiredLevel?: number; requiredVip?: boolean; requiredQuestIds?: string | null; class?: { name: string; slug: string } | null; item: { id: string; name: string; description: string; type: string; rarity: string; icon?: string | null; attackSpeedMs?: number; dps?: number; requiredVip?: boolean } | null; enchantment?: { name: string; slug: string; description: string; icon?: string | null; requiredVip?: boolean; level?: number; rarity?: string; category?: string; strength?: number; intellect?: number; endurance?: number; dexterity?: number; wisdom?: number; luck?: number; computedStats?: Record<string, number> } | null }[];
   quests?: { id: string; title: string; description: string; requiredLevel: number; requiredRank: number; requiredQuestIds?: string | null; xpReward: string | number; goldReward: string | number }[];
 }
 
@@ -637,6 +647,19 @@ export function MapPage() {
                                   <Crown size={9} /> VIP
                                 </span>
                               )}
+                              {isEnchantment && offer.enchantment?.level && offer.enchantment.level > 1 && (
+                                <span className="text-[10px] px-1.5 py-0.5 bg-purple-500/15 text-purple-300 rounded-md">
+                                  Nv. {offer.enchantment.level}
+                                </span>
+                              )}
+                              {isEnchantment && offer.enchantment && (() => {
+                                const stats = effectiveEnchantmentStats(offer.enchantment);
+                                return (
+                                  <span className="text-[10px] px-1.5 py-0.5 bg-yellow-500/10 text-yellow-300/90 rounded-md">
+                                    {ENCH_STAT_LABELS.map(({ key, label }) => `${label} +${stats[key]}`).join(" · ")}
+                                  </span>
+                                );
+                              })()}
                               {offer.enchantment?.requiredVip && (
                                 <span className="text-[10px] px-1.5 py-0.5 bg-yellow-500/15 text-yellow-300 rounded-md flex items-center gap-1">
                                   <Crown size={9} /> VIP

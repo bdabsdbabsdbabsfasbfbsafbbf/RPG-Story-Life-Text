@@ -10,6 +10,7 @@ import {
 import { useGameStore } from "../store/gameStore";
 import { useAuthStore } from "../store/authStore";
 import CharacterPreview from "../components/CharacterPreview";
+import { effectiveEnchantmentStats } from "../lib/enchantmentStats";
 import toast from "react-hot-toast";
 
 const rarityOrder: Record<string, number> = {
@@ -479,7 +480,8 @@ export function InventoryPage() {
                 <div className="grid grid-cols-2 gap-1 text-sm">
                   {CORE_STAT_LABELS.map(({ key, label, color }) => {
                     const ench = selectedItem.item.enchantment;
-                    const value = ench ? ((ench as any)[key] ?? 0) : ((selectedItem.item as any)[key] ?? 0);
+                    const enchStats = ench ? effectiveEnchantmentStats(ench) : null;
+                    const value = enchStats ? enchStats[key] : ((selectedItem.item as any)[key] ?? 0);
                     if (!value) return null;
                     return (
                       <div key={key} className="flex items-center justify-between">
@@ -518,7 +520,12 @@ export function InventoryPage() {
                 {selectedItem.item.enchantment ? (
                   <div className="flex items-center justify-between gap-2 mb-3">
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-yellow-300">{selectedItem.item.enchantment.name}</p>
+                      <p className="text-sm font-medium text-yellow-300">
+                        {selectedItem.item.enchantment.name}
+                        {selectedItem.item.enchantment.level > 1 && (
+                          <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded-md bg-yellow-500/15 text-yellow-400">Nv. {selectedItem.item.enchantment.level}</span>
+                        )}
+                      </p>
                       <p className="text-xs text-gray-500">{selectedItem.item.enchantment.description}</p>
                     </div>
                     <button
@@ -539,14 +546,12 @@ export function InventoryPage() {
                         <div className="min-w-0">
                           <p className="text-sm">{ue.enchantment.name} <span className="text-gray-500 text-xs">x{ue.quantity}</span></p>
                           <p className="text-[11px] text-gray-500">
-                            {[
-                              ue.enchantment.strength ? `Força +${ue.enchantment.strength}` : null,
-                              ue.enchantment.intellect ? `Intelecto +${ue.enchantment.intellect}` : null,
-                              ue.enchantment.endurance ? `Vigor +${ue.enchantment.endurance}` : null,
-                              ue.enchantment.dexterity ? `Destreza +${ue.enchantment.dexterity}` : null,
-                              ue.enchantment.wisdom ? `Sabedoria +${ue.enchantment.wisdom}` : null,
-                              ue.enchantment.luck ? `Sorte +${ue.enchantment.luck}` : null,
-                            ].filter(Boolean).join(" • ")}
+                            {(() => {
+                              const stats = effectiveEnchantmentStats(ue.enchantment);
+                              return CORE_STAT_LABELS.map(({ key, label }) =>
+                                stats[key] ? `${label} +${stats[key]}` : null
+                              ).filter(Boolean).join(" • ");
+                            })()}
                           </p>
                         </div>
                         <button

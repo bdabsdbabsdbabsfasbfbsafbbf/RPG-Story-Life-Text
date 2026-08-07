@@ -3,8 +3,12 @@ import { prisma } from "../../core/database";
 import { authenticate } from "../../core/middleware/auth";
 import { AppError } from "../../core/middleware/errorHandler";
 import { isVipActive, assertPurchaseRequirements } from "../../core/progression";
+import { withEnchantmentStats } from "../../core/enchantments/enchantmentStats";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+const enrichProducts = (products: any[]): any[] =>
+  products.map((p) => (p.enchantment ? { ...p, enchantment: withEnchantmentStats(p.enchantment) } : p));
 
 async function getShopConfig(): Promise<{ mockPayments: boolean }> {
   const row = await prisma.systemConfig.findUnique({ where: { key: "shop" } });
@@ -105,7 +109,7 @@ export function createShopModule(app: Express): void {
         include: { enchantment: true, item: true, gameClass: true },
         orderBy: [{ type: "asc" }, { sortOrder: "asc" }],
       });
-      res.json(products);
+      res.json(enrichProducts(products));
     } catch (err) {
       next(err);
     }
@@ -230,7 +234,12 @@ export function createShopModule(app: Express): void {
         orderBy: { createdAt: "desc" },
         take: 50,
       });
-      res.json(orders);
+      res.json(
+        orders.map((o) => ({
+          ...o,
+          product: o.product?.enchantment ? { ...o.product, enchantment: withEnchantmentStats(o.product.enchantment) } : o.product,
+        }))
+      );
     } catch (err) {
       next(err);
     }

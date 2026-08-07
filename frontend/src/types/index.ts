@@ -295,6 +295,7 @@ export interface Enchantment {
   icon?: string | null;
   category: string;
   rarity: string;
+  level: number;
   minRank: number;
   price: number;
   compatibleSlots: string;
@@ -304,6 +305,14 @@ export interface Enchantment {
   dexterity: number;
   wisdom: number;
   luck: number;
+  computedStats?: {
+    strength: number;
+    intellect: number;
+    endurance: number;
+    dexterity: number;
+    wisdom: number;
+    luck: number;
+  };
 }
 
 export interface UserEnchantment {

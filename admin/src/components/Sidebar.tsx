@@ -23,6 +23,7 @@ import {
   Newspaper,
   Dices,
   Gem,
+  Hammer,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -32,28 +33,52 @@ interface NavItem {
   label: string;
 }
 
-const navItems: NavItem[] = [
-  { to: '/', icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
-  { to: '/classes', icon: <Sword size={18} />, label: 'Classes' },
-  { to: '/skills', icon: <Zap size={18} />, label: 'Skills' },
-  { to: '/items', icon: <Box size={18} />, label: 'Items' },
-  { to: '/enchantments', icon: <Sparkles size={18} />, label: 'Encantamentos' },
-  { to: '/monsters', icon: <Skull size={18} />, label: 'Monsters' },
-  { to: '/map-monsters', icon: <Footprints size={18} />, label: 'Map Monsters' },
-  { to: '/maps', icon: <Map size={18} />, label: 'Maps' },
-  { to: '/quests', icon: <ScrollText size={18} />, label: 'Quests' },
-  { to: '/effects', icon: <Activity size={18} />, label: 'Effects' },
-  { to: '/npcs', icon: <Contact size={18} />, label: 'NPCs' },
-  { to: '/shops', icon: <ShoppingBag size={18} />, label: 'Shops' },
-  { to: '/shopProducts', icon: <ShoppingCart size={18} />, label: 'Loja do Game' },
-  { to: '/boosters', icon: <Dices size={18} />, label: 'Gacha (Anéis/Colares)' },
-  { to: '/gacha', icon: <Gem size={18} />, label: 'Gacha Config' },
-  { to: '/patchNotes', icon: <Newspaper size={18} />, label: 'Patch Notes' },
-  { to: '/statModels', icon: <Gauge size={18} />, label: 'Stat Models' },
-  { to: '/users', icon: <Users size={18} />, label: 'Users' },
-  { to: '/codes', icon: <Ticket size={18} />, label: 'Redeem Codes' },
-  { to: '/guild-settings', icon: <Swords size={18} />, label: 'Guild Settings' },
-  { to: '/limits', icon: <Scale size={18} />, label: 'Limits' },
+interface NavGroup {
+  title: string;
+  items: NavItem[];
+}
+
+const navGroups: NavGroup[] = [
+  {
+    title: 'Painel',
+    items: [{ to: '/', icon: <LayoutDashboard size={18} />, label: 'Dashboard' }],
+  },
+  {
+    title: 'Conteúdo do Jogo',
+    items: [
+      { to: '/classes', icon: <Sword size={18} />, label: 'Classes' },
+      { to: '/skills', icon: <Zap size={18} />, label: 'Skills' },
+      { to: '/items', icon: <Box size={18} />, label: 'Items' },
+      { to: '/enchantments', icon: <Sparkles size={18} />, label: 'Encantamentos' },
+      { to: '/monsters', icon: <Skull size={18} />, label: 'Monsters' },
+      { to: '/map-monsters', icon: <Footprints size={18} />, label: 'Map Monsters' },
+      { to: '/maps', icon: <Map size={18} />, label: 'Maps' },
+      { to: '/quests', icon: <ScrollText size={18} />, label: 'Quests' },
+      { to: '/effects', icon: <Activity size={18} />, label: 'Effects' },
+      { to: '/npcs', icon: <Contact size={18} />, label: 'NPCs' },
+      { to: '/shops', icon: <ShoppingBag size={18} />, label: 'Lojas (NPCs)' },
+      { to: '/craftRecipes', icon: <Hammer size={18} />, label: 'Craft (receitas)' },
+    ],
+  },
+  {
+    title: 'Loja & Gacha',
+    items: [
+      { to: '/shopProducts', icon: <ShoppingCart size={18} />, label: 'Loja do Game' },
+      { to: '/boosters', icon: <Dices size={18} />, label: 'Gacha (Anéis/Colares)' },
+      { to: '/gacha', icon: <Gem size={18} />, label: 'Gacha Config' },
+    ],
+  },
+  {
+    title: 'Sistema',
+    items: [
+      { to: '/statModels', icon: <Gauge size={18} />, label: 'Stat Models' },
+      { to: '/patchNotes', icon: <Newspaper size={18} />, label: 'Patch Notes' },
+      { to: '/users', icon: <Users size={18} />, label: 'Users' },
+      { to: '/codes', icon: <Ticket size={18} />, label: 'Redeem Codes' },
+      { to: '/guild-settings', icon: <Swords size={18} />, label: 'Guild Settings' },
+      { to: '/limits', icon: <Scale size={18} />, label: 'Limits' },
+    ],
+  },
 ];
 
 export default function Sidebar() {
@@ -69,23 +94,32 @@ export default function Sidebar() {
         <p className="text-xs text-gray-500 mt-0.5">Admin Panel</p>
       </div>
 
-      <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.to === '/'}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors text-sm ${
-                isActive
-                  ? 'bg-accent-600/20 text-accent-400 font-medium'
-                  : 'text-gray-400 hover:text-white hover:bg-dark-700'
-              }`
-            }
-          >
-            {item.icon}
-            <span>{item.label}</span>
-          </NavLink>
+      <nav className="flex-1 overflow-y-auto p-3 space-y-4">
+        {navGroups.map((group) => (
+          <div key={group.title}>
+            <p className="px-4 mb-1 text-[10px] font-semibold uppercase tracking-widest text-gray-600">
+              {group.title}
+            </p>
+            <div className="space-y-0.5">
+              {group.items.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.to === '/'}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-sm ${
+                      isActive
+                        ? 'bg-accent-600/20 text-accent-400 font-medium'
+                        : 'text-gray-400 hover:text-white hover:bg-dark-700'
+                    }`
+                  }
+                >
+                  {item.icon}
+                  <span>{item.label}</span>
+                </NavLink>
+              ))}
+            </div>
+          </div>
         ))}
       </nav>
 

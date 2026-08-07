@@ -1,5 +1,6 @@
 import { Express, Request, Response, NextFunction } from "express";
 import { prisma } from "../../core/database";
+import { withEnchantmentStats } from "../../core/enchantments/enchantmentStats";
 
 export function createItemsModule(app: Express): void {
   app.get("/api/enchantments", async (_req: Request, res: Response, next: NextFunction) => {
@@ -8,7 +9,7 @@ export function createItemsModule(app: Express): void {
         where: { isActive: true },
         orderBy: { name: "asc" },
       });
-      res.json(enchantments);
+      res.json(enchantments.map(withEnchantmentStats));
     } catch (err) {
       next(err);
     }

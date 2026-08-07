@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, Fragment, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { adminApi } from "../api";
 import JsonField, { JsonFieldDef } from "../components/JsonField";
@@ -19,6 +19,7 @@ export interface FieldConfig {
   hint?: string;
   iconCategories?: string[];
   jsonSchema?: JsonFieldDef;
+  group?: string; // renderiza um cabeçalho de seção antes deste campo
 }
 
 export interface ColumnConfig {
@@ -378,13 +379,26 @@ export default function CrudPage({ config }: CrudPageProps) {
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {config.fields.filter(isFieldVisible).map((field) => (
-                  <div key={field.name} className={field.type === "textarea" || field.type === "json" || field.type === "icon" ? "sm:col-span-2" : ""}>
-                    <label className="block text-sm text-gray-400 mb-1.5">{field.label}</label>
-                    {renderField(field)}
-                    {field.hint && <p className="text-xs text-gray-500 mt-1">{field.hint}</p>}
-                  </div>
-                ))}
+                {config.fields.filter(isFieldVisible).map((field, index, visibleFields) => {
+                  const prev = visibleFields[index - 1];
+                  const showHeader = !!field.group && (!prev || prev.group !== field.group);
+                  return (
+                    <Fragment key={field.name}>
+                      {showHeader && (
+                        <div className="sm:col-span-2">
+                          <p className="text-[11px] font-semibold uppercase tracking-wider text-accent-400 border-b border-dark-700 pb-1.5">
+                            {field.group}
+                          </p>
+                        </div>
+                      )}
+                      <div className={field.type === "textarea" || field.type === "json" || field.type === "icon" ? "sm:col-span-2" : ""}>
+                        <label className="block text-sm text-gray-400 mb-1.5">{field.label}</label>
+                        {renderField(field)}
+                        {field.hint && <p className="text-xs text-gray-500 mt-1">{field.hint}</p>}
+                      </div>
+                    </Fragment>
+                  );
+                })}
               </div>
               <div className="flex justify-end gap-3 pt-2">
                 <button

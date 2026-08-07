@@ -7,6 +7,7 @@ import { Battle, TICK_MS } from "../../core/classEngine/battle";
 import { SkillDef, PassiveDef, EffectDef, ActiveEffectRuntime } from "../../core/classEngine/types";
 import { StatsInput } from "../../core/classEngine/stat-calculator";
 import { sumCoreStats } from "../../core/stats/coreStats";
+import { computeEnchantmentStats } from "../../core/enchantments/enchantmentStats";
 import { grantPassXp } from "../seasons/seasons.module";
 import { isVipActive, VIP_XP_BONUS, VIP_GOLD_BONUS } from "../../core/progression";
 import { getEquippedBoosterBonuses } from "../../core/boosters";
@@ -210,13 +211,14 @@ export class CombatService {
       .map(parsePassive);
 
     // Core Stats de equipamento — o encantamento SUBSTITUI os valores do item:
-    // sem encantamento, soma os valores do item; encantado, vale só o encantamento.
+    // sem encantamento, soma os valores do item; encantado, vale só o encantamento
+    // (com os valores calculados pela fórmula de progressão: base nível 1 × crescimento).
     // Total = classe (fixa) + itens — convertido pela Combat Engine.
     const coreStats = sumCoreStats([
       ...["weapon", "classItem", "helm", "armor", "cape", "ring", "necklace"].map((slot) => {
         const item = (character.equipment as any)?.[slot];
         if (!item) return null;
-        const src = item.enchantment || item;
+        const src = item.enchantment ? computeEnchantmentStats(item.enchantment) : item;
         return {
           strength: src.strength ?? 0,
           intellect: src.intellect ?? 0,

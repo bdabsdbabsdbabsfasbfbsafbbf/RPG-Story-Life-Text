@@ -160,6 +160,7 @@ export const adminApi = {
     create: (data: any) => api.post("/admin/enchantments", data),
     update: (id: string, data: any) => api.put(`/admin/enchantments/${id}`, data),
     delete: (id: string) => api.delete(`/admin/enchantments/${id}`),
+    progression: (id: string) => api.get(`/admin/enchantments/${id}/progression`),
   },
   shopProducts: {
     list: () => api.get("/admin/shop-products"),

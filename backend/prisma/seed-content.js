@@ -166,14 +166,14 @@ const items = [
 // Só equipamentos de combate aceitam enchant: Arma, Armadura, Elmo e Capa.
 // Raridades: comum, raro, épico, lendário, mítico.
 const enchantments = [
-  { name: "Titã", slug: "titan", description: "Fortalece o corpo do portador, aumentando a força.", category: "physical", rarity: "common", minRank: 1, price: 5000, compatibleSlots: '["weapon","armor"]', strength: 15 },
-  { name: "Mago", slug: "mage", description: "Amplifica o poder arcano do portador.", category: "magical", rarity: "common", minRank: 1, price: 5000, compatibleSlots: '["weapon","cape"]', intellect: 15 },
-  { name: "Guardião", slug: "guardian", description: "Fortalece o corpo para resistir a golpes.", category: "defensive", rarity: "common", minRank: 1, price: 4500, compatibleSlots: '["helm","armor"]', endurance: 12 },
-  { name: "Caçador", slug: "hunter", description: "Aguça os reflexos do portador.", category: "utility", rarity: "common", minRank: 1, price: 4000, compatibleSlots: '["weapon","helm"]', dexterity: 10 },
-  { name: "Sábio", slug: "sage", description: "Expande a sabedoria e o equilíbrio do portador.", category: "magical", rarity: "common", minRank: 1, price: 4500, compatibleSlots: '["helm","cape"]', wisdom: 12 },
-  { name: "Fortuna", slug: "fortune", description: "Atrai a sorte para o portador.", category: "utility", rarity: "common", minRank: 1, price: 3500, compatibleSlots: '["cape","armor"]', luck: 8 },
-  { name: "Ventania", slug: "swift", description: "Movimento mais ágil e golpes mais precisos.", category: "utility", rarity: "rare", minRank: 2, price: 6000, compatibleSlots: '["weapon","cape"]', dexterity: 6, luck: 2 },
-  { name: "Colosso", slug: "colossus", description: "Uma força descomunal para os mais fortes.", category: "physical", rarity: "legendary", minRank: 3, price: 12000, compatibleSlots: '["weapon","armor"]', strength: 30 },
+  { name: "Titã", slug: "titan", description: "Fortalece o corpo do portador, aumentando a força.", category: "strength", rarity: "common", minRank: 1, price: 5000, level: 1, compatibleSlots: '["weapon","armor"]', strength: 15, intellect: 6, endurance: 9, dexterity: 8, wisdom: 5, luck: 4 },
+  { name: "Mago", slug: "mage", description: "Amplifica o poder arcano do portador.", category: "intellect", rarity: "common", minRank: 1, price: 5000, level: 1, compatibleSlots: '["weapon","cape"]', strength: 5, intellect: 15, endurance: 6, dexterity: 7, wisdom: 9, luck: 4 },
+  { name: "Guardião", slug: "guardian", description: "Fortalece o corpo para resistir a golpes.", category: "endurance", rarity: "common", minRank: 1, price: 4500, level: 1, compatibleSlots: '["helm","armor"]', strength: 7, intellect: 4, endurance: 15, dexterity: 6, wisdom: 5, luck: 3 },
+  { name: "Caçador", slug: "hunter", description: "Aguça os reflexos do portador.", category: "dexterity", rarity: "common", minRank: 1, price: 4000, level: 1, compatibleSlots: '["weapon","helm"]', strength: 8, intellect: 4, endurance: 6, dexterity: 15, wisdom: 5, luck: 5 },
+  { name: "Sábio", slug: "sage", description: "Expande a sabedoria e o equilíbrio do portador.", category: "wisdom", rarity: "common", minRank: 1, price: 4500, level: 1, compatibleSlots: '["helm","cape"]', strength: 4, intellect: 8, endurance: 5, dexterity: 6, wisdom: 15, luck: 5 },
+  { name: "Fortuna", slug: "fortune", description: "Atrai a sorte para o portador.", category: "luck", rarity: "common", minRank: 1, price: 3500, level: 1, compatibleSlots: '["cape","armor"]', strength: 4, intellect: 5, endurance: 5, dexterity: 6, wisdom: 7, luck: 15 },
+  { name: "Ventania", slug: "swift", description: "Movimento mais ágil e golpes mais precisos.", category: "dexterity", rarity: "rare", minRank: 2, price: 6000, level: 5, compatibleSlots: '["weapon","cape"]', strength: 8, intellect: 4, endurance: 6, dexterity: 20, wisdom: 5, luck: 4 },
+  { name: "Colosso", slug: "colossus", description: "Uma força descomunal para os mais fortes.", category: "strength", rarity: "legendary", minRank: 3, price: 12000, level: 10, compatibleSlots: '["weapon","armor"]', strength: 30, intellect: 8, endurance: 18, dexterity: 12, wisdom: 8, luck: 6 },
 ];
 
 // ===== Boosters (Anel/Colar de Gacha) — só boosts %, sem core stats =====

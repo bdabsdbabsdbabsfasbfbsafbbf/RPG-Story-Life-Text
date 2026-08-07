@@ -2,8 +2,16 @@ import { Express, Request, Response, NextFunction } from "express";
 import { prisma } from "../../core/database";
 import { authenticate } from "../../core/middleware/auth";
 import { AppError } from "../../core/middleware/errorHandler";
+import { withEnchantmentStats } from "../../core/enchantments/enchantmentStats";
 
 const EQUIP_SLOTS = ["weapon", "class", "helm", "armor", "cape", "ring", "necklace"] as const;
+
+// Anexa computedStats (fórmula de progressão) ao encantamento de cada item
+const enrichItems = (rows: any[]): any[] =>
+  rows.map((inv) => ({
+    ...inv,
+    item: inv.item?.enchantment ? { ...inv.item, enchantment: withEnchantmentStats(inv.item.enchantment) } : inv.item,
+  }));
 
 const SLOT_MAP: Record<string, string> = {
   weapon: "weaponId",
@@ -32,7 +40,7 @@ export function createInventoryModule(app: Express): void {
         include: { item: { include: { enchantment: true } } },
         orderBy: { acquiredAt: "desc" },
       });
-      res.json(items);
+      res.json(enrichItems(items));
     } catch (err) {
       next(err);
     }
@@ -44,7 +52,7 @@ export function createInventoryModule(app: Express): void {
         where: { userId: req.user!.userId, isEquipped: true },
         include: { item: { include: { enchantment: true } } },
       });
-      res.json(equipped);
+      res.json(enrichItems(equipped));
     } catch (err) {
       next(err);
     }
@@ -154,7 +162,7 @@ export function createInventoryModule(app: Express): void {
         include: { enchantment: true },
         orderBy: { acquiredAt: "desc" },
       });
-      res.json(owned);
+      res.json(owned.map((ue) => ({ ...ue, enchantment: withEnchantmentStats(ue.enchantment) })));
     } catch (err) {
       next(err);
     }

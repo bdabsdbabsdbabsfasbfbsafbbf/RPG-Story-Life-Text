@@ -11,6 +11,8 @@ interface GeneratedItemResult {
     subtype: string;
     artPrompt: string;
     stats: Record<string, number>;
+    attackSpeedMs?: number;
+    dps?: number;
     buyPrice: number;
     sellPrice: number;
   };
@@ -110,8 +112,8 @@ export default function AiItemGenerator({ onSaved }: { onSaved: () => void }) {
         isSellable: true,
         isStackable: false,
         maxStack: 1,
-        attackSpeedMs: 0,
-        dps: 0,
+        attackSpeedMs: result.plan.attackSpeedMs || 0,
+        dps: result.plan.dps || 0,
         strength: result.plan.stats.strength || 0,
         intellect: result.plan.stats.intellect || 0,
         endurance: result.plan.stats.endurance || 0,
@@ -244,6 +246,11 @@ export default function AiItemGenerator({ onSaved }: { onSaved: () => void }) {
                         {STAT_LABELS[k] || k}: <span className="text-white font-medium">{v}</span>
                       </span>
                     ) : null
+                  )}
+                  {type === "weapon" && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-orange-500/15 text-orange-300">
+                      DPS: {Number(result.plan.dps || 0).toLocaleString()} · Velocidade: {(Number(result.plan.attackSpeedMs) / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}s
+                    </span>
                   )}
                   <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-yellow-500/15 text-yellow-300">Compra: {Number(result.plan.buyPrice).toLocaleString()}</span>
                   <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-yellow-500/15 text-yellow-300">Venda: {Number(result.plan.sellPrice).toLocaleString()}</span>

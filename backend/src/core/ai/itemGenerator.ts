@@ -65,6 +65,8 @@ export interface ItemPlan {
   subtype: string;
   artPrompt: string;
   stats: Record<string, number>;
+  attackSpeedMs?: number; // apenas armas
+  dps?: number; // apenas armas
   buyPrice: number;
   sellPrice: number;
 }
@@ -99,13 +101,14 @@ async function planItem(input: PlanInput): Promise<ItemPlan> {
     "",
     "Para o desenho: o fundo DEVE ser um unico tom chapado e uniforme (uma cor so, sem gradiente, sem cena, sem chao, sem nuvens, sem sombra no fundo) - o jogo remove o fundo depois.",
     "",
-    "ATRIBUTOS (stats): forneca apenas os relevantes ao tipo, inteiros, proporcionais ao nivel (base ~1.2 x nivel) e a raridade (multiplicador " + RARITY_MULT[input.rarity] + "x), valores entre 1 e 200:",
-    "- arma fisica (sword/dagger/axe): strength e dexterity",
-    "- arma magica (staff/tome): intellect e wisdom",
-    "- elmo e armadura: endurance e dexterity",
-    "- capa: wisdom e luck",
-    "- anel e colar: luck + um atributo secundario leve",
-    "Use 0 nos demais. Quanto maior a raridade, mais pontos.",
+    "ATRIBUTOS (stats): TODOS os equipamentos (arma, elmo, armadura, capa, anel, colar) fornecem os 6 atributos — TODOS acima de zero. O atributo principal do tipo recebe o maior valor:",
+    "- arma fisica (sword/dagger/axe): strength e dexterity altos; arma magica (staff/tome): intellect e wisdom altos",
+    "- elmo e armadura: endurance e dexterity altos",
+    "- capa: wisdom e luck altos",
+    "- anel e colar: luck alto + um secundario",
+    "Os 4 atributos restantes recebem valores menores (20-60% do principal), mas NUNCA zero. Valores inteiros, proporcionais ao nivel (base ~1.2 x nivel) e a raridade (multiplicador " + RARITY_MULT[input.rarity] + "x), entre 1 e 200.",
+    "",
+    "ARMAS: inclua tambem attackSpeedMs (500 a 2600, velocidade de ataque em milissegundos — mais rapido = melhor) e dps (dano por segundo, proporcional ao nivel e raridade, entre 1 e 100000).",
     "",
     "PRECOS: buyPrice entre 50 e 500000, sellPrice = ~20% do buyPrice, coerentes com nivel e raridade.",
     "",
@@ -115,7 +118,7 @@ async function planItem(input: PlanInput): Promise<ItemPlan> {
     '"subtype":"um de: sword, dagger, staff, axe, tome, bow (arma) | cap, helmet, crown, hood (elmo) | light, heavy, robe (armadura) | vazio para capa/anel/colar",',
     '"artPrompt":"PROMPT DE ARTE EM INGLES, auto-contido, descrevendo o item com detalhes (formato, material, cor, ornamentos, iluminacao) e terminando com: pixel art icon, 64x64 game asset, flat solid uniform single-color background, no gradient, no scene, no floor, no clouds, nothing behind the item, single item centered, no character, no text, no UI, no logo, no frame, no external shadow, consistent style with the game other equipment (same detail level, same lighting, same outline, same pixel density)",',
     '"stats":{"strength":0,"intellect":0,"endurance":0,"dexterity":0,"wisdom":0,"luck":0},',
-    '"buyPrice":0,"sellPrice":0}',
+    '"attackSpeedMs":0,"dps":0,"buyPrice":0,"sellPrice":0}',
   ]
     .filter(Boolean)
     .join("\n");
@@ -155,14 +158,17 @@ async function planItem(input: PlanInput): Promise<ItemPlan> {
   const stats: Record<string, number> = {};
   for (const k of STAT_KEYS) {
     const v = Number(raw.stats?.[k]) || 0;
-    stats[k] = Math.max(0, Math.min(200, Math.round(v)));
+    stats[k] = Math.max(1, Math.min(200, Math.round(v)));
   }
+  const isWeapon = input.type === "weapon";
   return {
     name: String(raw.name).slice(0, 60),
     description: String(raw.description || "").slice(0, 300),
     subtype: String(raw.subtype || "").slice(0, 20),
     artPrompt: String(raw.artPrompt).slice(0, 1200),
     stats,
+    attackSpeedMs: isWeapon ? Math.max(500, Math.min(2600, Math.round(Number(raw.attackSpeedMs) || 2000))) : 0,
+    dps: isWeapon ? Math.max(0, Math.round(Number(raw.dps) || 0)) : 0,
     buyPrice: Math.max(0, Math.round(Number(raw.buyPrice) || 0)),
     sellPrice: Math.max(0, Math.round(Number(raw.sellPrice) || 0)),
   };

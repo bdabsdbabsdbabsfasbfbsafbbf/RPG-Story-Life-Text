@@ -430,12 +430,14 @@ model Enchantment {
   slug             String            @unique
   description      String
   icon             String?
-  category         String // physical | magical | defensive | utility
+  category         String // strength | intellect | endurance | dexterity | wisdom | luck (atributo principal)
   rarity           String            @default("common")
-  tier             Int               @default(1) // nível do encantamento (I, II, III...)
+  level            Int               @default(1) // nível do encantamento (1-150) — stats = fórmula(base, nível)
   minRank          Int               @default(1) // rank mínimo do equipamento
   price            BigInt            @default(0) // valor em ouro
   compatibleSlots  String            @default("[]") // JSON: ["weapon","helm",...]
+  // Base stats no NÍVEL 1 — os valores dos níveis seguintes são calculados pela
+  // fórmula do sistema (enchantmentStats.ts): nunca zerados (mínimo 1 cada).
   strength         Int               @default(0)
   intellect        Int               @default(0)
   endurance        Int               @default(0)

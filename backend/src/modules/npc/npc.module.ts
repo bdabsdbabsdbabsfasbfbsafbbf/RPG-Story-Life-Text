@@ -3,9 +3,17 @@ import { prisma } from "../../core/database";
 import { authenticate } from "../../core/middleware/auth";
 import { AppError } from "../../core/middleware/errorHandler";
 import { assertPurchaseRequirements } from "../../core/progression";
+import { withEnchantmentStats } from "../../core/enchantments/enchantmentStats";
 
 const SHOP_TYPES = new Set(["vendor", "shop"]);
 const QUEST_TYPES = new Set(["quest_giver", "quest"]);
+
+// Anexa computedStats (fórmula de progressão) aos encantamentos das ofertas
+function enrichOffers(shopItems: any[]): any[] {
+  return (shopItems || []).map((s) =>
+    s.enchantment ? { ...s, enchantment: withEnchantmentStats(s.enchantment) } : s
+  );
+}
 
 export function createNpcModule(app: Express): void {
   app.get("/api/npcs", async (req: Request, res: Response, next: NextFunction) => {
@@ -26,6 +34,7 @@ export function createNpcModule(app: Express): void {
       for (const npc of npcs) {
         if (!SHOP_TYPES.has(npc.type)) (npc as any).shopItems = [];
         if (!QUEST_TYPES.has(npc.type)) (npc as any).quests = [];
+        (npc as any).shopItems = enrichOffers((npc as any).shopItems);
       }
       res.json(npcs);
     } catch (err) {
@@ -49,6 +58,7 @@ export function createNpcModule(app: Express): void {
       }
       if (!SHOP_TYPES.has(npc.type)) (npc as any).shopItems = [];
       if (!QUEST_TYPES.has(npc.type)) (npc as any).quests = [];
+      (npc as any).shopItems = enrichOffers((npc as any).shopItems);
       res.json(npc);
     } catch (err) {
       next(err);
@@ -67,7 +77,7 @@ export function createNpcModule(app: Express): void {
         where: { npcId: req.params.id },
         include: { item: true, enchantment: true, class: true },
       });
-      res.json(shop);
+      res.json(enrichOffers(shop));
     } catch (err) {
       next(err);
     }
@@ -96,6 +106,14 @@ export function createNpcModule(app: Express): void {
             include: { item: true, enchantment: true, class: true },
           });
       if (!shopOffer) throw new AppError(404, "Item not sold by this NPC");
+
+      // Encantamento desativado não pode ser comprado (nem item inativo)
+      if (shopOffer.enchantmentId && !shopOffer.enchantment?.isActive) {
+        throw new AppError(400, "Este encantamento não está mais disponível.");
+      }
+      if (shopOffer.itemId && !shopOffer.item?.isActive) {
+        throw new AppError(400, "Este item não está mais disponível.");
+      }
 
       const user = await prisma.user.findUnique({
         where: { id: req.user!.userId },

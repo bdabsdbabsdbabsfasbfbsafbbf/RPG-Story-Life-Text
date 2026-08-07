@@ -8,6 +8,12 @@ import { AppError } from "../../core/middleware/errorHandler";
 import { DEFAULT_GAME_LIMITS, invalidateGameLimits } from "../../core/gameLimits";
 import { aiProvidersAvailable, generateClass, persistGeneratedClass } from "../../core/ai/classGenerator";
 import { generateItemSprite } from "../../core/ai/itemGenerator";
+import {
+  withEnchantmentStats,
+  enchantmentProgression,
+  clampLevel,
+  ENCHANTMENT_CATEGORIES,
+} from "../../core/enchantments/enchantmentStats";
 
 function requireAdmin(req: Request, res: Response, next: NextFunction) {
   authenticate(req, res, () => {
@@ -20,6 +26,27 @@ const DEFAULT_GUILD_SETTINGS = {
   requiredGold: 200,
   requiredDiamonds: 0,
 };
+
+// Regras do sistema de encantamentos:
+// - nível sempre entre 1 e 150 (fórmula do sistema calcula os valores);
+// - os 6 atributos NUNCA podem ficar zerados (mínimo 1);
+// - categoria = atributo principal (6 fixas).
+function sanitizeEnchantment(body: any): any {
+  const data = { ...body };
+  if (data.level !== undefined) data.level = clampLevel(Number(data.level) || 1);
+  if (data.category !== undefined && !ENCHANTMENT_CATEGORIES.includes(data.category)) {
+    data.category = "strength";
+  }
+  const STAT_KEYS = ["strength", "intellect", "endurance", "dexterity", "wisdom", "luck"];
+  for (const key of STAT_KEYS) {
+    const v = Math.max(1, Math.round(Number(data[key]) || 1));
+    data[key] = v;
+  }
+  if (data.compatibleSlots !== undefined && Array.isArray(data.compatibleSlots)) {
+    data.compatibleSlots = JSON.stringify(data.compatibleSlots);
+  }
+  return data;
+}
 
 export function createAdminModule(app: Express): void {
   // Admin auth
@@ -605,15 +632,27 @@ export function createAdminModule(app: Express): void {
 
   // Enchantments CRUD
   app.get("/api/admin/enchantments", requireAdmin, async (_req: Request, res: Response, next: NextFunction) => {
-    try { res.json(await prisma.enchantment.findMany({ orderBy: { name: "asc" } })); } catch (err) { next(err); }
+    try {
+      const enchantments = await prisma.enchantment.findMany({ orderBy: { name: "asc" } });
+      res.json(enchantments.map(withEnchantmentStats));
+    } catch (err) { next(err); }
+  });
+
+  // Progressão completa (níveis 1-150) de um encantamento, calculada pela fórmula do sistema
+  app.get("/api/admin/enchantments/:id/progression", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const enchantment = await prisma.enchantment.findUnique({ where: { id: req.params.id } });
+      if (!enchantment) throw new AppError(404, "Encantamento não encontrado");
+      res.json(enchantmentProgression(enchantment));
+    } catch (err) { next(err); }
   });
 
   app.post("/api/admin/enchantments", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
-    try { res.status(201).json(await prisma.enchantment.create({ data: normalizeBody("enchantment", req.body) })); } catch (err) { next(err); }
+    try { res.status(201).json(await prisma.enchantment.create({ data: sanitizeEnchantment(req.body) })); } catch (err) { next(err); }
   });
 
   app.put("/api/admin/enchantments/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
-    try { res.json(await prisma.enchantment.update({ where: { id: req.params.id }, data: normalizeBody("enchantment", req.body) })); } catch (err) { next(err); }
+    try { res.json(await prisma.enchantment.update({ where: { id: req.params.id }, data: sanitizeEnchantment(req.body) })); } catch (err) { next(err); }
   });
 
   app.delete("/api/admin/enchantments/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
@@ -751,7 +790,7 @@ export function createAdminModule(app: Express): void {
   app.get("/api/admin/npcs", requireAdmin, async (_req: Request, res: Response, next: NextFunction) => {
     try {
       res.json(await prisma.npc.findMany({
-        include: { mapNpcs: { include: { map: true } }, shopItems: { include: { item: true } } },
+        include: { mapNpcs: { include: { map: true } }, shopItems: { include: { item: true, enchantment: true } } },
         orderBy: { name: "asc" },
       }));
     } catch (err) { next(err); }

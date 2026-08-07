@@ -9,6 +9,7 @@ import LimitsPage from "./pages/LimitsPage";
 import SkillsPage from "./pages/SkillsPage";
 import EffectsPage from "./pages/EffectsPage";
 import ShopsPage from "./pages/ShopsPage";
+import EnchantmentsPage from "./pages/EnchantmentsPage";
 import MapMonstersPage from "./pages/MapMonstersPage";
 import GachaPage from "./pages/GachaPage";
 import CrudPage from "./pages/CrudPage";
@@ -26,6 +27,7 @@ export default function App() {
             element={<CrudPage config={config} />}
           />
         ))}
+        <Route path="/enchantments" element={<EnchantmentsPage />} />
         <Route path="/skills" element={<SkillsPage />} />
         <Route path="/effects" element={<EffectsPage />} />
         <Route path="/shops" element={<ShopsPage />} />

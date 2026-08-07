@@ -39,6 +39,28 @@ export default function ShopsPage() {
   const [savingMap, setSavingMap] = useState(false);
 
   const [filter, setFilter] = useState("");
+  const [shopFilterType, setShopFilterType] = useState("all");
+  const [shopFilterCategory, setShopFilterCategory] = useState("");
+  const [shopFilterRarity, setShopFilterRarity] = useState("");
+  const [shopFilterMinLevel, setShopFilterMinLevel] = useState("");
+
+  const ENCH_CATEGORIES = ["strength", "intellect", "endurance", "dexterity", "wisdom", "luck"];
+  const STAT_LABELS: Record<string, string> = {
+    strength: "Força",
+    intellect: "Intelecto",
+    endurance: "Resistência",
+    dexterity: "Destreza",
+    wisdom: "Sabedoria",
+    luck: "Sorte",
+  };
+  const RARITY_LABELS: Record<string, string> = {
+    common: "Comum",
+    uncommon: "Incomum",
+    rare: "Raro",
+    epic: "Épico",
+    legendary: "Lendário",
+    mythic: "Mítico",
+  };
 
   const load = async () => {
     setLoading(true);
@@ -78,7 +100,18 @@ export default function ShopsPage() {
     return npcs.filter((n) => n.name.toLowerCase().includes(q) || n.type.toLowerCase().includes(q));
   }, [npcs, filter]);
 
-  const selectedShopItems = useMemo(() => selected?.shopItems ?? [], [selected]);
+  const selectedShopItems = useMemo(() => {
+    const base = selected?.shopItems ?? [];
+    return base.filter((s) => {
+      if (shopFilterType === "items" && s.enchantmentId) return false;
+      if (shopFilterType === "enchantments" && !s.enchantmentId) return false;
+      const ench = s.enchantment;
+      if (shopFilterCategory && ench?.category !== shopFilterCategory) return false;
+      if (shopFilterRarity && ench?.rarity !== shopFilterRarity) return false;
+      if (shopFilterMinLevel !== "" && Number(ench?.level || 0) < Number(shopFilterMinLevel)) return false;
+      return true;
+    });
+  }, [selected, shopFilterType, shopFilterCategory, shopFilterRarity, shopFilterMinLevel]);
   const selectedMapNpcs = useMemo(() => selected?.mapNpcs ?? [], [selected]);
 
   const itemName = (id: string | null) => (id ? items.find((i) => i.id === id)?.name ?? id : null);
@@ -275,6 +308,52 @@ export default function ShopsPage() {
                 </button>
               </div>
 
+              <div className="px-4 py-3 border-b border-dark-700 grid grid-cols-2 sm:grid-cols-5 gap-3">
+                <div>
+                  <label className={labelClass}>Mostrar</label>
+                  <select value={shopFilterType} onChange={(e) => setShopFilterType(e.target.value)} className={inputClass}>
+                    <option value="all">Tudo</option>
+                    <option value="items">Só itens</option>
+                    <option value="enchantments">Só encantamentos</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={labelClass}>Encant. — categoria</label>
+                  <select value={shopFilterCategory} onChange={(e) => setShopFilterCategory(e.target.value)} className={inputClass}>
+                    <option value="">Todas</option>
+                    {ENCH_CATEGORIES.map((c) => (
+                      <option key={c} value={c}>{STAT_LABELS[c]}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelClass}>Encant. — raridade</label>
+                  <select value={shopFilterRarity} onChange={(e) => setShopFilterRarity(e.target.value)} className={inputClass}>
+                    <option value="">Todas</option>
+                    {Object.entries(RARITY_LABELS).map(([v, l]) => (
+                      <option key={v} value={v}>{l}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelClass}>Encant. — nível mín.</label>
+                  <input type="number" min={1} max={150} value={shopFilterMinLevel} onChange={(e) => setShopFilterMinLevel(e.target.value)} className={inputClass} />
+                </div>
+                <div className="flex items-end">
+                  <button
+                    onClick={() => {
+                      setShopFilterType("all");
+                      setShopFilterCategory("");
+                      setShopFilterRarity("");
+                      setShopFilterMinLevel("");
+                    }}
+                    className="text-xs text-gray-400 hover:text-white hover:bg-dark-700 rounded-lg px-3 py-2 transition-colors"
+                  >
+                    Limpar filtros
+                  </button>
+                </div>
+              </div>
+
               <form onSubmit={handleItemSubmit} className="p-4 border-b border-dark-700 grid grid-cols-2 sm:grid-cols-6 gap-3 items-end">
                 <div className="col-span-2 sm:col-span-2">
                   <label className={labelClass}>Item *</label>
@@ -389,9 +468,22 @@ export default function ShopsPage() {
                       <tr key={s.id} className="border-b border-dark-700 hover:bg-dark-800/50">
                         <td className="py-2.5 px-4 font-medium text-white">
                           {s.enchantmentId ? (
-                            <span className="flex items-center gap-1.5">
+                            <span className="flex flex-wrap items-center gap-1.5">
                               <span className="text-purple-300">{enchantmentName(s.enchantmentId) ?? "Encantamento"}</span>
                               <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-500/15 text-purple-300">encantamento</span>
+                              {s.enchantment && (
+                                <>
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-dark-900 text-gray-400 capitalize">
+                                    {STAT_LABELS[s.enchantment.category] ?? s.enchantment.category}
+                                  </span>
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-dark-900 text-gray-400">
+                                    {RARITY_LABELS[s.enchantment.rarity] ?? s.enchantment.rarity}
+                                  </span>
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-500/15 text-purple-300">
+                                    Nv. {s.enchantment.level ?? 1}
+                                  </span>
+                                </>
+                              )}
                             </span>
                           ) : (
                             itemName(s.itemId) ?? "-"
@@ -425,6 +517,23 @@ export default function ShopsPage() {
                         </td>
                         <td className="py-2.5 px-4 font-mono text-xs">{s.stock}</td>
                         <td className="py-2.5 px-4 text-right whitespace-nowrap">
+                          {s.enchantmentId && s.enchantment && (
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await adminApi.enchantments.update(s.enchantment.id, { isActive: !s.enchantment.isActive });
+                                  toast.success(s.enchantment.isActive ? "Encantamento desativado" : "Encantamento ativado");
+                                  await load();
+                                } catch (err: any) {
+                                  toast.error(err.response?.data?.message || "Falha ao alternar");
+                                }
+                              }}
+                              className={`mr-3 text-xs ${s.enchantment.isActive ? "text-green-400 hover:text-green-300" : "text-gray-500 hover:text-gray-300"}`}
+                              title="Ativar/desativar este encantamento"
+                            >
+                              {s.enchantment.isActive ? "Ativo" : "Inativo"}
+                            </button>
+                          )}
                           <button onClick={() => openEditItem(s)} className="text-blue-400 hover:text-blue-300 mr-3">Edit</button>
                           <button onClick={() => handleDeleteItem(s)} className="text-red-400 hover:text-red-300">Delete</button>
                         </td>
