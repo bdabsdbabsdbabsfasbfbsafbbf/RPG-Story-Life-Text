@@ -62,6 +62,7 @@ export const adminApi = {
     create: (data: any) => api.post("/admin/items", data),
     update: (id: string, data: any) => api.put(`/admin/items/${id}`, data),
     delete: (id: string) => api.delete(`/admin/items/${id}`),
+    generate: (data: any) => api.post("/admin/items/generate", data),
   },
   monsters: {
     list: () => api.get("/admin/monsters"),

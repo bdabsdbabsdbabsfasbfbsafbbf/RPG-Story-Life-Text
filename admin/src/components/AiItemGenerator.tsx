@@ -1,0 +1,279 @@
+import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
+import { Sparkles, Wand2, Loader2, RefreshCw, CheckCircle2 } from "lucide-react";
+import { adminApi } from "../api";
+
+interface GeneratedItemResult {
+  icon: string;
+  plan: {
+    name: string;
+    description: string;
+    subtype: string;
+    artPrompt: string;
+    stats: Record<string, number>;
+    buyPrice: number;
+    sellPrice: number;
+  };
+}
+
+const TYPE_OPTIONS = [
+  { value: "weapon", label: "Arma" },
+  { value: "helm", label: "Elmo" },
+  { value: "armor", label: "Armadura" },
+  { value: "cape", label: "Capa" },
+  { value: "ring", label: "Anel" },
+  { value: "necklace", label: "Colar" },
+];
+
+const RARITY_OPTIONS = [
+  { value: "common", label: "Comum" },
+  { value: "uncommon", label: "Incomum" },
+  { value: "rare", label: "Raro" },
+  { value: "epic", label: "Épico" },
+  { value: "legendary", label: "Lendário" },
+  { value: "mythic", label: "Mítico" },
+];
+
+const STAT_LABELS: Record<string, string> = {
+  strength: "Força",
+  intellect: "Intelecto",
+  endurance: "Resistência",
+  dexterity: "Destreza",
+  wisdom: "Sabedoria",
+  luck: "Sorte",
+};
+
+const inputClass =
+  "w-full bg-dark-900 border border-dark-600 rounded-lg px-3 py-2 text-sm text-white focus:border-fuchsia-500 focus:outline-none";
+
+export default function AiItemGenerator({ onSaved }: { onSaved: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [providers, setProviders] = useState<{ gemini: boolean; groq: boolean } | null>(null);
+  const [type, setType] = useState("weapon");
+  const [rarity, setRarity] = useState("rare");
+  const [level, setLevel] = useState(6);
+  const [theme, setTheme] = useState("");
+  const [material, setMaterial] = useState("");
+  const [color, setColor] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [result, setResult] = useState<GeneratedItemResult | null>(null);
+  const [seed, setSeed] = useState(1);
+
+  useEffect(() => {
+    adminApi.classes
+      .aiConfig()
+      .then(({ data }) => setProviders(data))
+      .catch(() => {});
+  }, []);
+
+  const handleGenerate = async () => {
+    setBusy(true);
+    setResult(null);
+    try {
+      const { data } = await adminApi.items.generate({
+        type,
+        rarity,
+        level,
+        theme: theme.trim() || undefined,
+        material: material.trim() || undefined,
+        color: color.trim() || undefined,
+        seed,
+      });
+      setResult(data);
+      setSeed((s) => s + 1);
+      toast.success("Item gerado! Revise e salve.");
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || err.message || "Falha ao gerar item");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!result) return;
+    setSaving(true);
+    try {
+      await adminApi.items.create({
+        name: result.plan.name,
+        description: result.plan.description,
+        icon: result.icon,
+        type,
+        subtype: result.plan.subtype || undefined,
+        rarity,
+        level,
+        rank: 1,
+        buyPrice: result.plan.buyPrice,
+        sellPrice: result.plan.sellPrice,
+        isActive: false,
+        isTradable: true,
+        isSellable: true,
+        isStackable: false,
+        maxStack: 1,
+        attackSpeedMs: 0,
+        dps: 0,
+        strength: result.plan.stats.strength || 0,
+        intellect: result.plan.stats.intellect || 0,
+        endurance: result.plan.stats.endurance || 0,
+        dexterity: result.plan.stats.dexterity || 0,
+        wisdom: result.plan.stats.wisdom || 0,
+        luck: result.plan.stats.luck || 0,
+      });
+      toast.success(`Item "${result.plan.name}" salvo (rascunho)!`);
+      setOpen(false);
+      setResult(null);
+      onSaved();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || err.message || "Falha ao salvar item");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!providers?.groq) {
+    return (
+      <button
+        title="Defina GROQ_API_KEY nas variáveis do Railway para ativar"
+        className="flex items-center gap-2 px-4 py-2 bg-dark-700 text-gray-500 rounded-lg text-sm font-medium cursor-not-allowed"
+        disabled
+      >
+        <Wand2 size={16} /> Gerador de itens indisponível
+      </button>
+    );
+  }
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-500 hover:to-purple-500 text-white rounded-lg text-sm font-medium transition-colors"
+      >
+        <Wand2 size={16} /> Gerar item com IA
+      </button>
+
+      {open && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => !busy && !saving && setOpen(false)}>
+          <div
+            className="bg-dark-800 border border-dark-600 rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold flex items-center gap-2">
+                <Sparkles size={18} className="text-fuchsia-400" /> Gerar item com IA
+              </h2>
+              <button onClick={() => setOpen(false)} className="text-gray-500 hover:text-gray-300 text-xl leading-none">
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-gray-500 mb-4">
+              Groq planeja o item (nome, atributos, prompt de arte) e o Pollinations.ai renderiza o ícone pixel art 64x64.
+              Deixe Tema/Material/Cor vazios para a IA escolher tudo. O item nasce como <span className="text-yellow-400">rascunho (inativo)</span>.
+            </p>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <label className="text-xs text-gray-400">
+                Tipo
+                <select value={type} onChange={(e) => setType(e.target.value)} className={inputClass + " mt-1"}>
+                  {TYPE_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-xs text-gray-400">
+                Raridade
+                <select value={rarity} onChange={(e) => setRarity(e.target.value)} className={inputClass + " mt-1"}>
+                  {RARITY_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-xs text-gray-400">
+                Nível
+                <input type="number" min={1} max={100} value={level} onChange={(e) => setLevel(parseInt(e.target.value) || 1)} className={inputClass + " mt-1"} />
+              </label>
+              <label className="text-xs text-gray-400">
+                Tema (opcional)
+                <input value={theme} onChange={(e) => setTheme(e.target.value)} placeholder="ex.: dragão de gelo" className={inputClass + " mt-1"} />
+              </label>
+              <label className="text-xs text-gray-400">
+                Material (opcional)
+                <input value={material} onChange={(e) => setMaterial(e.target.value)} placeholder="ex.: aço negro" className={inputClass + " mt-1"} />
+              </label>
+              <label className="text-xs text-gray-400">
+                Cor (opcional)
+                <input value={color} onChange={(e) => setColor(e.target.value)} placeholder="ex.: azul gélido" className={inputClass + " mt-1"} />
+              </label>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 mt-4">
+              <button
+                onClick={handleGenerate}
+                disabled={busy}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-500 hover:to-purple-500 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+              >
+                {busy ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
+                {busy ? "Planejando e desenhando (~30s)..." : "Gerar item"}
+              </button>
+            </div>
+
+            {result && (
+              <div className="mt-5 bg-dark-900/60 border border-dark-600 rounded-xl p-4">
+                <div className="flex items-center gap-4">
+                  <div
+                    className="w-16 h-16 rounded-lg overflow-hidden shrink-0"
+                    style={{ backgroundImage: "conic-gradient(#2a2a35 25%, #1e1e28 0 50%, #2a2a35 0 75%, #1e1e28 0)" }}
+                  >
+                    <img src={result.icon} alt={result.plan.name} className="w-16 h-16 object-contain" style={{ imageRendering: "pixelated" }} />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-semibold text-white">{result.plan.name}</p>
+                      {result.plan.subtype && <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-dark-700 text-gray-300">{result.plan.subtype}</span>}
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-purple-500/15 text-purple-300">{RARITY_OPTIONS.find((r) => r.value === rarity)?.label}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-dark-700 text-gray-300">Nv. {level}</span>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1 line-clamp-2">{result.plan.description}</p>
+                  </div>
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {Object.entries(result.plan.stats).map(([k, v]) =>
+                    v > 0 ? (
+                      <span key={k} className="text-[10px] px-1.5 py-0.5 rounded-md bg-dark-800 text-gray-300">
+                        {STAT_LABELS[k] || k}: <span className="text-white font-medium">{v}</span>
+                      </span>
+                    ) : null
+                  )}
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-yellow-500/15 text-yellow-300">Compra: {Number(result.plan.buyPrice).toLocaleString()}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-yellow-500/15 text-yellow-300">Venda: {Number(result.plan.sellPrice).toLocaleString()}</span>
+                </div>
+
+                <p className="mt-3 text-[10px] text-gray-600 font-mono break-words line-clamp-2">{result.plan.artPrompt}</p>
+
+                <div className="mt-4 flex justify-end gap-2">
+                  <button
+                    onClick={handleGenerate}
+                    disabled={busy}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-dark-700 hover:bg-dark-600 text-gray-300 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                  >
+                    {busy ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+                    Gerar de novo
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                  >
+                    {saving ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
+                    {saving ? "Salvando..." : "Salvar item (rascunho)"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}

@@ -7,6 +7,7 @@ import { authenticate, requireRole, AuthPayload } from "../../core/middleware/au
 import { AppError } from "../../core/middleware/errorHandler";
 import { DEFAULT_GAME_LIMITS, invalidateGameLimits } from "../../core/gameLimits";
 import { aiProvidersAvailable, generateClass, persistGeneratedClass } from "../../core/ai/classGenerator";
+import { generateItemSprite } from "../../core/ai/itemGenerator";
 
 function requireAdmin(req: Request, res: Response, next: NextFunction) {
   authenticate(req, res, () => {
@@ -557,6 +558,32 @@ export function createAdminModule(app: Express): void {
 
   app.delete("/api/admin/statmodels/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try { await prisma.statModel.delete({ where: { id: req.params.id } }); res.json({ message: "Deleted" }); } catch (err) { next(err); }
+  });
+
+  // IA: gerar item (ícone pixel art + dados) — Groq planeja, Pollinations renderiza
+  app.post("/api/admin/items/generate", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (!process.env.GROQ_API_KEY) {
+        throw new AppError(503, "Gerador de itens desativado: defina GROQ_API_KEY nas variáveis do Railway");
+      }
+      const body = req.body || {};
+      const log: string[] = [];
+      const { icon, plan } = await generateItemSprite(
+        {
+          type: String(body.type || "weapon"),
+          theme: body.theme ? String(body.theme) : undefined,
+          material: body.material ? String(body.material) : undefined,
+          color: body.color ? String(body.color) : undefined,
+          rarity: body.rarity ? String(body.rarity) : undefined,
+          level: body.level !== undefined ? Number(body.level) : undefined,
+          seed: body.seed !== undefined ? Number(body.seed) : undefined,
+        },
+        log
+      );
+      res.status(201).json({ icon, plan, providers: log });
+    } catch (err) {
+      next(err);
+    }
   });
 
   // Items CRUD
