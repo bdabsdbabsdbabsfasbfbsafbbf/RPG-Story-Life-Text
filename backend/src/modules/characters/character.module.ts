@@ -87,9 +87,12 @@ export function createCharacterModule(app: Express): void {
   // Create the player's character
   app.post("/api/characters", authenticate, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { name, classId } = req.body;
+      const { name, classId, gender } = req.body;
       const characterName = (name ?? "").trim();
       if (!classId) throw new AppError(400, "Class required");
+      if (gender !== undefined && !["male", "female"].includes(gender)) {
+        throw new AppError(400, "Gender must be 'male' or 'female'");
+      }
 
       const existing = await prisma.character.findFirst({ where: { userId: req.user!.userId } });
       if (existing) throw new AppError(409, "You already have a character");
@@ -114,6 +117,7 @@ export function createCharacterModule(app: Express): void {
           data: {
             userId: req.user!.userId,
             name: characterName.slice(0, 50),
+            gender: gender ?? "male",
             classId: gameClass.id,
             currentHp: stats.maxHp,
             currentMana: stats.maxMana,

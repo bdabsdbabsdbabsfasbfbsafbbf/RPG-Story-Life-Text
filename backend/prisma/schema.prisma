@@ -53,6 +53,7 @@ model Character {
   id              String    @id @default(uuid())
   userId          String
   name            String
+  gender          String    @default("male")
   classId         String
   level           Int       @default(1)
   experience      BigInt    @default(0)

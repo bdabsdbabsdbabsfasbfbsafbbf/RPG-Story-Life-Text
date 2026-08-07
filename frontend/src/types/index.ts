@@ -557,6 +557,7 @@ export interface User {
 export interface Character {
   id: string;
   name: string;
+  gender?: "male" | "female";
   level: number;
   classId?: string | null;
   className?: string;

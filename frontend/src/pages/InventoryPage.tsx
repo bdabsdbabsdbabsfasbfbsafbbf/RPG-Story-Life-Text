@@ -245,7 +245,7 @@ export function InventoryPage() {
           <Shield size={16} className="text-yellow-400" /> Equipamento
         </h2>
         <div className="flex flex-col sm:flex-row gap-4">
-          <CharacterPreview equipped={equippedMap} onItemClick={(inv) => setSelectedItem(inv)} />
+          <CharacterPreview equipped={equippedMap} gender={selectedCharacter?.gender as any} onItemClick={(inv) => setSelectedItem(inv)} />
           <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
           {SLOTS.map((slot) => {
             if (slot.key === "class") {

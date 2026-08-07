@@ -9,23 +9,24 @@ interface CharacterPreviewProps<T extends PreviewItem> {
   equipped: Record<string, T>;
   onItemClick?: (inv: T) => void;
   className?: string;
+  gender?: "male" | "female";
 }
 
 const SPRITE_DIMS: Record<string, { w: number; h: number }> = {
   male: { w: 71, h: 160 },
-  female: { w: 62, h: 160 },
+  female: { w: 63, h: 160 },
 };
 
 const SPRITE_POS: Record<
   string,
   { top: string; left: string; width: string; height: string; rotate?: number; z?: number }
 > = {
-  helm: { top: "-4%", left: "18%", width: "64%", height: "24%", z: 30 },
+  helm: { top: "2%", left: "16%", width: "68%", height: "24%", z: 30 },
   necklace: { top: "24%", left: "34%", width: "32%", height: "15%", z: 30 },
-  armor: { top: "27%", left: "8%", width: "84%", height: "35%", z: 30 },
+  armor: { top: "27%", left: "8%", width: "84%", height: "36%", z: 30 },
   cape: { top: "4%", left: "-10%", width: "120%", height: "52%", z: 0 },
-  weapon: { top: "44%", left: "86%", width: "55%", height: "36%", rotate: 12, z: 30 },
-  ring: { top: "60%", left: "-4%", width: "22%", height: "22%", z: 30 },
+  weapon: { top: "32%", left: "54%", width: "42%", height: "40%", rotate: 12, z: 30 },
+  ring: { top: "58%", left: "2%", width: "22%", height: "22%", z: 30 },
 };
 
 const SLOT_LABELS: Record<string, string> = {
@@ -41,9 +42,10 @@ export default function CharacterPreview<T extends PreviewItem>({
   equipped,
   onItemClick,
   className,
+  gender: genderProp,
 }: CharacterPreviewProps<T>) {
   const [gender, setGender] = useState<"male" | "female">(
-    () => (localStorage.getItem("rpg_preview_gender") as "male" | "female") || "male"
+    () => genderProp || (localStorage.getItem("rpg_preview_gender") as "male" | "female") || "male"
   );
 
   const setG = (g: "male" | "female") => {
