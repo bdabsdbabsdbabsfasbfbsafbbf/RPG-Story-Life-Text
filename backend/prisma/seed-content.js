@@ -19,6 +19,7 @@ const starterClasses = [
     statModel: "tank",
     unlockMethod: "auto",
     requiredLevel: 1,
+    price: 1500,
     baseHp: 180,
     baseMana: 40,
     baseAttack: 10,
@@ -48,6 +49,7 @@ const starterClasses = [
     statModel: "caster",
     unlockMethod: "auto",
     requiredLevel: 1,
+    price: 1500,
     baseHp: 90,
     baseMana: 140,
     baseAttack: 6,
@@ -77,6 +79,7 @@ const starterClasses = [
     statModel: "dps",
     unlockMethod: "auto",
     requiredLevel: 1,
+    price: 1500,
     baseHp: 110,
     baseMana: 60,
     baseAttack: 16,
@@ -106,6 +109,7 @@ const starterClasses = [
     statModel: "support",
     unlockMethod: "auto",
     requiredLevel: 1,
+    price: 1500,
     baseHp: 120,
     baseMana: 120,
     baseAttack: 7,
@@ -261,6 +265,8 @@ const npcs = [
   { name: "Aurelia", description: "Vendedora de poções e equipamentos da vila.", type: "vendor", dialogue: "Bem-vindo à minha loja, aventureiro!" },
   { name: "Mestre Branko", description: "Um velho veterano que dá missões aos novatos.", type: "quest_giver", dialogue: "Precisa de trabalho? Tenho algumas tarefas para você." },
   { name: "Mística", description: "A misteriosa dona do baú da sorte da cidade. Com seus tickets, rola Anéis e Colares com poderosos boosts.", type: "gacha", dialogue: "Quer tentar a sorte, aventureiro? Três tickets grátis para começar!" },
+  { name: "Eldrin", description: "Encantador veterano de Arcádia. Vende encantamentos para transformar seu equipamento.", type: "enchantments", dialogue: "Procura poder? Meus encantamentos vão reescrever o destino das suas armas!" },
+  { name: "Capitão Valdir", description: "Comandante da guarda de Arcádia. Vende classes e treina novos combatentes.", type: "classes", dialogue: "Quer dominar uma nova arte de combate? Escolha sua classe!" },
 ];
 
 const shopOffers = [
@@ -270,14 +276,19 @@ const shopOffers = [
   { npc: "Aurelia", item: "Adaga Serrilhada", price: 140, class: "assassino" },
   { npc: "Aurelia", item: "Cajado Arcano", price: 160, class: "mago" },
   { npc: "Aurelia", item: "Armadura de Couro", price: 120, requiredLevel: 3 },
-  { npc: "Aurelia", enchantment: "titan", price: 5000 },
-  { npc: "Aurelia", enchantment: "mage", price: 5000 },
-  { npc: "Aurelia", enchantment: "guardian", price: 4500 },
-  { npc: "Aurelia", enchantment: "hunter", price: 4000 },
-  { npc: "Aurelia", enchantment: "sage", price: 4500 },
-  { npc: "Aurelia", enchantment: "fortune", price: 3500 },
-  { npc: "Aurelia", enchantment: "swift", price: 6000 },
-  { npc: "Aurelia", enchantment: "colossus", price: 12000 },
+  { npc: "Eldrin", enchantment: "titan", price: 5000 },
+  { npc: "Eldrin", enchantment: "mage", price: 5000 },
+  { npc: "Eldrin", enchantment: "guardian", price: 4500 },
+  { npc: "Eldrin", enchantment: "hunter", price: 4000 },
+  { npc: "Eldrin", enchantment: "sage", price: 4500 },
+  { npc: "Eldrin", enchantment: "fortune", price: 3500 },
+  { npc: "Eldrin", enchantment: "swift", price: 6000 },
+  { npc: "Eldrin", enchantment: "colossus", price: 12000 },
+  { npc: "Capitão Valdir", class: "cavaleiro", price: 1500 },
+  { npc: "Capitão Valdir", class: "mago", price: 1500 },
+  { npc: "Capitão Valdir", class: "assassino", price: 1500 },
+  { npc: "Capitão Valdir", class: "suporte", price: 1500 },
+  { npc: "Capitão Valdir", class: "senhor-das-sombras", price: 10000, requiredVip: true },
   { npc: "Aurelia", item: "Anel de Bronze", price: 10 },
   { npc: "Aurelia", item: "Anel de Prata", price: 35 },
   { npc: "Aurelia", item: "Capa Esfarrapada", price: 15 },
@@ -604,6 +615,7 @@ const vipClasses = [
     statModel: "hybrid",
     requiredLevel: 10,
     requiredVip: true,
+    price: 10000,
     sortOrder: 6,
   },
 ];
@@ -886,7 +898,9 @@ async function seedWorld() {
     }
     const where = offer.item
       ? { npcId: npc.id, itemId: item.id, enchantmentId: null }
-      : { npcId: npc.id, itemId: null, enchantmentId: enchantment.id };
+      : offer.enchantment
+        ? { npcId: npc.id, itemId: null, enchantmentId: enchantment.id }
+        : { npcId: npc.id, itemId: null, enchantmentId: null, classId: cls?.id ?? null };
     const data = {
       npcId: npc.id,
       itemId: item?.id ?? null,
@@ -895,14 +909,18 @@ async function seedWorld() {
       currency: "gold",
       classId: cls?.id ?? null,
       requiredLevel: offer.requiredLevel || 0,
+      requiredVip: offer.requiredVip || false,
     };
     const existing = await prisma.shopItem.findFirst({ where });
     if (existing) {
-      await prisma.shopItem.update({ where: { id: existing.id }, data: { classId: data.classId, requiredLevel: data.requiredLevel } });
-      console.log("  shop (updated):", offer.npc, "->", offer.item ?? offer.enchantment, cls ? `[${cls.name}]` : "");
+      await prisma.shopItem.update({
+        where: { id: existing.id },
+        data: { classId: data.classId, requiredLevel: data.requiredLevel, requiredVip: data.requiredVip },
+      });
+      console.log("  shop (updated):", offer.npc, "->", offer.item ?? offer.enchantment ?? offer.class, cls ? `[${cls.name}]` : "");
     } else {
       await prisma.shopItem.create({ data });
-      console.log("  shop:", offer.npc, "->", offer.item ?? offer.enchantment, cls ? `[${cls.name}]` : "");
+      console.log("  shop:", offer.npc, "->", offer.item ?? offer.enchantment ?? offer.class, cls ? `[${cls.name}]` : "");
     }
   }
 
@@ -1050,6 +1068,7 @@ async function seedWorld() {
       statModelId: statModel?.id ?? null,
       isStarter: true,
       isActive: true,
+      price: cls.price || 0,
       sortOrder: cls.sortOrder || 0,
     };
     await prisma.gameClass.upsert({
@@ -1078,6 +1097,7 @@ async function seedWorld() {
       statModelId: statModel?.id ?? null,
       isStarter: false,
       isActive: true,
+      price: cls.price || 0,
       sortOrder: cls.sortOrder || 5,
     };
     await prisma.gameClass.upsert({

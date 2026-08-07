@@ -130,6 +130,7 @@ export function ClassPage() {
   const autoSkill = skills.find((s) => s.trigger === "auto");
   const actives = skills.filter((s) => s.trigger === "active");
   const ultimate = skills.find((s) => s.trigger === "ultimate");
+  const charStats: any = (data as any).stats || {};
   const stats: any = gameClass.stats || {};
   const coreStats: any = stats.coreStats || {};
   const conversion: any = stats.conversion || {};
@@ -266,17 +267,17 @@ export function ClassPage() {
         </div>
       </div>
 
-      {/* Stats resumo */}
+      {/* Stats resumo — valores reais do personagem (nível + itens + encantamentos + passivas) */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: "HP", value: stats.hp, icon: Heart, color: "text-red-400" },
-          { label: "Mana", value: stats.mana, icon: Droplets, color: "text-blue-400" },
-          { label: "Ataque", value: stats.attack, icon: Swords, color: "text-orange-400" },
-          { label: "Defesa", value: stats.defense, icon: ShieldCheck, color: "text-yellow-400" },
-          { label: "Magia", value: stats.magic, icon: Sparkles, color: "text-purple-400" },
-          { label: "Res. Mágica", value: stats.magicDefense, icon: Shield, color: "text-cyan-400" },
-          { label: "Velocidade", value: stats.speed, icon: Zap, color: "text-green-400" },
-          { label: "Mana Regen", value: stats.manaRegenPerTick, icon: Droplets, color: "text-blue-300" },
+          { label: "HP", value: charStats.hp ?? stats.hp, icon: Heart, color: "text-red-400" },
+          { label: "Mana", value: charStats.mana ?? stats.mana, icon: Droplets, color: "text-blue-400" },
+          { label: "Ataque", value: charStats.attack ?? stats.attack, icon: Swords, color: "text-orange-400" },
+          { label: "Defesa", value: charStats.defense ?? stats.defense, icon: ShieldCheck, color: "text-yellow-400" },
+          { label: "Magia", value: charStats.magic ?? stats.magic, icon: Sparkles, color: "text-purple-400" },
+          { label: "Res. Mágica", value: charStats.magicDefense ?? stats.magicDefense, icon: Shield, color: "text-cyan-400" },
+          { label: "Velocidade", value: charStats.speed ?? stats.speed, icon: Zap, color: "text-green-400" },
+          { label: "Mana Regen", value: charStats.manaRegenPerTick ?? stats.manaRegenPerTick, icon: Droplets, color: "text-blue-300" },
         ].map((stat) => (
           <div key={stat.label} className="panel p-3 flex items-center gap-3">
             <stat.icon size={16} className={stat.color} />

@@ -8,6 +8,7 @@ interface PreviewItem {
 interface CharacterPreviewProps<T extends PreviewItem> {
   equipped: Record<string, T>;
   onItemClick?: (inv: T) => void;
+  onClassClick?: () => void;
   className?: string;
   gender?: "male" | "female";
 }
@@ -17,30 +18,32 @@ const SPRITE_DIMS: Record<string, { w: number; h: number }> = {
   female: { w: 63, h: 160 },
 };
 
-const SPRITE_POS: Record<
+// Quadrados de equipamento posicionados SOBRE o personagem (a arma fica fora do doll)
+const SLOT_POS: Record<
   string,
-  { top: string; left: string; width: string; height: string; rotate?: number; z?: number }
+  { top: string; left: string; width: string; height: string; centerX?: boolean; z?: number }
 > = {
-  helm: { top: "2%", left: "16%", width: "68%", height: "24%", z: 30 },
-  necklace: { top: "24%", left: "34%", width: "32%", height: "15%", z: 30 },
-  armor: { top: "27%", left: "8%", width: "84%", height: "36%", z: 30 },
-  cape: { top: "4%", left: "-10%", width: "120%", height: "52%", z: 0 },
-  weapon: { top: "44%", left: "58%", width: "38%", height: "44%", rotate: 12, z: 30 },
-  ring: { top: "58%", left: "2%", width: "22%", height: "22%", z: 30 },
+  helm: { top: "1%", left: "50%", width: "54%", height: "20%", centerX: true, z: 30 },
+  necklace: { top: "18%", left: "50%", width: "36%", height: "13%", centerX: true, z: 30 },
+  armor: { top: "25%", left: "50%", width: "62%", height: "36%", centerX: true, z: 30 },
+  ring: { top: "43%", left: "1%", width: "26%", height: "26%", z: 30 },
+  cape: { top: "62%", left: "1%", width: "26%", height: "26%", z: 30 },
+  class: { top: "74%", left: "50%", width: "46%", height: "22%", centerX: true, z: 30 },
 };
 
-const SLOT_LABELS: Record<string, string> = {
+const SLOT_LETTERS: Record<string, string> = {
   helm: "E",
   necklace: "C",
   armor: "A",
-  cape: "P",
-  weapon: "W",
   ring: "R",
+  cape: "P",
+  class: "C",
 };
 
 export default function CharacterPreview<T extends PreviewItem>({
   equipped,
   onItemClick,
+  onClassClick,
   className,
   gender: genderProp,
 }: CharacterPreviewProps<T>) {
@@ -54,7 +57,8 @@ export default function CharacterPreview<T extends PreviewItem>({
   };
 
   const dims = SPRITE_DIMS[gender];
-  const slotKeys = ["cape", "helm", "necklace", "armor", "weapon", "ring"];
+  const slotKeys = Object.keys(SLOT_POS);
+  const equippedClass = equipped["class"];
 
   return (
     <div className={`shrink-0 flex flex-col items-center ${className || ""}`}>
@@ -79,50 +83,9 @@ export default function CharacterPreview<T extends PreviewItem>({
 
       <div
         className="relative rounded-xl border border-dark-600 bg-dark-900/60 overflow-hidden"
-        style={{ aspectRatio: `${dims.w} / ${dims.h}`, height: 240 }}
+        style={{ aspectRatio: `${dims.w} / ${dims.h}`, height: 280 }}
       >
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(168,85,247,0.15),transparent_60%)]" />
-
-        {slotKeys.map((key) => {
-          const pos = SPRITE_POS[key];
-          const inv = equipped[key];
-          const style: CSSProperties = {
-            position: "absolute",
-            top: pos.top,
-            left: pos.left,
-            width: pos.width,
-            height: pos.height,
-            zIndex: pos.z ?? 20,
-            transform: pos.rotate ? `rotate(${pos.rotate}deg)` : undefined,
-          };
-          if (inv?.item?.icon) {
-            return (
-              <button
-                key={key}
-                style={style}
-                onClick={() => onItemClick?.(inv)}
-                title={inv.item.name}
-                className="group"
-              >
-                <img
-                  src={inv.item.icon}
-                  alt={inv.item.name}
-                  className="w-full h-full object-contain drop-shadow-[0_0_4px_rgba(0,0,0,0.6)] transition-transform group-hover:scale-110"
-                  style={{ imageRendering: "pixelated" }}
-                />
-              </button>
-            );
-          }
-          return (
-            <div
-              key={key}
-              style={style}
-              className="flex items-center justify-center rounded-md border border-dashed border-dark-600/80 bg-dark-800/30"
-            >
-              <span className="text-[9px] text-gray-600 font-bold">{SLOT_LABELS[key]}</span>
-            </div>
-          );
-        })}
 
         <img
           src={`/sprites/${gender}.png`}
@@ -131,11 +94,57 @@ export default function CharacterPreview<T extends PreviewItem>({
           style={{ imageRendering: "pixelated", zIndex: 10 }}
           draggable={false}
         />
+
+        {slotKeys.map((key) => {
+          const pos = SLOT_POS[key];
+          const inv = equipped[key];
+          const style: CSSProperties = {
+            position: "absolute",
+            top: pos.top,
+            left: pos.left,
+            width: pos.width,
+            height: pos.height,
+            zIndex: pos.z ?? 20,
+          };
+          if (pos.centerX) {
+            style.transform = "translateX(-50%)";
+          }
+          const cls = key === "class" ? equippedClass?.item : inv?.item;
+          return (
+            <button
+              key={key}
+              style={style}
+              onClick={() => (key === "class" ? onClassClick?.() : onItemClick?.(inv))}
+              title={key === "class" ? (cls ? `Classe: ${cls.name}` : "Classe") : inv?.item?.name || undefined}
+              className={`group rounded-lg border transition-all flex flex-col items-center justify-center gap-0.5 p-0.5 ${
+                cls
+                  ? "border-purple-500/50 bg-purple-600/25 hover:bg-purple-600/40"
+                  : "border-dashed border-dark-600/80 bg-dark-800/35 hover:bg-dark-800/60"
+              }`}
+            >
+              {cls?.icon ? (
+                <img
+                  src={cls.icon}
+                  alt={cls.name}
+                  className="max-w-[80%] max-h-[70%] object-contain drop-shadow-[0_0_3px_rgba(0,0,0,0.6)] transition-transform group-hover:scale-110"
+                  style={{ imageRendering: "pixelated" }}
+                />
+              ) : (
+                <span className="text-[10px] text-gray-500 font-bold">{SLOT_LETTERS[key]}</span>
+              )}
+              {cls && (
+                <span className="text-[8px] text-purple-200/90 leading-none truncate max-w-full px-0.5">
+                  {cls.name}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       <div className="mt-2 flex items-center gap-1.5 text-[10px] text-gray-500">
         <Shield size={10} className="text-yellow-500" />
-        Clique num item para ver detalhes
+        Clique num slot para ver detalhes
       </div>
     </div>
   );

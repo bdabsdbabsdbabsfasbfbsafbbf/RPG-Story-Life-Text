@@ -5,7 +5,7 @@ import { AppError } from "../../core/middleware/errorHandler";
 import { assertPurchaseRequirements } from "../../core/progression";
 import { withEnchantmentStats } from "../../core/enchantments/enchantmentStats";
 
-const SHOP_TYPES = new Set(["vendor", "shop"]);
+const SHOP_TYPES = new Set(["vendor", "shop", "enchantments", "classes"]);
 const QUEST_TYPES = new Set(["quest_giver", "quest"]);
 
 // Anexa computedStats (fórmula de progressão) aos encantamentos das ofertas
@@ -83,11 +83,11 @@ export function createNpcModule(app: Express): void {
     }
   });
 
-  // Buy an item (ou encantamento) do NPC vendor (debita gold/diamante e adiciona ao inventário/coleção)
+  // Buy an item (ou encantamento ou classe) do NPC vendor (debita gold/diamante e adiciona ao inventário/coleção)
   app.post("/api/npcs/:id/buy", authenticate, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { itemId, enchantmentId, quantity = 1 } = req.body;
-      if (!itemId && !enchantmentId) throw new AppError(400, "itemId ou enchantmentId required");
+      const { itemId, enchantmentId, classId, quantity = 1 } = req.body;
+      if (!itemId && !enchantmentId && !classId) throw new AppError(400, "itemId, enchantmentId ou classId required");
       const qty = Math.max(1, Math.floor(Number(quantity) || 1));
 
       const npc = await prisma.npc.findUnique({ where: { id: req.params.id }, select: { type: true } });
@@ -99,6 +99,11 @@ export function createNpcModule(app: Express): void {
       const shopOffer = enchantmentId
         ? await prisma.shopItem.findFirst({
             where: { npcId: req.params.id, enchantmentId },
+            include: { item: true, enchantment: true, class: true },
+          })
+        : classId
+        ? await prisma.shopItem.findFirst({
+            where: { npcId: req.params.id, classId },
             include: { item: true, enchantment: true, class: true },
           })
         : await prisma.shopItem.findFirst({
@@ -114,6 +119,9 @@ export function createNpcModule(app: Express): void {
       if (shopOffer.itemId && !shopOffer.item?.isActive) {
         throw new AppError(400, "Este item não está mais disponível.");
       }
+      if (shopOffer.classId && !shopOffer.class?.isActive) {
+        throw new AppError(400, "Esta classe não está mais disponível.");
+      }
 
       const user = await prisma.user.findUnique({
         where: { id: req.user!.userId },
@@ -122,21 +130,21 @@ export function createNpcModule(app: Express): void {
       if (!user) throw new AppError(404, "User not found");
 
       // Requisitos de compra: VIP, quests concluídas e nível do personagem ativo
-      const requiresVip = shopOffer.requiredVip || shopOffer.item?.requiredVip || shopOffer.enchantment?.requiredVip;
+      const requiresVip = shopOffer.requiredVip || shopOffer.item?.requiredVip || shopOffer.enchantment?.requiredVip || shopOffer.class?.requiredVip;
       await assertPurchaseRequirements(user.id, {
-        requiredLevel: Number(shopOffer.requiredLevel) || 0,
+        requiredLevel: Number(shopOffer.requiredLevel) || Number(shopOffer.class?.requiredLevel) || 0,
         requiredVip: !!requiresVip,
         requiredQuestIds: shopOffer.requiredQuestIds,
       });
 
-      // Restrição de classe: usa o personagem ativo (mais recente)
-      if (shopOffer.classId) {
-        const character = await prisma.character.findFirst({
+      // Restrição de classe: itens que são exclusivos de uma classe usam o personagem ativo
+      if (itemId && shopOffer.classId) {
+        const restrictedChar = await prisma.character.findFirst({
           where: { userId: user.id },
           orderBy: { updatedAt: "desc" },
           include: { class: true },
         });
-        if (!character || character.classId !== shopOffer.classId) {
+        if (!restrictedChar || restrictedChar.classId !== shopOffer.classId) {
           throw new AppError(403, `Este item é exclusivo para a classe ${shopOffer.class?.name ?? "restrita"}.`);
         }
       }
@@ -150,6 +158,11 @@ export function createNpcModule(app: Express): void {
       } else if (Number(user.gold) < totalPrice) {
         throw new AppError(400, `Not enough gold (need ${totalPrice})`);
       }
+
+      const character = await prisma.character.findFirst({
+        where: { userId: user.id },
+        orderBy: { updatedAt: "desc" },
+      });
 
       await prisma.$transaction(async (tx) => {
         if (currency === "diamond") {
@@ -169,6 +182,24 @@ export function createNpcModule(app: Express): void {
             create: { userId: user.id, enchantmentId: shopOffer.enchantmentId, quantity: qty },
             update: { quantity: { increment: qty } },
           });
+        } else if (classId) {
+          if (!character) throw new AppError(404, "Character not found");
+          const classIdToBuy = shopOffer.classId;
+          if (!classIdToBuy) throw new AppError(400, "Esta oferta não é uma classe.");
+          // Desbloqueia a classe e já equipa no personagem (troca gratuita depois)
+          await tx.characterClass.upsert({
+            where: { characterId_classId: { characterId: character.id, classId: classIdToBuy } },
+            update: { isActive: true },
+            create: { characterId: character.id, classId: classIdToBuy, isActive: true },
+          });
+          await tx.characterClass.updateMany({
+            where: { characterId: character.id, classId: { not: classIdToBuy }, isActive: true },
+            data: { isActive: false },
+          });
+          await tx.character.update({
+            where: { id: character.id },
+            data: { classId: classIdToBuy },
+          });
         } else if (shopOffer.itemId) {
           const existing = await tx.inventory.findFirst({
             where: { userId: user.id, itemId: shopOffer.itemId, slotIndex: null },
@@ -187,10 +218,11 @@ export function createNpcModule(app: Express): void {
       });
 
       res.json({
-        item: shopOffer.enchantment?.name ?? shopOffer.item?.name ?? "Compra",
+        item: shopOffer.class?.name ?? shopOffer.enchantment?.name ?? shopOffer.item?.name ?? "Compra",
         quantity: qty,
         totalPrice,
         currency,
+        isClass: !!shopOffer.classId,
         [currency === "diamond" ? "diamondsLeft" : "goldLeft"]: Math.max(0, Number(currency === "diamond" ? user.diamonds : user.gold) - totalPrice),
       });
     } catch (err) {

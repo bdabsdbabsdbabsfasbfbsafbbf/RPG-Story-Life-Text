@@ -17,12 +17,6 @@ const rarityOrder: Record<string, number> = {
   common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4, mythic: 5, artifact: 6,
 };
 
-const SQUARE_ROWS: string[][] = [
-  ["helm"],
-  ["ring", "armor", "weapon"],
-  ["cape", "necklace", "class"],
-];
-
 const SLOT_LABELS: Record<string, string> = {
   weapon: "Arma", class: "Classe", helm: "Elmo", armor: "Armadura",
   cape: "Capa", ring: "Anel", necklace: "Colar",
@@ -251,47 +245,20 @@ export function InventoryPage() {
           <Shield size={16} className="text-yellow-400" /> Equipamento
         </h2>
         <div className="flex flex-col sm:flex-row gap-4 items-center sm:items-start">
-          <CharacterPreview equipped={equippedMap} gender={selectedCharacter?.gender as any} onItemClick={(inv) => setSelectedItem(inv)} />
+          <CharacterPreview
+            equipped={equippedMap}
+            gender={selectedCharacter?.gender as any}
+            onItemClick={(inv) => setSelectedItem(inv)}
+            onClassClick={() => selectedCharacter?.class?.slug && navigate(`/class/${selectedCharacter.class.slug}`)}
+          />
           <div className="flex-1 flex flex-col items-center gap-2">
-          {SQUARE_ROWS.map((row, ri) => (
-            <div key={ri} className="flex justify-center gap-2">
-            {row.map((key) => {
+            {(() => {
+              const key = "weapon";
               const slot = { key, label: SLOT_LABELS[key], icon: SLOT_ICONS[key] };
-              if (key === "class") {
-                const cls = selectedCharacter?.class;
-                const Icon = slot.icon;
-                return (
-                  <button
-                    key={key}
-                    onClick={() => cls && navigate(`/class/${cls.slug}`)}
-                    className={`card-hover p-3 text-center w-28 sm:w-32 min-h-[110px] flex flex-col items-center justify-center gap-2 ${
-                      cls ? "border-purple-500/40" : "border-dashed border-dark-600"
-                    }`}
-                  >
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      cls ? "bg-gradient-to-br from-purple-600 to-blue-600" : "bg-dark-800/60"
-                    }`}>
-                      <Icon size={18} className={cls ? "text-white" : "text-gray-600"} />
-                    </div>
-                    {cls ? (
-                      <>
-                        <p className="text-xs font-medium leading-tight">{cls.name}</p>
-                        <p className="text-[10px] text-purple-300">Equipada</p>
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-xs font-medium text-gray-500">{slot.label}</p>
-                        <p className="text-[10px] text-gray-600">Vazio</p>
-                      </>
-                    )}
-                  </button>
-                );
-              }
               const inv = equippedMap[key];
               const Icon = slot.icon;
               return (
                 <button
-                  key={key}
                   onClick={() => inv && setSelectedItem(inv)}
                   className={`card-hover p-3 text-center w-28 sm:w-32 min-h-[110px] flex flex-col items-center justify-center gap-2 ${
                     inv ? "border-purple-500/40" : "border-dashed border-dark-600"
@@ -317,9 +284,10 @@ export function InventoryPage() {
                   )}
                 </button>
               );
-            })}
-            </div>
-          ))}
+            })()}
+            <p className="text-[11px] text-gray-600 text-center max-w-[220px]">
+              A arma não aparece no personagem — os slots ficam sobre ele e a arma ao lado.
+            </p>
           </div>
         </div>
       </div>

@@ -25,7 +25,7 @@ interface NpcDetail {
   id: string;
   name: string;
   type: string;
-  shopItems?: { id: string; price: string | number; currency?: string; itemId?: string | null; enchantmentId?: string | null; classId?: string | null; requiredLevel?: number; requiredVip?: boolean; requiredQuestIds?: string | null; class?: { name: string; slug: string } | null; item: { id: string; name: string; description: string; type: string; rarity: string; icon?: string | null; attackSpeedMs?: number; dps?: number; requiredVip?: boolean } | null; enchantment?: { name: string; slug: string; description: string; icon?: string | null; requiredVip?: boolean; level?: number; rarity?: string; category?: string; strength?: number; intellect?: number; endurance?: number; dexterity?: number; wisdom?: number; luck?: number; computedStats?: Record<string, number> } | null }[];
+  shopItems?: { id: string; price: string | number; currency?: string; itemId?: string | null; enchantmentId?: string | null; classId?: string | null; requiredLevel?: number; requiredVip?: boolean; requiredQuestIds?: string | null; class?: { id: string; name: string; slug: string; description: string; icon?: string | null; role: string; requiredLevel: number; requiredVip: boolean; price: string | number } | null; item: { id: string; name: string; description: string; type: string; rarity: string; icon?: string | null; attackSpeedMs?: number; dps?: number; requiredVip?: boolean } | null; enchantment?: { name: string; slug: string; description: string; icon?: string | null; requiredVip?: boolean; level?: number; rarity?: string; category?: string; strength?: number; intellect?: number; endurance?: number; dexterity?: number; wisdom?: number; luck?: number; computedStats?: Record<string, number> } | null }[];
   quests?: { id: string; title: string; description: string; requiredLevel: number; requiredRank: number; requiredQuestIds?: string | null; xpReward: string | number; goldReward: string | number }[];
 }
 
@@ -141,11 +141,21 @@ function parseQuestIdList(raw?: string | null): string[] {
   return String(raw).split(",").map((x) => x.trim()).filter(Boolean);
 }
 
-const SHOP_TYPES = new Set(["vendor", "shop"]);
+const SHOP_TYPES = new Set(["vendor", "shop", "enchantments", "classes"]);
 const QUEST_TYPES = new Set(["quest_giver", "quest"]);
+const ENCHANT_NPC_TYPES = new Set(["enchantments"]);
+const CLASS_NPC_TYPES = new Set(["classes"]);
 
 function isShopNpc(type?: string | null) {
   return !!type && SHOP_TYPES.has(type);
+}
+
+function isEnchantNpc(type?: string | null) {
+  return !!type && ENCHANT_NPC_TYPES.has(type);
+}
+
+function isClassNpc(type?: string | null) {
+  return !!type && CLASS_NPC_TYPES.has(type);
 }
 
 function isQuestNpc(type?: string | null) {
@@ -316,17 +326,20 @@ export function MapPage() {
     }
   };
 
-  const buyItem = async (offer: { item?: { id: string } | null; enchantment?: { name: string } | null; enchantmentId?: string | null; itemId?: string | null; price: string | number; currency?: string }) => {
+  const buyItem = async (offer: { item?: { id: string } | null; enchantment?: { name: string } | null; enchantmentId?: string | null; itemId?: string | null; classId?: string | null; class?: { name: string } | null; price: string | number; currency?: string }) => {
     if (!npc) return;
     const isEnchantment = !!offer.enchantmentId;
-    setBuyingItemId(isEnchantment ? offer.enchantmentId! : offer.itemId!);
+    const isClass = !!offer.classId && !offer.itemId && !offer.enchantmentId;
+    setBuyingItemId(isEnchantment ? offer.enchantmentId! : isClass ? offer.classId! : offer.itemId!);
     try {
       const payload = isEnchantment
         ? { enchantmentId: offer.enchantmentId!, quantity: 1 }
-        : { itemId: offer.itemId!, quantity: 1 };
+        : isClass
+          ? { classId: offer.classId!, quantity: 1 }
+          : { itemId: offer.itemId!, quantity: 1 };
       const { data } = await npcApi.buy(npc.id, payload);
       const currency = data.currency === "diamond" ? "diamantes" : "gold";
-      toast.success(`${data.quantity}x ${data.item} comprado (${data.totalPrice} ${currency})`);
+      toast.success(isClass ? `Classe ${data.item} desbloqueada e equipada!` : `${data.quantity}x ${data.item} comprado (${data.totalPrice} ${currency})`);
       if (currency === "diamantes") refreshUser();
     } catch (err: any) {
       toast.error(err.response?.data?.error || "Purchase failed");
@@ -519,7 +532,9 @@ export function MapPage() {
                   className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-dark-700/50 transition-colors text-left"
                 >
                   <div className="w-8 h-8 rounded-lg bg-dark-700 flex items-center justify-center">
-                    {isShopNpc(mn.npc.type) ? <Store size={16} className="text-cyan-400" /> :
+                    {isEnchantNpc(mn.npc.type) ? <Sparkles size={16} className="text-purple-400" /> :
+                     isClassNpc(mn.npc.type) ? <Swords size={16} className="text-orange-400" /> :
+                     isShopNpc(mn.npc.type) ? <Store size={16} className="text-cyan-400" /> :
                      isQuestNpc(mn.npc.type) ? <ScrollText size={16} className="text-green-400" /> :
                      isGachaNpc(mn.npc.type) ? <Dices size={16} className="text-yellow-400" /> :
                      <Shield size={16} className="text-purple-400" />}
@@ -575,6 +590,7 @@ export function MapPage() {
 
             {isShopNpc(npc.type) && (
               <div className="space-y-2">
+                {!isEnchantNpc(npc.type) && !isClassNpc(npc.type) && (
                 <div className="flex gap-2 flex-wrap border-b border-dark-700 pb-2">
                   {(
                     [
@@ -600,10 +616,11 @@ export function MapPage() {
                     );
                   })}
                 </div>
+                )}
 
                 {(vendorTab === "items" || vendorTab === "enchantments") && (() => {
                   const offers = (npc.shopItems ?? []).filter((o) =>
-                    vendorTab === "enchantments" ? !!o.enchantmentId : !o.enchantmentId
+                    (isEnchantNpc(npc.type) || vendorTab === "enchantments") ? !!o.enchantmentId : !o.enchantmentId
                   );
                   return offers.length > 0 ? (
                     offers.map((offer) => {
@@ -708,12 +725,12 @@ export function MapPage() {
                     })
                   ) : (
                     <p className="text-sm text-gray-500">
-                      {vendorTab === "enchantments" ? "Nenhum encantamento à venda." : "Nenhum item à venda."}
+                      {(isEnchantNpc(npc.type) || vendorTab === "enchantments") ? "Nenhum encantamento à venda." : "Nenhum item à venda."}
                     </p>
                   );
                 })()}
 
-                {vendorTab === "crafts" && (
+                {!isEnchantNpc(npc.type) && !isClassNpc(npc.type) && vendorTab === "crafts" && (
                   crafts.length > 0 ? (
                     <div className="space-y-2">
                       {crafts.map((recipe) => {
@@ -762,6 +779,61 @@ export function MapPage() {
                     <p className="text-sm text-gray-500">Nenhuma receita disponível.</p>
                   )
                 )}
+
+              {isClassNpc(npc.type) && (() => {
+                const classOffers = (npc.shopItems ?? []).filter((o) => !!o.classId && !o.itemId && !o.enchantmentId);
+                return classOffers.length > 0 ? (
+                  <div className="space-y-2">
+                    {classOffers.map((offer) => {
+                      const cls = offer.class;
+                      if (!cls) return null;
+                      const vipLocked = cls.requiredVip && !vipActive;
+                      return (
+                        <div key={offer.id} className="card p-3 flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center overflow-hidden shrink-0">
+                            {cls.icon ? (
+                              <img src={cls.icon} alt="" className="w-full h-full object-contain p-0.5" style={{ imageRendering: "pixelated" }} />
+                            ) : (
+                              <Swords size={16} className="text-purple-400" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium">
+                              {cls.name}
+                              <span className="text-[10px] ml-1.5 px-1.5 py-0.5 rounded-full bg-purple-500/15 text-purple-300 align-middle">classe</span>
+                            </p>
+                            <p className="text-[11px] text-gray-500 line-clamp-2">{cls.description}</p>
+                            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                              <span className="text-[10px] px-1.5 py-0.5 bg-dark-700 text-gray-300 rounded-md capitalize">{cls.role}</span>
+                              {cls.requiredLevel > 1 && (
+                                <span className="text-[10px] px-1.5 py-0.5 bg-yellow-500/15 text-yellow-300 rounded-md">Nv. {cls.requiredLevel}+</span>
+                              )}
+                              {cls.requiredVip && (
+                                <span className="text-[10px] px-1.5 py-0.5 bg-yellow-500/15 text-yellow-300 rounded-md flex items-center gap-1">
+                                  <Crown size={9} /> VIP
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="text-sm text-yellow-400">{Number(offer.price).toLocaleString()} gold</p>
+                            <button
+                              onClick={() => buyItem(offer)}
+                              disabled={buyingItemId === offer.classId || vipLocked}
+                              className="btn-secondary text-xs px-3 py-1 mt-1 disabled:opacity-50"
+                              title={vipLocked ? "Requer VIP" : undefined}
+                            >
+                              {buyingItemId === offer.classId ? "..." : vipLocked ? "VIP" : "Comprar"}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500">Nenhuma classe à venda.</p>
+                );
+              })()}
               </div>
             )}
 

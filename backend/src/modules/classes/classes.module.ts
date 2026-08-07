@@ -3,6 +3,10 @@ import { prisma } from "../../core/database";
 import { authenticate } from "../../core/middleware/auth";
 import { computeStats, CLASS_STAT_CONVERSION } from "../../core/classEngine/stat-calculator";
 import { applyClassXp, classXpToNextRank } from "../../core/progression";
+import { sumCoreStats } from "../../core/stats/coreStats";
+import { computeEnchantmentStats } from "../../core/enchantments/enchantmentStats";
+import { getEquippedBoosterBonuses } from "../../core/boosters";
+import { PassiveDef } from "../../core/classEngine/types";
 
 function parseJson(value: any, fallback: any = null): any {
   if (value === null || value === undefined) return fallback;
@@ -45,6 +49,99 @@ export function displayStats(gameClass: any): any {
     healthRegenPerTick: stats.healthRegenPerTick,
     coreStats,
     conversion: CLASS_STAT_CONVERSION,
+  };
+}
+
+function parsePassiveForStats(p: any): PassiveDef {
+  return {
+    id: p.id,
+    name: p.name,
+    slug: p.slug || p.id,
+    description: p.description || "",
+    rankRequired: Number(p.rankRequired) || 1,
+    statModifiers: parseJson(p.statModifiers, {}),
+    skillModifiers: [],
+    effectModifiers: [],
+    conditions: [],
+    events: [],
+    type: p.type || "permanente",
+    internalCooldownMs: Number(p.internalCooldownMs) || 0,
+  };
+}
+
+// Stats reais do personagem (nível + equipamento + encantamentos + passivas do rank),
+// mesma lógica do combate — é o que mantém os mostradores atualizados.
+async function characterCombatStats(character: any): Promise<any> {
+  const rank = character.classProgress?.[0]?.rank ?? 1;
+  const equipment = await prisma.equipment.findUnique({
+    where: { characterId: character.id },
+    include: {
+      weapon: { include: { enchantment: true } },
+      classItem: { include: { enchantment: true } },
+      helm: { include: { enchantment: true } },
+      armor: { include: { enchantment: true } },
+      cape: { include: { enchantment: true } },
+      ring: { include: { enchantment: true } },
+      necklace: { include: { enchantment: true } },
+    },
+  });
+
+  const coreStats = sumCoreStats([
+    ...["weapon", "classItem", "helm", "armor", "cape", "ring", "necklace"].map((slot) => {
+      const item = (equipment as any)?.[slot];
+      if (!item) return null;
+      const src = item.enchantment ? computeEnchantmentStats(item.enchantment) : item;
+      return {
+        strength: src.strength ?? 0,
+        intellect: src.intellect ?? 0,
+        endurance: src.endurance ?? 0,
+        dexterity: src.dexterity ?? 0,
+        wisdom: src.wisdom ?? 0,
+        luck: src.luck ?? 0,
+      };
+    }),
+  ]);
+
+  const passives = (character.class?.passives || [])
+    .filter((p: any) => (p.rankRequired ?? 1) <= rank)
+    .map(parsePassiveForStats);
+
+  const boosterBonuses = await getEquippedBoosterBonuses(character.userId);
+
+  const weapon = equipment?.weapon ?? null;
+
+  const stats = computeStats({
+    level: character.level,
+    statModel: {
+      coreStats: parseJson(character.class?.statModel?.coreStats, {}),
+      bonuses: { damageBoost: boosterBonuses.damage, defenseBoost: boosterBonuses.defense },
+    },
+    resource: parseJson(character.class?.resource, {}),
+    passives,
+    coreStats,
+    attackSpeedMs: weapon && weapon.attackSpeedMs > 0 ? weapon.attackSpeedMs : undefined,
+    weaponDps: weapon && Number(weapon.dps) > 0 ? Number(weapon.dps) : undefined,
+  });
+
+  return {
+    hp: stats.hp,
+    mana: stats.mana,
+    maxHp: stats.maxHp,
+    maxMana: stats.maxMana,
+    attack: stats.attack,
+    defense: stats.defense,
+    magic: stats.magic,
+    magicDefense: stats.magicDefense,
+    speed: stats.speed,
+    attackPower: stats.attackPower,
+    spellPower: stats.spellPower,
+    hitChance: stats.hitChance,
+    critChance: stats.critChance,
+    critDamage: stats.critDamage,
+    dodge: stats.dodge,
+    attackSpeedMs: stats.attackSpeedMs,
+    manaRegenPerTick: stats.manaRegenPerTick,
+    healthRegenPerTick: stats.healthRegenPerTick,
   };
 }
 
@@ -153,6 +250,7 @@ export function createClassesModule(app: Express): void {
       res.json({
         ...character,
         class: character.class ? { ...character.class, stats: displayStats(character.class) } : null,
+        stats: await characterCombatStats(character),
         rankXpToNext: classXpToNextRank(character.classProgress?.[0]?.rank ?? 1),
       });
     } catch (err) {
