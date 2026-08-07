@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useGameStore } from "../store/gameStore";
 import { useAuthStore } from "../store/authStore";
+import CharacterPreview from "../components/CharacterPreview";
 import toast from "react-hot-toast";
 
 const rarityOrder: Record<string, number> = {
@@ -242,7 +243,9 @@ export function InventoryPage() {
         <h2 className="font-display font-semibold mb-3 flex items-center gap-2">
           <Shield size={16} className="text-yellow-400" /> Equipamento
         </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <CharacterPreview equipped={equippedMap} onItemClick={(inv) => setSelectedItem(inv)} />
+          <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
           {SLOTS.map((slot) => {
             if (slot.key === "class") {
               const cls = selectedCharacter?.class;
@@ -305,6 +308,7 @@ export function InventoryPage() {
               </button>
             );
           })}
+          </div>
         </div>
       </div>
 
