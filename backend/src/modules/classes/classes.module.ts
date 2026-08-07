@@ -36,6 +36,7 @@ export function displayStats(gameClass: any): any {
     speed: stats.speed,
     attackPower: stats.attackPower,
     spellPower: stats.spellPower,
+    hitChance: stats.hitChance,
     critChance: stats.critChance,
     critDamage: stats.critDamage,
     dodge: stats.dodge,

@@ -158,9 +158,8 @@ CONTRATO (responda apenas com JSON válido, sem markdown):
 }
 
 REGRAS DE CORE STATS (${CORE_KEYS.join(", ")}):
-- Valores inteiros de 0 a 12.
-- SOMA TOTAL entre 15 e 25 pontos.
-- Distribua de acordo com a fantasy da classe (tank = endurance/strength; mage = intellect; assassino = dexterity/luck; suporte = wisdom/intellect).
+- Valores inteiros de 0 a 999999 (pontos altos são permitidos: cada ponto converte pouco, então classes fortes precisam de pontos altos — ex.: 200+ pontos para chance de crítico relevante).
+- SOMA TOTAL livre (sem limite máximo). Distribua de acordo com a fantasy da classe (tank = endurance/strength; mage = intellect; assassino = dexterity/luck; suporte = wisdom/intellect).
 
 REGRAS DE SKILLS (2 a 5 skills):
 - A PRIMEIRA skill é o ataque automático: trigger "auto", kind "attack", target "enemy", cooldown 2000, manaCost 0, rankRequired 1, sortOrder 1, actions: [{ action: "damage", amount: 6-10, scaling: [{ stat: "attack"|"magic", factor: 0.8-1.2 }], damageType: "physical"|"magic" }].
@@ -257,11 +256,11 @@ function normalize(raw: any, errors: string[]): GeneratedClass {
   const stats: Record<string, number> = {};
   let total = 0;
   for (const k of CORE_KEYS) {
-    const v = Math.max(0, Math.min(12, Math.round(num(sm.coreStats?.[k], 0))));
+    const v = Math.max(0, Math.min(999999, Math.round(num(sm.coreStats?.[k], 0))));
     stats[k] = v;
     total += v;
   }
-  if (total < 15 || total > 25) errors.push(`Soma de coreStats (${total}) fora do orçamento 15-25 — ajustar manualmente`);
+  if (total < 6) errors.push(`Soma de coreStats (${total}) muito baixa — a classe ficará fraca`);
 
   const role = VALID_ROLES.includes(cls.role) ? cls.role : "hybrid";
   const category = VALID_CATEGORIES.includes(sm.category) ? sm.category : "hybrid";
