@@ -101,7 +101,7 @@ const BOOST_LABELS: Record<string, string> = {
   damage: "Dano Geral",
   dropChance: "Chance de Drop",
   xp: "XP",
-  gold: "Gold",
+  gold: "Ouro",
   classXp: "XP de Classe",
 };
 
@@ -342,7 +342,7 @@ export function MapPage() {
       toast.success(isClass ? `Classe ${data.item} desbloqueada e equipada!` : `${data.quantity}x ${data.item} comprado (${data.totalPrice} ${currency})`);
       if (currency === "diamantes") refreshUser();
     } catch (err: any) {
-      toast.error(err.response?.data?.error || "Purchase failed");
+      toast.error(err.response?.data?.error || "Falha na compra");
     } finally {
       setBuyingItemId(null);
     }

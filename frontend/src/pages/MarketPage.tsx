@@ -21,7 +21,7 @@ export function MarketPage() {
       toast.success("Item purchased!");
       setListings(prev => prev.filter(l => l.id !== id));
     } catch (err: any) {
-      toast.error(err.response?.data?.error || "Purchase failed");
+      toast.error(err.response?.data?.error || "Falha na compra");
     }
   };
 
@@ -37,7 +37,7 @@ export function MarketPage() {
 
       <div className="relative max-w-xs">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search listings..." className="input-rpg pl-9" />
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar anúncios..." className="input-rpg pl-9" />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -50,12 +50,12 @@ export function MarketPage() {
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm truncate">{listing.item.name}</p>
                 <p className="text-xs text-gray-500 capitalize">{listing.item.rarity} • {listing.item.type}</p>
-                <p className="text-xs text-gray-500">Seller: {listing.seller?.displayName ?? "Unknown"}</p>
+                <p className="text-xs text-gray-500">Vendedor: {listing.seller?.displayName ?? "Desconhecido"}</p>
               </div>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-lg font-bold font-mono text-yellow-400">{Number(listing.price).toLocaleString()} G</span>
-              <button onClick={() => handleBuy(listing.id)} className="btn-primary text-sm">Buy</button>
+              <button onClick={() => handleBuy(listing.id)} className="btn-primary text-sm">Comprar</button>
             </div>
           </div>
         ))}

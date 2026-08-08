@@ -72,7 +72,7 @@ export function GuildPage() {
               try {
                 await guildApi.leave(myGuild.guildId);
                 setMyGuild(null);
-                toast.success("Left guild");
+                toast.success("Você saiu da guilda");
               } catch {}
             }} className="btn-danger flex items-center gap-2">
               <LogOut size={16} /> Leave
@@ -87,16 +87,16 @@ export function GuildPage() {
             <div className="bg-dark-800 border border-amber-500/30 rounded-lg p-3 text-sm">
               <p className="text-amber-300 font-medium mb-1">Requisitos para criar guilda:</p>
               <p className="text-gray-300">
-                Level {requirements.requiredLevel} • {Number(requirements.requiredGold).toLocaleString()} Gold • {Number(requirements.requiredDiamonds).toLocaleString()} Diamonds
+                Nível {requirements.requiredLevel} • {Number(requirements.requiredGold).toLocaleString()} Ouro • {Number(requirements.requiredDiamonds).toLocaleString()} Diamantes
               </p>
             </div>
           )}
           <div className="grid grid-cols-2 gap-3">
-            <input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="input-rpg" placeholder="Guild name" required />
+            <input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="input-rpg" placeholder="Nome da guilda" required />
             <input value={form.tag} onChange={e => setForm({...form, tag: e.target.value})} className="input-rpg" placeholder="TAG" maxLength={5} required />
           </div>
-          <textarea value={form.description} onChange={e => setForm({...form, description: e.target.value})} className="input-rpg" placeholder="Description" rows={2} required />
-          <button type="submit" className="btn-primary w-full">Create Guild</button>
+          <textarea value={form.description} onChange={e => setForm({...form, description: e.target.value})} className="input-rpg" placeholder="Descrição" rows={2} required />
+          <button type="submit" className="btn-primary w-full">Criar Guilda</button>
         </form>
       )}
 
@@ -106,7 +106,7 @@ export function GuildPage() {
             <div className="flex items-start justify-between mb-3">
               <div>
                 <h3 className="font-display font-bold text-lg">{g.name}</h3>
-                <p className="text-xs text-gray-500">[{g.tag}] • Level {g.level}</p>
+                <p className="text-xs text-gray-500">[{g.tag}] • Nível {g.level}</p>
               </div>
               <div className="flex items-center gap-1 text-sm">
                 <Users size={14} className="text-gray-500" />

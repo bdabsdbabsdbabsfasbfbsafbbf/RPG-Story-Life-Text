@@ -81,7 +81,7 @@ export function QuestPage() {
                 filter === type ? "bg-green-600 text-white" : "bg-dark-700 text-gray-400 hover:text-gray-200"
               }`}
             >
-              {type === "all" ? "All" : type}
+              {type === "all" ? "Todas" : type}
             </button>
           ))}
         </div>

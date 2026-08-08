@@ -364,9 +364,9 @@ export function CombatPage() {
               <Shield size={24} className="text-white" />
             </div>
             <div>
-              <h2 className="font-display font-bold">{combat?.characterName || selectedCharacter?.name || user?.displayName || "Player"}</h2>
+              <h2 className="font-display font-bold">{combat?.characterName || selectedCharacter?.name || user?.displayName || "Jogador"}</h2>
               <p className="text-xs text-gray-400">
-                Level {combat?.characterLevel || selectedCharacter?.level || user?.level || 1}
+                Nível {combat?.characterLevel || selectedCharacter?.level || user?.level || 1}
                 {selectedCharacter?.class?.name && <> • {selectedCharacter.class.name}</>}
               </p>
             </div>
@@ -420,7 +420,7 @@ export function CombatPage() {
             </div>
             <div>
               <h2 className="font-display font-bold capitalize">{monsterName}</h2>
-              <p className="text-xs text-gray-400">Level {monsterLevel} • Monstro</p>
+              <p className="text-xs text-gray-400">Nível {monsterLevel} • Monstro</p>
             </div>
             {combat && combat.state === "active" && (
               <span className="ml-auto flex items-center gap-2 text-sm text-red-400">

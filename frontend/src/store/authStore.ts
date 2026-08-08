@@ -60,7 +60,7 @@ export const useAuthStore = create<AuthStore>()(
             isLoading: false,
           });
         } catch (err: any) {
-          set({ isLoading: false, error: err.response?.data?.error || err.message || 'Login failed' });
+          set({ isLoading: false, error: err.response?.data?.error || err.message || 'Falha no login' });
           throw err;
         }
       },
@@ -77,7 +77,7 @@ export const useAuthStore = create<AuthStore>()(
             isLoading: false,
           });
         } catch (err: any) {
-          set({ isLoading: false, error: err.response?.data?.error || err.message || 'Registration failed' });
+          set({ isLoading: false, error: err.response?.data?.error || err.message || 'Falha no registro' });
           throw err;
         }
       },

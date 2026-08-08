@@ -17,9 +17,9 @@ export function LoginPage() {
     try {
       await login(username, password);
       navigate("/");
-      toast.success("Welcome back!");
+      toast.success("Bem-vindo de volta!");
     } catch (err: any) {
-      toast.error(err.response?.data?.error || "Login failed");
+      toast.error(err.response?.data?.error || "Falha no login");
     } finally {
       setLoading(false);
     }
@@ -33,38 +33,38 @@ export function LoginPage() {
             <Sword size={32} className="text-white" />
           </div>
           <h1 className="text-3xl font-display font-bold glow-text">RPG Story Life</h1>
-          <p className="text-gray-400 mt-2">Sign in to continue your adventure</p>
+          <p className="text-gray-400 mt-2">Entre para continuar sua aventura</p>
         </div>
 
         <form onSubmit={handleSubmit} className="panel p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Username</label>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Nome de usuário</label>
             <input
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="input-rpg"
-              placeholder="Enter your username"
+              placeholder="Digite seu nome de usuário"
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Password</label>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Senha</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="input-rpg"
-              placeholder="Enter your password"
+              placeholder="Digite sua senha"
               required
             />
           </div>
           <button type="submit" disabled={loading} className="btn-primary w-full py-2.5">
-            {loading ? "Signing in..." : "Sign In"}
+            {loading ? "Entrando..." : "Entrar"}
           </button>
 
           <p className="text-center text-sm text-gray-400">
-            Don't have an account?{" "}
-            <Link to="/register" className="text-purple-400 hover:text-purple-300">Register</Link>
+            Não tem uma conta?{" "}
+            <Link to="/register" className="text-purple-400 hover:text-purple-300">Cadastre-se</Link>
           </p>
         </form>
       </div>

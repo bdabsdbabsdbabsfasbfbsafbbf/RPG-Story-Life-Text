@@ -26,7 +26,7 @@ export function RegisterPage() {
       navigate("/");
       toast.success("Welcome to RPG Story Life!");
     } catch (err: any) {
-      toast.error(err.response?.data?.error || "Registration failed");
+      toast.error(err.response?.data?.error || "Falha no registro");
     } finally {
       setLoading(false);
     }
@@ -39,7 +39,7 @@ export function RegisterPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 mb-4">
             <Sword size={32} className="text-white" />
           </div>
-          <h1 className="text-3xl font-display font-bold glow-text">Create Account</h1>
+          <h1 className="text-3xl font-display font-bold glow-text">Criar Conta</h1>
           <p className="text-gray-400 mt-2">Seu nick será o nome do seu personagem</p>
         </div>
 
@@ -50,23 +50,23 @@ export function RegisterPage() {
             <p className="text-[11px] text-gray-500 mt-1">3-20 caracteres, apenas letras, números e _.</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Email (optional)</label>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Email (opcional)</label>
             <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="input-rpg" placeholder="email@example.com" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Password</label>
-            <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className="input-rpg" placeholder="Min 6 characters" required />
+            <label className="block text-sm font-medium text-gray-300 mb-1">Senha</label>
+            <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className="input-rpg" placeholder="Mínimo 6 caracteres" required />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Confirm Password</label>
-            <input type="password" value={form.confirmPassword} onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })} className="input-rpg" placeholder="Confirm password" required />
+            <label className="block text-sm font-medium text-gray-300 mb-1">Confirmar Senha</label>
+            <input type="password" value={form.confirmPassword} onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })} className="input-rpg" placeholder="Confirme a senha" required />
           </div>
           <button type="submit" disabled={loading} className="btn-primary w-full py-2.5">
-            {loading ? "Creating account..." : "Create Account"}
+            {loading ? "Criando conta..." : "Criar Conta"}
           </button>
           <p className="text-center text-sm text-gray-400">
-            Already have an account?{" "}
-            <Link to="/login" className="text-purple-400 hover:text-purple-300">Sign in</Link>
+            Já tem uma conta?{" "}
+            <Link to="/login" className="text-purple-400 hover:text-purple-300">Entrar</Link>
           </p>
         </form>
       </div>

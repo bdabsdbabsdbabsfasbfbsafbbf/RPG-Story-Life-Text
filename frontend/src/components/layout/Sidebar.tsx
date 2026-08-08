@@ -46,10 +46,10 @@ export function Sidebar({ isOpen }: SidebarProps) {
   };
 
   const navItems = [
-    { to: "/map", icon: Map, label: "Map" },
+    { to: "/map", icon: Map, label: "Mapa" },
     { to: "/classes", icon: Sword, label: "Classes" },
-    { to: "/inventory", icon: Backpack, label: "Inventory" },
-    { to: "/season", icon: Trophy, label: "Season" },
+    { to: "/inventory", icon: Backpack, label: "Inventário" },
+    { to: "/season", icon: Trophy, label: "Temporada" },
     { to: "/shop", icon: ShoppingBag, label: "Loja" },
     ...(hasActiveQuest ? [{ to: "/quests", icon: ScrollText, label: "Quests" }] : []),
   ];
@@ -125,7 +125,7 @@ export function Sidebar({ isOpen }: SidebarProps) {
             }
           >
             <Settings size={18} />
-            <span>Settings</span>
+            <span>Configurações</span>
           </NavLink>
           <NavLink
             to="/codex"

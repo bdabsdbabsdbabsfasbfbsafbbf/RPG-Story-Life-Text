@@ -58,9 +58,9 @@ export function SettingsPage() {
     try {
       const { data } = await authApi.updateMe({ displayName: displayName.trim() });
       setUser(data);
-      toast.success("Settings saved!");
+      toast.success("Configurações salvas!");
     } catch (err: any) {
-      toast.error(err.response?.data?.error || "Failed to save settings");
+      toast.error(err.response?.data?.error || "Falha ao salvar configurações");
     } finally {
       setSaving(false);
     }
@@ -91,23 +91,23 @@ export function SettingsPage() {
   };
 
   const rows = [
-    { icon: UserIcon, label: "Username", value: user?.username },
+    { icon: UserIcon, label: "Nome de usuário", value: user?.username },
     { icon: Mail, label: "Email", value: user?.email || "-" },
-    { icon: Crown, label: "Role", value: user?.role },
-    { icon: Star, label: "Level", value: user?.level || 1 },
-    { icon: TrendingUp, label: "Gold", value: (user?.gold ?? 0).toLocaleString() },
-    { icon: Zap, label: "Diamonds", value: user?.diamonds || 0 },
-    { icon: Calendar, label: "Member since", value: user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : "-" },
+    { icon: Crown, label: "Cargo", value: user?.role },
+    { icon: Star, label: "Nível", value: user?.level || 1 },
+    { icon: TrendingUp, label: "Ouro", value: (user?.gold ?? 0).toLocaleString() },
+    { icon: Zap, label: "Diamantes", value: user?.diamonds || 0 },
+    { icon: Calendar, label: "Membro desde", value: user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : "-" },
   ];
 
   return (
     <div className="space-y-6 animate-fade-in max-w-2xl">
       <h1 className="text-2xl font-display font-bold flex items-center gap-2">
-        <Settings size={24} className="text-purple-400" /> Settings
+        <Settings size={24} className="text-purple-400" /> Configurações
       </h1>
 
       <div className="panel p-4 space-y-4">
-        <h2 className="font-display font-semibold">Account</h2>
+        <h2 className="font-display font-semibold">Conta</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {rows.map((row) => (
             <div key={row.label} className="flex items-center gap-3 bg-dark-800 border border-dark-600 rounded-lg px-3 py-2.5">
@@ -122,7 +122,7 @@ export function SettingsPage() {
       </div>
 
       <form onSubmit={handleSave} className="panel p-4 space-y-3">
-        <h2 className="font-display font-semibold">Display name</h2>
+        <h2 className="font-display font-semibold">Nome de exibição</h2>
         <div className="flex gap-3">
           <input
             value={displayName}
@@ -132,7 +132,7 @@ export function SettingsPage() {
             required
           />
           <button type="submit" disabled={saving} className="btn-primary">
-            {saving ? "Saving..." : "Save"}
+            {saving ? "Salvando..." : "Salvar"}
           </button>
         </div>
         <p className="text-xs text-gray-500">O nome mostrado no jogo. Máximo de 30 caracteres.</p>

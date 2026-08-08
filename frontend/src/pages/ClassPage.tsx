@@ -11,9 +11,9 @@ import {
 import toast from "react-hot-toast";
 
 const rankNames: Record<number, string> = {
-  1: "Initiate", 2: "Apprentice", 3: "Adept", 4: "Expert",
-  5: "Master", 6: "Grand Master", 7: "Elite", 8: "Legend",
-  9: "Mythic", 10: "Transcendent",
+  1: "Iniciante", 2: "Aprendiz", 3: "Adepto", 4: "Especialista",
+  5: "Mestre", 6: "Grão-Mestre", 7: "Elite", 8: "Lenda",
+  9: "Mítico", 10: "Transcendente",
 };
 
 function formatMs(ms: number): string {
@@ -31,10 +31,10 @@ const CORE_STATUS: { key: string; label: string; icon: any; color: string }[] = 
 ];
 
 const CONVERSION_LABELS: Record<string, string> = {
-  attackPower: "Attack Power",
+  attackPower: "Poder de Ataque",
   physicalBoost: "Boost Físico",
   armorPenetration: "Pen. de Armadura",
-  spellPower: "Spell Power",
+  spellPower: "Poder de Magia",
   magicalBoost: "Boost Mágico",
   magicPenetration: "Pen. Mágica",
   maxHealth: "HP Máximo",
@@ -43,7 +43,7 @@ const CONVERSION_LABELS: Record<string, string> = {
   hitChance: "Acerto (Hit)",
   evasion: "Esquiva",
   mana: "Mana",
-  manaRegen: "Mana Regen",
+  manaRegen: "Regen de Mana",
   healingBoost: "Boost de Cura",
   cooldownReduction: "Red. de CD",
   critChance: "Chance de Crítico",
@@ -277,7 +277,7 @@ export function ClassPage() {
           { label: "Magia", value: charStats.magic ?? stats.magic, icon: Sparkles, color: "text-purple-400" },
           { label: "Res. Mágica", value: charStats.magicDefense ?? stats.magicDefense, icon: Shield, color: "text-cyan-400" },
           { label: "Velocidade", value: charStats.speed ?? stats.speed, icon: Zap, color: "text-green-400" },
-          { label: "Mana Regen", value: charStats.manaRegenPerTick ?? stats.manaRegenPerTick, icon: Droplets, color: "text-blue-300" },
+          { label: "Regen de Mana", value: charStats.manaRegenPerTick ?? stats.manaRegenPerTick, icon: Droplets, color: "text-blue-300" },
         ].map((stat) => (
           <div key={stat.label} className="panel p-3 flex items-center gap-3">
             <stat.icon size={16} className={stat.color} />
@@ -400,7 +400,7 @@ export function ClassPage() {
             )}
             {selectedSkill.castTime > 0 && (
               <div className="bg-dark-800/50 rounded-lg p-3">
-                <p className="text-xs text-gray-500 mb-1">Cast</p>
+                <p className="text-xs text-gray-500 mb-1">Tempo de Cast</p>
                 <p className="font-mono font-bold text-orange-400">{formatMs(selectedSkill.castTime)}</p>
               </div>
             )}
@@ -412,7 +412,7 @@ export function ClassPage() {
             )}
             {selectedSkill.scaling && selectedSkill.scaling.length > 0 && (
               <div className="bg-dark-800/50 rounded-lg p-3 col-span-2">
-                <p className="text-xs text-gray-500 mb-1">Scaling</p>
+                <p className="text-xs text-gray-500 mb-1">Escala</p>
                 <p className="font-mono font-bold text-purple-300">
                   {selectedSkill.scaling.map((s) => `${s.stat} ×${s.factor}`).join(", ")}
                 </p>

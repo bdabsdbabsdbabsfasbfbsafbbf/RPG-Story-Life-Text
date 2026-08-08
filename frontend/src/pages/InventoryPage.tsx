@@ -235,8 +235,8 @@ export function InventoryPage() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-display font-bold flex items-center gap-2">
-          <Backpack size={24} className="text-purple-400" /> Inventory
-          <span className="text-sm text-gray-500 font-normal">({items.length} items)</span>
+          <Backpack size={24} className="text-purple-400" /> Inventário
+          <span className="text-sm text-gray-500 font-normal">({items.length} itens)</span>
         </h1>
       </div>
 
@@ -298,7 +298,7 @@ export function InventoryPage() {
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder={filterType === "classes" ? "Buscar classe..." : "Search items..."}
+            placeholder={filterType === "classes" ? "Buscar classe..." : "Buscar itens..."}
             className="input-rpg pl-9"
           />
         </div>

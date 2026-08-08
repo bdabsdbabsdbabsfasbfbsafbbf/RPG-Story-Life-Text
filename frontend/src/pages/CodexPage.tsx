@@ -32,7 +32,7 @@ export function CodexPage() {
 
   const tabs: { id: CodexTab; label: string; icon: any }[] = [
     { id: "classes", label: "Classes", icon: Sword },
-    { id: "items", label: "Items", icon: Package },
+    { id: "items", label: "Itens", icon: Package },
   ];
 
   return (

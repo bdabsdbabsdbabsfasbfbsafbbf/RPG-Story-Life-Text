@@ -63,8 +63,8 @@ export function DashboardPage() {
   const level = character?.level ?? user?.level ?? 1;
 
   const rankCards = [
-    { label: "Level", value: level.toLocaleString(), icon: Trophy, color: "from-purple-500 to-purple-600" },
-    { label: "Gold", value: gold.toLocaleString(), icon: TrendingUp, color: "from-yellow-500 to-yellow-600" },
+    { label: "Nível", value: level.toLocaleString(), icon: Trophy, color: "from-purple-500 to-purple-600" },
+    { label: "Ouro", value: gold.toLocaleString(), icon: TrendingUp, color: "from-yellow-500 to-yellow-600" },
     { label: "Diamantes", value: diamonds.toLocaleString(), icon: Zap, color: "from-cyan-500 to-cyan-600" },
     { label: "Kills PvP", value: pvpKills.toLocaleString(), icon: Skull, color: "from-red-500 to-orange-500" },
   ];
@@ -105,7 +105,7 @@ export function DashboardPage() {
           <div className="flex items-center gap-3">
             <Sword size={20} className="text-cyan-400" />
             <div className="flex-1">
-              <p className="text-sm text-gray-400">Selected character</p>
+              <p className="text-sm text-gray-400">Personagem selecionado</p>
               <p className="font-display font-bold">
                 {character.name}{" "}
                 <span className="text-sm text-purple-400 font-mono">Lv.{character.level}</span>

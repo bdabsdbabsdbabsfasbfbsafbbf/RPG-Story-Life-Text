@@ -26,7 +26,7 @@ const STEPS = [
   },
   {
     icon: ScrollText,
-    title: "Complete quests",
+    title: "Complete missões",
     body: "Aceite quests com NPCs, complete objetivos e reivindique recompensas. Questes encadeadas liberam chefes como o Goblin Bruxo!",
     to: "/quests",
     cta: "Ver quests",
